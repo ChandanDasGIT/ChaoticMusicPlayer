@@ -4,8 +4,11 @@ import QtQuick
 // The app's look: colors (dark / light), typography, metrics and animation
 // timing. Nothing else: icons are in Icon.qml, helpers in Util.qml.
 QtObject {
-    // Dark (default) or light colors, from Settings > Appearance.
-    readonly property bool isDark: SettingsController.darkMode
+    // Dark or light colors, from Settings > Appearance: "system" follows the
+    // desktop's preference (dark when the desktop doesn't say).
+    readonly property bool isDark: SettingsController.themeMode === "system"
+                                   ? Application.styleHints.colorScheme !== Qt.ColorScheme.Light
+                                   : SettingsController.themeMode !== "light"
 
     // Colors. Translucent ones work on any cover tint: white glazes in dark
     // mode, black ones in light mode.

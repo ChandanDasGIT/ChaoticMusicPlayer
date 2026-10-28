@@ -28,7 +28,8 @@ constexpr const char *RepeatModeKey = "repeat";
 constexpr const char *VolumeStepKey = "volume.step";
 constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
-constexpr const char *DarkModeKey = "appearance.dark";
+constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *OldDarkModeKey = "appearance.dark"; // before "Follow system": a dark / light switch
 constexpr const char *OutputDeviceKey = "audio.outputDevice";
 constexpr const char *ShowRemainingKey = "seekbar.showRemaining";
 constexpr const char *CrossfadeKey = "playback.crossfadeSeconds";
@@ -234,18 +235,22 @@ void SettingsController::setBackgroundPlayback(bool enabled)
     emit backgroundPlaybackChanged();
 }
 
-bool SettingsController::darkMode() const
+QString SettingsController::themeMode() const
 {
-    return m_settings->boolValue(DarkModeKey, true);
+    const QString mode = QString::fromStdString(m_settings->value(ThemeModeKey));
+    if (mode == QLatin1String("system") || mode == QLatin1String("dark") || mode == QLatin1String("light"))
+        return mode;
+    return m_settings->boolValue(OldDarkModeKey, true) ? QStringLiteral("dark") : QStringLiteral("light");
 }
 
-void SettingsController::setDarkMode(bool dark)
+void SettingsController::setThemeMode(const QString &mode)
 {
-    if (dark == darkMode())
+    if (mode == themeMode() || (mode != QLatin1String("system") && mode != QLatin1String("dark")
+                                && mode != QLatin1String("light")))
         return;
-    m_settings->setBool(DarkModeKey, dark);
+    m_settings->setValue(ThemeModeKey, mode.toStdString());
     scheduleSave();
-    emit darkModeChanged();
+    emit themeModeChanged();
 }
 
 QString SettingsController::outputDevice() const

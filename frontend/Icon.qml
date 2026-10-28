@@ -35,6 +35,8 @@ Text {
         case "palette": return "\uf53f"
         case "image": return "\uf03e"
         case "keyboard": return "\uf11c"
+        case "moon": return "\uf186"
+        case "sun": return "\uf185"
         case "lyrics": return "\uf10d"
         case "arrowUp": return "\uf062"
         case "arrowDown": return "\uf063"

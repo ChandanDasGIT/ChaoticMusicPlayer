@@ -33,7 +33,7 @@ class SettingsController : public QObject
     // Playback
     Q_PROPERTY(bool restorePlaylist READ restorePlaylist WRITE setRestorePlaylist NOTIFY restorePlaylistChanged)
     Q_PROPERTY(bool backgroundPlayback READ backgroundPlayback WRITE setBackgroundPlayback NOTIFY backgroundPlaybackChanged)
-    Q_PROPERTY(bool darkMode READ darkMode WRITE setDarkMode NOTIFY darkModeChanged)
+    Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     Q_PROPERTY(int volumeStep READ volumeStep WRITE setVolumeStep NOTIFY volumeStepChanged)
     Q_PROPERTY(bool showRemainingTime READ showRemainingTime WRITE setShowRemainingTime NOTIFY showRemainingTimeChanged)
     // Seconds the end of a song overlaps the next one (0 = gapless)
@@ -86,8 +86,8 @@ public:
     void setRestorePlaylist(bool restore);
     bool backgroundPlayback() const; // closing the window keeps the music playing
     void setBackgroundPlayback(bool enabled);
-    bool darkMode() const; // dark (default) or light colors (Theme.isDark)
-    void setDarkMode(bool dark);
+    QString themeMode() const; // "system" (follow the desktop), "dark" (default) or "light"
+    void setThemeMode(const QString &mode);
     QString outputDevice() const;    // "" = system default; applied by main()
     void setOutputDevice(const QString &deviceId);
     int volumeStep() const;          // percent per mouse-wheel notch
@@ -145,7 +145,7 @@ signals:
     void volumeStepChanged();
     void restorePlaylistChanged();
     void backgroundPlaybackChanged();
-    void darkModeChanged();
+    void themeModeChanged();
     void showRemainingTimeChanged();
     void crossfadeSecondsChanged();
     void lyricsSourcesChanged();

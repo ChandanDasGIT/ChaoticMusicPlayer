@@ -360,12 +360,31 @@ Popup {
 
                         SettingsRow {
                             Layout.fillWidth: true
-                            title: qsTr("Dark mode")
-                            description: qsTr("Off: light colors.")
+                            title: qsTr("Colors")
+                            description: qsTr("System follows your desktop's light or dark setting.")
+                        }
 
-                            SettingsSwitch {
-                                checked: SettingsController.darkMode
-                                onToggled: SettingsController.darkMode = checked
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Repeater {
+                                model: [
+                                    { id: "system", name: qsTr("System"), icon: "settings" },
+                                    { id: "dark", name: qsTr("Dark"), icon: "moon" },
+                                    { id: "light", name: qsTr("Light"), icon: "sun" }
+                                ]
+
+                                delegate: PillButton {
+                                    required property var modelData
+
+                                    iconName: modelData.icon
+                                    iconSize: 11
+                                    text: modelData.name
+                                    implicitHeight: 32
+                                    active: SettingsController.themeMode === modelData.id
+                                    onClicked: SettingsController.themeMode = modelData.id
+                                }
                             }
                         }
                     }
