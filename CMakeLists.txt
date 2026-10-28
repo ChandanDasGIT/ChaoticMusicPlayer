@@ -225,6 +225,9 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
 
 target_compile_options(ChaoticMusicPlayer PRIVATE -Wall -Wextra)
 
+# Shown in Settings > About (QCoreApplication::applicationVersion).
+target_compile_definitions(ChaoticMusicPlayer PRIVATE APP_VERSION="${PROJECT_VERSION}")
+
 target_link_libraries(ChaoticMusicPlayer PRIVATE
     backend
     Qt6::Quick

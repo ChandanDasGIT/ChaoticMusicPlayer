@@ -18,6 +18,7 @@ RowLayout {
 
         Label {
             Layout.fillWidth: true
+            visible: root.title !== ""
             text: root.title
             color: Theme.text
             font.pixelSize: Theme.fontSize

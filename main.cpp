@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("ChaoticMusicPlayer");
+    QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION)); // from CMake (project version)
     QGuiApplication::setOrganizationName("ChaoticMusicPlayer");
     QGuiApplication::setDesktopFileName("ChaoticMusicPlayer"); // app id; matches MPRIS DesktopEntry
     // Window / task bar icon (the launcher uses the installed copy, see scripts/install-desktop.sh).
