@@ -223,6 +223,29 @@ hook = '''    // ---- screenshot harness
                 });
             });
     }
+    for (const char *mode : {"SHOT_PICK_M3U", "SHOT_SAVE_M3U"}) // the picker opening / saving a playlist file in that folder
+        if (qEnvironmentVariableIsSet(mode))
+            QTimer::singleShot(2600, [&, mode] {
+                QVariantMap options{{QStringLiteral("files"), QStringList{QStringLiteral("*.m3u"), QStringLiteral("*.m3u8")}}};
+                const bool save = QByteArray(mode) == "SHOT_SAVE_M3U";
+                if (save) {
+                    options.insert(QStringLiteral("save"), true);
+                    options.insert(QStringLiteral("name"), qEnvironmentVariableIsSet("SHOT_SAVE_NAME") ? qEnvironmentVariable("SHOT_SAVE_NAME") : QStringLiteral("Queue.m3u8"));
+                }
+                if (QObject *picker = engine.rootObjects().constFirst()->findChild<QObject *>("folderPicker"))
+                    QMetaObject::invokeMethod(picker, "pick", Q_ARG(QVariant, QVariant(save ? QStringLiteral("Export as M3U") : QStringLiteral("Import an M3U playlist"))),
+                                              Q_ARG(QVariant, QVariant(save ? QStringLiteral("Save") : QString())),
+                                              Q_ARG(QVariant, QVariant(QStringLiteral("file://") + qEnvironmentVariable(mode))),
+                                              Q_ARG(QVariant, QVariant()), Q_ARG(QVariant, QVariant(options)));
+            });
+    if (qEnvironmentVariableIsSet("SHOT_PRINT_PLAYLISTS")) // the playlists, a while after start
+        QTimer::singleShot(qEnvironmentVariableIntValue("SHOT_PRINT_PLAYLISTS"), [&] {
+            for (const QVariant &p : playlists.property("playlists").toList())
+                std::printf("playlist: %s (%d songs)\\n", qPrintable(p.toMap().value(QStringLiteral("name")).toString()),
+                            p.toMap().value(QStringLiteral("count")).toInt());
+            std::printf("viewing: %s\\n", qPrintable(playlists.property("viewedName").toString()));
+            std::fflush(stdout);
+        });
     if (qEnvironmentVariableIsSet("SHOT_TOOLTIP")) // hover the settings button like a real mouse
         QTimer::singleShot(2000, [&, findItems] {
             auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());

@@ -33,6 +33,8 @@ Rectangle {
     signal closeRequested()
     signal openPlayerRequested()
     signal detailsRequested(string path)
+    signal importM3uRequested()
+    signal exportM3uRequested(string id, string name) // id "" = the Queue
 
     // Switching between the Queue and a playlist: the new list slides in
     // sideways (playlists from the right, the Queue from the left) and fades in.
@@ -286,6 +288,20 @@ Rectangle {
                 text: qsTr("New playlist…")
                 icon.name: "plus"
                 onTriggered: PlaylistsController.requestNewPlaylist([])
+            }
+
+            Action {
+                text: qsTr("Import M3U playlist…")
+                icon.name: "download"
+                onTriggered: root.importM3uRequested()
+            }
+
+            Action {
+                text: root.viewingQueue ? qsTr("Export the Queue as M3U…")
+                                        : qsTr("Export “%1” as M3U…").arg(PlaylistsController.viewedName)
+                icon.name: "link"
+                onTriggered: root.exportM3uRequested(root.viewingQueue ? "" : PlaylistsController.viewedId,
+                                                     root.viewingQueue ? qsTr("Queue") : PlaylistsController.viewedName)
             }
 
             Action {

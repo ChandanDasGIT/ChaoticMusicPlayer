@@ -10,6 +10,8 @@ import Qt.labs.folderlistmodel
 // places on the side (home, Music, Downloads, mounted drives), a clickable
 // path bar, the folders of the current one, and Cancel / "Use this folder".
 // Click a folder to open it; Backspace goes up, Enter accepts, Esc cancels.
+// Also picks a file (pick()'s options): { files: ["*.m3u"] } lists those files
+// and a click picks one; { save: true, name: "x.m3u8" } adds a file name field.
 Popup {
     id: root
 
@@ -21,14 +23,26 @@ Popup {
 
     property var onPicked: null // the function pick() was given
     property var drives: []     // mounted drives, read when opened
+    property var fileFilters: [] // e.g. ["*.m3u", "*.m3u8"]: files to list (empty: folders only)
+    property bool saveMode: false // choose a folder and type a file name
+    readonly property bool openFileMode: fileFilters.length > 0 && !saveMode
+    // Saving over a file that is already there. (count / status: checked again
+    // once the folder's listing has loaded; indexOf alone doesn't notice.)
+    readonly property bool nameTaken: saveMode && nameField.text.trim() !== "" && folders.status === FolderListModel.Ready
+                                      && folders.count >= 0
+                                      && folders.indexOf(Qt.resolvedUrl(folder + "/" + nameField.text.trim())) >= 0
 
     signal accepted(string folder) // local path
 
-    // Opens at startFolder (url; "" = home) and calls done(path) with the chosen folder.
-    function pick(dialogTitle, buttonText, startFolder, done) {
+    // Opens at startFolder (url; "" = home) and calls done(path) with the chosen
+    // folder (or file, see options).
+    function pick(dialogTitle, buttonText, startFolder, done, options) {
         title = dialogTitle
         acceptText = buttonText
         onPicked = done
+        fileFilters = options && options.files ? options.files : []
+        saveMode = !!(options && options.save)
+        nameField.text = options && options.name ? options.name : ""
         folder = startFolder && startFolder !== "" ? startFolder : home
         drives = LocalLibraryController.drives()
         open()
@@ -48,7 +62,11 @@ Popup {
     }
 
     function accept() {
-        const path = pathOf(folder)
+        if (openFileMode)
+            return // a file is picked by clicking it
+        if (saveMode && nameField.text.trim() === "")
+            return
+        const path = saveMode ? pathOf(folder) + "/" + nameField.text.trim() : pathOf(folder)
         root.accepted(path)
         if (onPicked)
             onPicked(path)
@@ -87,7 +105,8 @@ Popup {
     FolderListModel {
         id: folders
         folder: root.folder
-        showFiles: false
+        showFiles: root.fileFilters.length > 0
+        nameFilters: root.fileFilters
         showDirsFirst: true
         showDotAndDotDot: false
         showHidden: hiddenSwitch.checked
@@ -325,6 +344,7 @@ Popup {
 
                         required property string fileName
                         required property url fileUrl
+                        required property bool fileIsDir
 
                         width: ListView.view.width
                         height: 40
@@ -334,7 +354,20 @@ Popup {
                         Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
                         HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
-                        TapHandler { onTapped: root.folder = row.fileUrl }
+                        TapHandler {
+                            onTapped: {
+                                if (row.fileIsDir) {
+                                    root.folder = row.fileUrl
+                                } else if (root.saveMode) {
+                                    nameField.text = row.fileName // save over it
+                                } else {
+                                    root.accepted(root.pathOf(row.fileUrl))
+                                    if (root.onPicked)
+                                        root.onPicked(root.pathOf(row.fileUrl))
+                                    root.close()
+                                }
+                            }
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -343,9 +376,9 @@ Popup {
                             spacing: Theme.padding
 
                             Icon {
-                                name: "folder"
+                                name: row.fileIsDir ? "folder" : "listMusic"
                                 size: 13
-                                color: rowHover.hovered ? Theme.accent : Theme.textMuted
+                                color: rowHover.hovered || !row.fileIsDir ? Theme.accent : Theme.textMuted
                             }
 
                             Label {
@@ -360,6 +393,7 @@ Popup {
                                 name: "chevronRight"
                                 size: 9
                                 color: Theme.textDim
+                                visible: row.fileIsDir
                                 opacity: rowHover.hovered ? 1 : 0
                             }
                         }
@@ -368,7 +402,8 @@ Popup {
                     Label {
                         anchors.centerIn: parent
                         visible: folders.status === FolderListModel.Ready && folders.count === 0
-                        text: qsTr("No folders in here")
+                        text: root.fileFilters.length > 0 ? qsTr("No folders or playlist files in here")
+                                                          : qsTr("No folders in here")
                         color: Theme.textDim
                         font.pixelSize: Theme.fontSize
                     }
@@ -385,10 +420,34 @@ Popup {
 
             Label {
                 Layout.fillWidth: true
-                text: root.pathOf(root.folder)
+                visible: !root.saveMode
+                text: root.openFileMode ? qsTr("Click a playlist file to open it") : root.pathOf(root.folder)
                 color: Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideMiddle
+            }
+
+            // Saving: the file name
+            TextField {
+                id: nameField
+                Layout.fillWidth: true
+                visible: root.saveMode
+                implicitHeight: 36
+                leftPadding: 14
+                rightPadding: 14
+                placeholderText: qsTr("File name")
+                placeholderTextColor: Theme.textMuted
+                color: Theme.text
+                font.pixelSize: Theme.fontSize
+                selectByMouse: true
+                onAccepted: root.accept()
+
+                background: Rectangle {
+                    radius: height / 2
+                    color: nameField.activeFocus ? Theme.fillStrong : Theme.fill
+                    border.width: nameField.activeFocus ? 1 : 0
+                    border.color: Theme.accent
+                }
             }
 
             PillButton {
@@ -398,9 +457,11 @@ Popup {
             }
 
             PillButton {
+                visible: !root.openFileMode
+                enabled: !root.saveMode || nameField.text.trim() !== ""
                 iconName: "check"
                 iconSize: 11
-                text: root.acceptText
+                text: root.nameTaken ? qsTr("Replace") : root.acceptText
                 implicitHeight: 36
                 filled: true
                 onClicked: root.accept()

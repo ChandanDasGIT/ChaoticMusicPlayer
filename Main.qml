@@ -182,6 +182,8 @@ ApplicationWindow {
                 pinned: true
                 onPinToggled: SettingsController.playlistPinned = false
                 onDetailsRequested: (path) => detailsDialog.show(path)
+                onImportM3uRequested: window.importM3u()
+                onExportM3uRequested: (id, name) => window.exportM3u(id, name)
             }
         }
 
@@ -270,6 +272,8 @@ ApplicationWindow {
                 onCloseRequested: playlistDrawer.close()
                 onOpenPlayerRequested: playlistDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
+                onImportM3uRequested: window.importM3u()
+                onExportM3uRequested: (id, name) => window.exportM3u(id, name)
             }
         }
     }
@@ -380,12 +384,27 @@ ApplicationWindow {
         z: 1000
         onUrlsDropped: {
             PlaylistsController.view("") // show the Queue, whatever list was open
-            if (!window.playlistDocked) {
-                youtubeDrawer.close()
-                libraryDrawer.close()
-                playlistDrawer.open()
-            }
+            window.showPlaylistPanel()
         }
+        onPlaylistsDropped: window.showPlaylistPanel() // the import opens the new playlist
+    }
+
+    function showPlaylistPanel() {
+        if (!playlistDocked) {
+            youtubeDrawer.close()
+            libraryDrawer.close()
+            playlistDrawer.open()
+        }
+    }
+
+    // M3U playlists through the app's own file picker.
+    function importM3u() {
+        folderPicker.pick(qsTr("Import an M3U playlist"), "", "", (file) => PlaylistsController.importM3u(file),
+                          { files: ["*.m3u", "*.m3u8"] })
+    }
+    function exportM3u(id, name) {
+        folderPicker.pick(qsTr("Export as M3U"), qsTr("Save"), "", (file) => PlaylistsController.exportM3u(id, file),
+                          { save: true, files: ["*.m3u", "*.m3u8"], name: name.replace(/[\/]/g, "-") + ".m3u8" })
     }
 
     TrackDetailsDialog {

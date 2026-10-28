@@ -6,7 +6,8 @@ import QtQuick.Controls
 DropArea {
     id: root
 
-    signal urlsDropped()
+    signal urlsDropped()      // songs / folders: added to the Queue
+    signal playlistsDropped() // .m3u / .m3u8 files: imported as playlists
 
     onEntered: (drag) => {
         if (!drag.hasUrls)
@@ -16,9 +17,23 @@ DropArea {
     onDropped: (drop) => {
         if (!drop.hasUrls)
             return
-        LibraryController.addUrls(drop.urls)
+        const songs = []
+        let playlists = 0
+        for (const url of drop.urls) {
+            if (/\.m3u8?$/i.test(url.toString())) {
+                PlaylistsController.importM3u(url.toString())
+                ++playlists
+            } else {
+                songs.push(url)
+            }
+        }
         drop.acceptProposedAction()
-        root.urlsDropped()
+        if (songs.length > 0) {
+            LibraryController.addUrls(songs)
+            root.urlsDropped()
+        }
+        if (playlists > 0)
+            root.playlistsDropped()
     }
 
     // Drag highlight

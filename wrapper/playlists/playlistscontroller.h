@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QThreadPool>
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
@@ -72,6 +73,11 @@ public:
     Q_INVOKABLE void addToQueue(const QVariantList &items);
     // Right after the playing song ([{ path }] or YouTube song maps).
     Q_INVOKABLE void playNext(const QVariantList &items);
+    // M3U / M3U8 files (path or file:// URL). Import reads the songs in the
+    // background into a new playlist (named after the file) and opens it.
+    // Export writes playlist `id`, or the Queue when `id` is "".
+    Q_INVOKABLE void importM3u(const QString &file);
+    Q_INVOKABLE void exportM3u(const QString &id, const QString &file);
 
     Q_INVOKABLE void requestNewPlaylist(const QVariantList &items = {});
     Q_INVOKABLE void requestRename(const QString &id);
@@ -100,6 +106,7 @@ private:
     PlayerController *m_player;
     SettingsController *m_settings;
     std::unique_ptr<PlaylistLibrary> m_library;
+    QThreadPool m_pool; // M3U imports (one at a time)
 
     QString m_viewedId;
     std::function<const ::Track *(const QString &)> m_lookup;

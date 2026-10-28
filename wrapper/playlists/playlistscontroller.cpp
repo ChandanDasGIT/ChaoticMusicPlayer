@@ -1,13 +1,18 @@
 #include "wrapper/playlists/playlistscontroller.h"
 
+#include "backend/playlist/m3u/m3u.h"
 #include "backend/playlist/playlistlibrary/playlistlibrary.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 #include "wrapper/youtube/youtubecontroller.h"
 
+#include <QFileInfo>
 #include <QJSEngine>
 #include <QStandardPaths>
+#include <QUrl>
+
+#include <algorithm>
 
 PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerController *player,
                                          SettingsController *settings, QObject *parent)
@@ -25,6 +30,7 @@ PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerContro
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                         + QStringLiteral("/ChaoticMusicPlayer/playlists");
     m_library = std::make_unique<PlaylistLibrary>(dir.toStdString());
+    m_pool.setMaxThreadCount(1);
     m_library->load();
 
     connect(m_player, &PlayerController::sourceChanged, this, &PlaylistsController::updateViewCurrent);
@@ -36,6 +42,7 @@ PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerContro
 
 PlaylistsController::~PlaylistsController()
 {
+    m_pool.waitForDone(); // no import may post to a destroyed object
     s_instance = nullptr;
 }
 
@@ -186,6 +193,71 @@ void PlaylistsController::playNext(const QVariantList &items)
         return;
     m_queue->playNext(tracks);
     emit notice(tracks.size() == 1 ? tr("Plays next") : tr("%1 songs play next").arg(tracks.size()));
+}
+
+namespace {
+
+QString songCount(size_t n)
+{
+    return n == 1 ? QObject::tr("1 song") : QObject::tr("%1 songs").arg(n);
+}
+
+QString localPath(const QString &file)
+{
+    return file.startsWith(QStringLiteral("file:")) ? QUrl(file).toLocalFile() : file;
+}
+
+} // namespace
+
+void PlaylistsController::importM3u(const QString &file)
+{
+    const QString path = localPath(file);
+    emit notice(tr("Importing “%1”…").arg(QFileInfo(path).fileName()));
+    m_pool.start([this, path] {
+        M3u::Result result = M3u::read(path.toStdString());
+        QMetaObject::invokeMethod(this, [this, path, result = std::move(result)] {
+            if (!result.ok) {
+                emit notice(tr("Couldn't read “%1”").arg(QFileInfo(path).fileName()));
+                return;
+            }
+            if (result.tracks.empty()) {
+                emit notice(tr("No songs found in “%1”").arg(QFileInfo(path).fileName()));
+                return;
+            }
+            // Named after the file; "Name (2)" if that name is taken.
+            const QString base = QFileInfo(path).completeBaseName();
+            QString name = base;
+            for (int n = 2; std::any_of(m_library->playlists().begin(), m_library->playlists().end(),
+                                        [&](const PlaylistLibrary::Entry &e) { return QString::fromStdString(e.name) == name; });
+                 ++n)
+                name = QStringLiteral("%1 (%2)").arg(base).arg(n);
+            const std::string id = m_library->create(name.toStdString());
+            m_library->addTracks(id, result.tracks);
+            emit playlistsChanged();
+            view(QString::fromStdString(id));
+
+            QString text = tr("Imported %1 into “%2”").arg(songCount(result.tracks.size()), name);
+            if (result.missing > 0)
+                text += tr(" · %1 not found").arg(result.missing);
+            emit notice(text);
+        }, Qt::QueuedConnection);
+    });
+}
+
+void PlaylistsController::exportM3u(const QString &id, const QString &file)
+{
+    QString path = localPath(file);
+    if (!path.endsWith(QStringLiteral(".m3u8"), Qt::CaseInsensitive)
+        && !path.endsWith(QStringLiteral(".m3u"), Qt::CaseInsensitive))
+        path += QStringLiteral(".m3u8");
+    const PlaylistLibrary::Entry *entry = id.isEmpty() ? nullptr : m_library->find(id.toStdString());
+    if (!id.isEmpty() && !entry)
+        return;
+    const std::vector<::Track> &tracks = entry ? entry->tracks : m_queue->tracks();
+    if (M3u::write(path.toStdString(), tracks))
+        emit notice(tr("Exported %1 to “%2”").arg(songCount(tracks.size()), QFileInfo(path).fileName()));
+    else
+        emit notice(tr("Couldn't write “%1”").arg(QFileInfo(path).fileName()));
 }
 
 void PlaylistsController::requestNewPlaylist(const QVariantList &items)

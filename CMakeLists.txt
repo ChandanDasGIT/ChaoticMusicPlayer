@@ -63,6 +63,8 @@ add_library(backend STATIC
     backend/youtube/ytmetadatastore/ytmetadatastore.h
     backend/youtube/ytmusicclient/ytmusicclient.cpp
     backend/youtube/ytmusicclient/ytmusicclient.h
+    backend/playlist/m3u/m3u.cpp
+    backend/playlist/m3u/m3u.h
     backend/playlist/playlist/playlist.cpp
     backend/playlist/playlist/playlist.h
     backend/playlist/playlistlibrary/playlistlibrary.cpp
