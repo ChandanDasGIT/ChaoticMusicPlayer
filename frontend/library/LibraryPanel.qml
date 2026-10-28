@@ -34,7 +34,7 @@ Rectangle {
         searchField.selectAll()
     }
 
-    color: "#4d000000" // darkens the cover tint behind it
+    color: Theme.panelShade // softens the cover tint behind it
     radius: Theme.radiusCard
     border.color: Theme.border
 
@@ -49,7 +49,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.headerHeight
-            color: "#0dffffff"
+            color: Theme.fillSoft
             topLeftRadius: Theme.radiusCard - 1
             topRightRadius: Theme.radiusCard - 1
 
@@ -74,7 +74,7 @@ Rectangle {
                 Label {
                     Layout.fillWidth: true
                     visible: LocalLibraryController.songCount > 0
-                    text: Theme.songCount(LocalLibraryController.songCount)
+                    text: Util.songCount(LocalLibraryController.songCount)
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
                     elide: Text.ElideRight
@@ -209,7 +209,7 @@ Rectangle {
 
                     background: Rectangle {
                         radius: height / 2
-                        color: searchField.activeFocus ? "#24ffffff" : "#14ffffff"
+                        color: searchField.activeFocus ? Theme.fillStrong : Theme.fill
                         border.width: searchField.activeFocus ? 1 : 0
                         border.color: Theme.accent
 
@@ -296,7 +296,7 @@ Rectangle {
 
                             Image {
                                 anchors.fill: parent
-                                source: Theme.coverSource(tile.modelData.coverPath, "")
+                                source: Util.coverSource(tile.modelData.coverPath, "")
                                 sourceSize: Qt.size(280, 280)
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
@@ -393,7 +393,7 @@ Rectangle {
                         }
 
                         Label {
-                            text: Theme.songCount(artistRow.modelData.count)
+                            text: Util.songCount(artistRow.modelData.count)
                             color: Theme.textMuted
                             font.pixelSize: Theme.fontSizeSmall
                         }
@@ -442,7 +442,7 @@ Rectangle {
 
                         Image {
                             anchors.fill: parent
-                            source: Theme.coverSource(LocalLibraryController.detailCoverPath, "")
+                            source: Util.coverSource(LocalLibraryController.detailCoverPath, "")
                             sourceSize: Qt.size(112, 112)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
@@ -541,7 +541,7 @@ Rectangle {
                         width: ListView.view.width
                         height: 44
                         radius: Theme.radius
-                        color: "#14ffffff"
+                        color: Theme.fill
 
                         RowLayout {
                             anchors.fill: parent

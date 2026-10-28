@@ -85,7 +85,7 @@ ColumnLayout {
         implicitWidth: toggles.implicitWidth + 10
         implicitHeight: toggles.implicitHeight + 10
         radius: height / 2
-        color: "#14ffffff"
+        color: Theme.fill
 
         RowLayout {
             id: toggles

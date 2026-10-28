@@ -47,7 +47,7 @@ Popup {
     }
 
     Overlay.modal: Rectangle {
-        color: "#99000000"
+        color: Theme.scrim
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
     }
 
@@ -74,7 +74,7 @@ Popup {
 
             background: Rectangle {
                 radius: height / 2
-                color: "#24ffffff"
+                color: Theme.fillStrong
                 border.width: field.activeFocus ? 1 : 0
                 border.color: Theme.accent
             }

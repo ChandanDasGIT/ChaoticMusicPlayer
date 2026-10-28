@@ -48,7 +48,7 @@ Rectangle {
 
     implicitHeight: 56
     radius: Theme.radius
-    color: isCurrent ? (hover.hovered ? "#409b8cff" : "#269b8cff")
+    color: isCurrent ? (hover.hovered ? Theme.currentRowHover : Theme.currentRow)
          : hover.hovered ? Theme.hover : "transparent"
 
     Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -91,7 +91,7 @@ Rectangle {
 
             Image {
                 anchors.fill: parent
-                source: Theme.coverSource(root.path, "")
+                source: Util.coverSource(root.path, "")
                 sourceSize: Qt.size(80, 80)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
@@ -138,7 +138,7 @@ Rectangle {
 
         Label {
             visible: !root.showButtons && !root.isCurrent
-            text: Theme.formatTime(root.duration)
+            text: Util.formatTime(root.duration)
             color: Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
             font.features: { "tnum": 1 }

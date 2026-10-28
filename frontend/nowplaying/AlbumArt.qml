@@ -13,7 +13,7 @@ Item {
     property string thumbnail // YouTube tracks: thumbnail URL
     property bool playing: false
 
-    readonly property string sourceUrl: Theme.coverSource(path, thumbnail)
+    readonly property string sourceUrl: Util.coverSource(path, thumbnail)
     readonly property real radius: width * 0.04 // matches the provider's corner radius
     // Which image is showing: 0 / 1, or -1 for the placeholder.
     property int shown: -1

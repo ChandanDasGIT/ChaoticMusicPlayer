@@ -1,20 +1,50 @@
 pragma Singleton
 import QtQuick
 
+// The app's look: colors (dark / light), typography, metrics and animation
+// timing. Nothing else: icons are in Icon.qml, helpers in Util.qml.
 QtObject {
-    // Colors
-    readonly property color background: "#111116"
-    readonly property color surface:    "#17171e"
-    readonly property color surfaceAlt: "#1f1f28"
-    readonly property color border:     "#22ffffff" // translucent: work on any tint
-    readonly property color hover:      "#12ffffff"
-    readonly property color selection:  "#24ffffff"
-    readonly property color accent:     "#9b8cff"
-    readonly property color accentSoft: "#339b8cff" // accent at ~20% opacity
-    readonly property color text:       "#ececf2"
-    readonly property color textMuted:  "#8b8b9e"
-    readonly property color textDim:    "#5c5c6e"
-    readonly property color error:      "#f06a6a"
+    // Dark (default) or light colors, from Settings > Appearance.
+    readonly property bool isDark: SettingsController.darkMode
+
+    // Colors. Translucent ones work on any cover tint: white glazes in dark
+    // mode, black ones in light mode.
+    readonly property color background: isDark ? "#111116" : "#f3f3f7"
+    readonly property color surface:    isDark ? "#17171e" : "#ffffff"
+    readonly property color surfaceAlt: isDark ? "#1f1f28" : "#e9e9f0"
+    readonly property color border:     isDark ? "#22ffffff" : "#1f000000"
+    readonly property color hover:      isDark ? "#12ffffff" : "#0f000000"
+    readonly property color selection:  isDark ? "#24ffffff" : "#1c000000"
+    readonly property color accent:     isDark ? "#9b8cff" : "#6a55e0"
+    readonly property color accentSoft: withAlpha(accent, 0.2)
+    readonly property color text:       isDark ? "#ececf2" : "#1b1b22"
+    readonly property color textMuted:  isDark ? "#8b8b9e" : "#5f5f72"
+    readonly property color textDim:    isDark ? "#5c5c6e" : "#9a9aab"
+    readonly property color error:      isDark ? "#f06a6a" : "#d64545"
+
+    // Glazes for fields, chips, headers and buttons (weakest to strongest)
+    readonly property color fillSoft:   isDark ? "#0dffffff" : "#08000000"
+    readonly property color fill:       isDark ? "#14ffffff" : "#0d000000"
+    readonly property color fillHover:  isDark ? "#1fffffff" : "#14000000"
+    readonly property color fillStrong: isDark ? "#24ffffff" : "#1a000000"
+    // The playing song's row, and an active button while hovered
+    readonly property color currentRow:      withAlpha(accent, 0.15)
+    readonly property color currentRowHover: withAlpha(accent, 0.25)
+    readonly property color accentSoftHover: withAlpha(accent, 0.3)
+    readonly property color errorSoft:  withAlpha(error, 0.2)
+    // Switch track (off), and while hovered
+    readonly property color switchTrack:      isDark ? "#2effffff" : "#26000000"
+    readonly property color switchTrackHover: isDark ? "#40ffffff" : "#33000000"
+    // Behind dialogs; under panels (softens the cover tint); the lyrics capsule
+    readonly property color scrim:      isDark ? "#99000000" : "#59000000"
+    readonly property color panelShade: isDark ? "#4d000000" : "#73ffffff"
+    readonly property color capsule:    isDark ? "#33000000" : "#14000000"
+    readonly property color miniPlayer: isDark ? "#e61b1b23" : "#f2ffffff"
+    readonly property color tooltip:    isDark ? "#f21f1f28" : "#f2ffffff"
+
+    function withAlpha(c, alpha) {
+        return Qt.rgba(c.r, c.g, c.b, alpha)
+    }
 
     // Typography
     readonly property int fontSizeSmall: 11
@@ -43,97 +73,4 @@ QtObject {
 
     // Below this window width the app switches to the phone-like layout.
     readonly property int compactBreakpoint: 700
-
-    // "m:ss" or "h:mm:ss"
-    function formatTime(ms) {
-        let s = Math.floor(Math.max(0, ms) / 1000)
-        const h = Math.floor(s / 3600)
-        const m = Math.floor((s % 3600) / 60)
-        s = s % 60
-        const ss = s < 10 ? "0" + s : "" + s
-        if (h > 0)
-            return h + ":" + (m < 10 ? "0" + m : m) + ":" + ss
-        return m + ":" + ss
-    }
-
-    // Cover image for a track: its YouTube thumbnail, else the file's own cover.
-    // (Both go through the album-art provider, which rounds the corners.)
-    function coverSource(path, thumbnail) {
-        if (thumbnail && thumbnail !== "")
-            return "image://albumart/" + encodeURIComponent(thumbnail)
-        // (The revision makes images ask again after a missing cover was found online.)
-        return path && path !== "" ? "image://albumart/" + encodeURIComponent(path) + "?r=" + CoverController.revision : ""
-    }
-
-    // "1 song" / "9 songs"
-    function songCount(n) {
-        return n === 1 ? qsTr("1 song") : qsTr("%1 songs").arg(n)
-    }
-
-    // "45 min" / "1 h 5 min"
-    function formatLongDuration(ms) {
-        if (ms > 0 && ms < 30000)
-            return qsTr("<1 min")
-        const totalMin = Math.round(Math.max(0, ms) / 60000)
-        const h = Math.floor(totalMin / 60)
-        const m = totalMin % 60
-        return h > 0 ? qsTr("%1 h %2 min").arg(h).arg(m) : qsTr("%1 min").arg(m)
-    }
-
-    // Icons (Font Awesome 6 Free Solid codepoints)
-    readonly property string iconFamily: "Font Awesome 6 Free"
-    readonly property var icons: ({
-        "play":       "\uf04b",
-        "pause":      "\uf04c",
-        "next":       "\uf051",
-        "prev":       "\uf048",
-        "shuffle":    "\uf074",
-        "repeat":     "\uf01e",
-        "volume":     "\uf028",
-        "volumeLow":  "\uf027",
-        "volumeMute": "\uf6a9",
-        "list":       "\uf03a",
-        "thumbtack":  "\uf08d",
-        "music":      "\uf001",
-        "folderOpen": "\uf07c",
-        "close":      "\uf00d",
-        "info":       "\uf05a",
-        "sortUp":     "\uf0d8",
-        "sortDown":   "\uf0d7",
-        "chevronDown":  "\uf078",
-        "chevronRight": "\uf054",
-        "trash":      "\uf1f8",
-        "settings":   "\uf013",
-        "power":      "\uf011",
-        "sliders":    "\uf1de",
-        "palette":    "\uf53f",
-        "image":      "\uf03e",
-        "keyboard":   "\uf11c",
-        "lyrics":     "\uf10d",
-        "arrowUp":    "\uf062",
-        "arrowDown":  "\uf063",
-        "plus":       "\u002b",
-        "minus":      "\uf068",
-        "back":       "\uf060",
-        "cloud":      "\uf0c2",
-        "search":     "\uf002",
-        "bookmark":   "\uf02e",
-        "link":       "\uf0c1",
-        "user":       "\uf007",
-        "heart":      "\uf004",
-        "compass":    "\uf14e",
-        "listMusic":  "\uf0ca",
-        "check":      "\uf00c",
-        "refresh":    "\uf021",
-        "more":       "\uf142",
-        "grip":       "\uf58e",
-        "chevronLeftSmall": "\uf053",
-        "compactDisc": "\uf51f",
-        "folder":     "\uf07b",
-        "folderPlus": "\uf65e",
-        "eyeSlash":   "\uf070",
-        "home":       "\uf015",
-        "download":   "\uf019",
-        "drive":      "\uf0a0"
-    })
 }

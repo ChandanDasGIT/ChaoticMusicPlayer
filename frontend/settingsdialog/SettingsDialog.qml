@@ -52,7 +52,7 @@ Popup {
     }
 
     Overlay.modal: Rectangle {
-        color: "#99000000"
+        color: Theme.scrim
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
     }
 
@@ -255,7 +255,7 @@ Popup {
                                 Layout.fillWidth: true
                                 implicitHeight: 40
                                 radius: Theme.radius
-                                color: current ? Theme.accentSoft : deviceHover.hovered ? Theme.hover : "#0dffffff"
+                                color: current ? Theme.accentSoft : deviceHover.hovered ? Theme.hover : Theme.fillSoft
 
                                 Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
@@ -356,6 +356,21 @@ Popup {
                     title: qsTr("Appearance")
 
                     SettingsCard {
+                        title: qsTr("Theme")
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("Dark mode")
+                            description: qsTr("Off: light colors.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.darkMode
+                                onToggled: SettingsController.darkMode = checked
+                            }
+                        }
+                    }
+
+                    SettingsCard {
                         title: qsTr("Background")
 
                         SettingsRow {
@@ -448,7 +463,7 @@ Popup {
                                 Layout.fillWidth: true
                                 implicitHeight: 40
                                 radius: Theme.radius
-                                color: "#14ffffff"
+                                color: Theme.fill
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -562,7 +577,7 @@ Popup {
                                 Layout.fillWidth: true
                                 implicitHeight: 44
                                 radius: Theme.radius
-                                color: "#0dffffff"
+                                color: Theme.fillSoft
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -880,7 +895,7 @@ Popup {
         Layout.bottomMargin: 2
         implicitHeight: cardColumn.implicitHeight + 2 * Theme.padding
         radius: Theme.radiusLarge
-        color: "#0dffffff"
+        color: Theme.fillSoft
 
         ColumnLayout {
             id: cardColumn

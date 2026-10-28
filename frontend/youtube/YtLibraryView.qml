@@ -27,7 +27,7 @@ Item {
         visible: !YouTubeController.signedIn
         implicitHeight: signIn.implicitHeight + 2 * Theme.padding * 1.5
         radius: Theme.radiusLarge
-        color: "#14ffffff"
+        color: Theme.fill
 
         ColumnLayout {
             id: signIn

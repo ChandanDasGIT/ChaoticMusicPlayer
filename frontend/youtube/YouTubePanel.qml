@@ -34,7 +34,7 @@ Rectangle {
         toastTimer.restart()
     }
 
-    color: "#4d000000" // darkens the cover tint behind it
+    color: Theme.panelShade // softens the cover tint behind it
     radius: Theme.radiusCard
     border.color: Theme.border
 
@@ -53,7 +53,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.headerHeight
-            color: "#0dffffff"
+            color: Theme.fillSoft
             topLeftRadius: Theme.radiusCard - 1
             topRightRadius: Theme.radiusCard - 1
 
@@ -83,7 +83,7 @@ Rectangle {
                     implicitWidth: warningLabel.implicitWidth + 16
                     implicitHeight: warningLabel.implicitHeight + 6
                     radius: height / 2
-                    color: "#33f06a6a"
+                    color: Theme.errorSoft
 
                     Label {
                         id: warningLabel

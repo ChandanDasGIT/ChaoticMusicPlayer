@@ -80,7 +80,7 @@ Popup {
     }
 
     Overlay.modal: Rectangle {
-        color: "#99000000"
+        color: Theme.scrim
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
     }
 
@@ -228,7 +228,7 @@ Popup {
                         Layout.fillWidth: true
                         implicitHeight: 32
                         radius: height / 2
-                        color: "#14ffffff"
+                        color: Theme.fill
                         clip: true
 
                         ListView {

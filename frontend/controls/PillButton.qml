@@ -59,12 +59,12 @@ AbstractButton {
                 return root.pressed ? Qt.darker(Theme.accent, 1.15)
                      : root.hovered ? Qt.lighter(Theme.accent, 1.08) : Theme.accent
             if (root.active)
-                return root.hovered ? "#4d9b8cff" : Theme.accentSoft
+                return root.hovered ? Theme.accentSoftHover : Theme.accentSoft
             if (root.pressed)
                 return Theme.selection
             if (root.hovered)
-                return "#1fffffff"
-            return root.transparentIdle ? "transparent" : "#14ffffff"
+                return Theme.fillHover
+            return root.transparentIdle ? "transparent" : Theme.fill
         }
 
         Behavior on radius { NumberAnimation { duration: Theme.anim; easing.type: Theme.easing } }

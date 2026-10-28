@@ -35,7 +35,7 @@ Item {
         width: Math.min(parent.width, capsuleRow.implicitWidth + 28)
         height: 52
         radius: height / 2
-        color: "#33000000"
+        color: Theme.capsule
         opacity: root.phase(0.45, 1)
 
         RowLayout {
@@ -63,7 +63,7 @@ Item {
 
                 Image {
                     anchors.fill: parent
-                    source: Theme.coverSource(PlayerController.source, PlaylistController.currentThumbnail)
+                    source: Util.coverSource(PlayerController.source, PlaylistController.currentThumbnail)
                     sourceSize: Qt.size(80, 80)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
@@ -239,7 +239,7 @@ Item {
             implicitWidth: modeRow.implicitWidth + 8
             implicitHeight: modeRow.implicitHeight + 8
             radius: height / 2
-            color: "#14ffffff"
+            color: Theme.fill
 
             RowLayout {
                 id: modeRow

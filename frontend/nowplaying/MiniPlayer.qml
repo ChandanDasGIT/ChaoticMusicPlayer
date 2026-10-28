@@ -14,7 +14,7 @@ Rectangle {
 
     implicitHeight: shown ? 64 : 0
     radius: Theme.radiusLarge
-    color: "#e61b1b23"
+    color: Theme.miniPlayer
     border.color: Theme.border
     clip: true
     opacity: shown ? 1 : 0
@@ -71,7 +71,7 @@ Rectangle {
 
                 Image {
                     anchors.fill: parent
-                    source: Theme.coverSource(PlayerController.source, PlaylistController.currentThumbnail)
+                    source: Util.coverSource(PlayerController.source, PlaylistController.currentThumbnail)
                     sourceSize: Qt.size(88, 88)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true

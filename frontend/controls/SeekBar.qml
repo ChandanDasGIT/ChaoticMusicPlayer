@@ -165,7 +165,7 @@ Item {
         Label {
             id: elapsedLabel
             x: root.pad
-            text: Theme.formatTime(root.progress * PlayerController.duration)
+            text: Util.formatTime(root.progress * PlayerController.duration)
             color: root.dragging ? Theme.text : Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
             font.features: { "tnum": 1 } // fixed-width digits: no jitter while counting
@@ -177,8 +177,8 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: root.pad
             text: root.showRemaining
-                  ? "-" + Theme.formatTime(PlayerController.duration * (1 - root.progress))
-                  : Theme.formatTime(PlayerController.duration)
+                  ? "-" + Util.formatTime(PlayerController.duration * (1 - root.progress))
+                  : Util.formatTime(PlayerController.duration)
             color: remainingArea.containsMouse ? Theme.text : Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
             font.features: { "tnum": 1 }

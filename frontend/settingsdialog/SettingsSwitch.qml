@@ -14,7 +14,7 @@ AbstractButton {
 
     background: Rectangle {
         radius: height / 2
-        color: root.checked ? Theme.accent : root.hovered ? "#40ffffff" : "#2effffff"
+        color: root.checked ? Theme.accent : root.hovered ? Theme.switchTrackHover : Theme.switchTrack
 
         Behavior on color { ColorAnimation { duration: Theme.anim } }
     }

@@ -55,7 +55,7 @@ Popup {
     }
 
     Overlay.modal: Rectangle {
-        color: "#99000000"
+        color: Theme.scrim
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
     }
 
@@ -329,7 +329,7 @@ Popup {
                 YtField { label: qsTr("Year"); value: root.ytInfo.year || "" }
                 YtField {
                     label: qsTr("Duration")
-                    value: root.ytInfo.duration > 0 ? Theme.formatTime(root.ytInfo.duration) : ""
+                    value: root.ytInfo.duration > 0 ? Util.formatTime(root.ytInfo.duration) : ""
                 }
                 YtField { label: qsTr("Link"); value: root.ytInfo.url || "" }
             }

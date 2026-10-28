@@ -10,7 +10,7 @@ Rectangle {
     implicitWidth: label.implicitWidth + 20
     implicitHeight: label.implicitHeight + 6
     radius: height / 2
-    color: "#1affffff"
+    color: Theme.fill
     opacity: text !== "" ? 1 : 0
     visible: opacity > 0
 

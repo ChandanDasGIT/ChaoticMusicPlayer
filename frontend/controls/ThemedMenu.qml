@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Controls
 
 // The app's menu look: dark rounded card, icon + text rows, a chevron on
-// submenus, quick fade/scale. Use Actions (icon.name = a Theme.icons name).
+// submenus, quick fade/scale. Use Actions (icon.name = an Icon name).
 Menu {
     id: root
 

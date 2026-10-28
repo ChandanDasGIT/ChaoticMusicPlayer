@@ -27,7 +27,7 @@ Rectangle {
     Image {
         id: image
         anchors.fill: parent
-        source: root.source !== "" ? Theme.coverSource("", root.source) : ""
+        source: root.source !== "" ? Util.coverSource("", root.source) : ""
         sourceSize: Qt.size(Math.max(64, root.width * 2), Math.max(64, root.height * 2))
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

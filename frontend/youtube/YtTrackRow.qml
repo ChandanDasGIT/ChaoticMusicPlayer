@@ -44,7 +44,7 @@ Rectangle {
 
     implicitHeight: 60
     radius: Theme.radius
-    color: isCurrent ? (hover.hovered ? "#409b8cff" : "#269b8cff")
+    color: isCurrent ? (hover.hovered ? Theme.currentRowHover : Theme.currentRow)
          : hover.hovered ? Theme.hover : "transparent"
 
     Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -102,7 +102,7 @@ Rectangle {
             Label {
                 Layout.fillWidth: true
                 text: (root.song.artists || "")
-                      + (root.song.duration > 0 ? "  ·  " + Theme.formatTime(root.song.duration) : "")
+                      + (root.song.duration > 0 ? "  ·  " + Util.formatTime(root.song.duration) : "")
                 color: Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight

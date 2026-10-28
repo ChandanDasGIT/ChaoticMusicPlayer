@@ -217,7 +217,7 @@ Item {
         border.color: Theme.accent
         color: root.reordering ? Theme.surfaceAlt
              : root.selected ? Theme.selection
-             : root.isCurrent ? (hover.hovered ? "#409b8cff" : "#269b8cff")
+             : root.isCurrent ? (hover.hovered ? Theme.currentRowHover : Theme.currentRow)
              : hover.hovered ? Theme.hover : "transparent"
 
         Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -286,7 +286,7 @@ Item {
                     id: cover
                     anchors.fill: parent
                     // The provider returns a 1x1 transparent image when there is no cover.
-                    source: Theme.coverSource(root.path, root.thumbnail)
+                    source: Util.coverSource(root.path, root.thumbnail)
                     sourceSize: Qt.size(68, 68)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
@@ -393,7 +393,7 @@ Item {
             rightPadding: moreButton.opacity > 0 ? 6 + 26 * moreButton.opacity : 6 // makes room for "⋮"
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignRight
-            text: root.durationMs > 0 ? Theme.formatTime(root.durationMs) : ""
+            text: root.durationMs > 0 ? Util.formatTime(root.durationMs) : ""
             color: Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
             font.features: { "tnum": 1 }

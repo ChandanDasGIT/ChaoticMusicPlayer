@@ -3,8 +3,8 @@ import QtQuick.Templates as T
 
 // The app's tooltip (ChaoticStyle; every other control falls back to Basic).
 // Dark rounded card above the control, appears after a short pause with a
-// small pop, wraps long text. Colors mirror frontend/Theme.qml (a style module
-// can't import the app module).
+// small pop, wraps long text. Colors come from the window's palette, which
+// Main.qml sets from Theme (a style module can't import the app module).
 T.ToolTip {
     id: control
 
@@ -42,14 +42,15 @@ T.ToolTip {
     contentItem: Text {
         text: control.text
         font.pixelSize: 12
-        color: "#ececf2"
+        color: control.palette.toolTipText
         wrapMode: Text.Wrap
         horizontalAlignment: Text.AlignHCenter
     }
 
     background: Rectangle {
-        color: "#f21f1f28"
+        color: control.palette.toolTipBase
         radius: 9
-        border.color: "#2effffff"
+        border.color: Qt.rgba(control.palette.toolTipText.r, control.palette.toolTipText.g,
+                              control.palette.toolTipText.b, 0.18)
     }
 }

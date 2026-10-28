@@ -28,6 +28,7 @@ constexpr const char *RepeatModeKey = "repeat";
 constexpr const char *VolumeStepKey = "volume.step";
 constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
+constexpr const char *DarkModeKey = "appearance.dark";
 constexpr const char *OutputDeviceKey = "audio.outputDevice";
 constexpr const char *ShowRemainingKey = "seekbar.showRemaining";
 constexpr const char *CrossfadeKey = "playback.crossfadeSeconds";
@@ -231,6 +232,20 @@ void SettingsController::setBackgroundPlayback(bool enabled)
     m_settings->setBool(BackgroundPlaybackKey, enabled);
     scheduleSave();
     emit backgroundPlaybackChanged();
+}
+
+bool SettingsController::darkMode() const
+{
+    return m_settings->boolValue(DarkModeKey, true);
+}
+
+void SettingsController::setDarkMode(bool dark)
+{
+    if (dark == darkMode())
+        return;
+    m_settings->setBool(DarkModeKey, dark);
+    scheduleSave();
+    emit darkModeChanged();
 }
 
 QString SettingsController::outputDevice() const

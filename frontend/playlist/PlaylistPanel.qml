@@ -64,7 +64,7 @@ Rectangle {
         NumberAnimation { target: root; property: "switchFade"; from: 0; to: 1; duration: Theme.anim }
     }
 
-    color: "#4d000000" // darkens the cover tint behind it
+    color: Theme.panelShade // softens the cover tint behind it
     radius: Theme.radiusCard
     border.color: Theme.border
 
@@ -78,7 +78,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.headerHeight
-            color: "#0dffffff"
+            color: Theme.fillSoft
             topLeftRadius: Theme.radiusCard - 1
             topRightRadius: Theme.radiusCard - 1
 
@@ -158,7 +158,7 @@ Rectangle {
                     implicitWidth: summary.implicitWidth + 16
                     implicitHeight: summary.implicitHeight + 6
                     radius: height / 2
-                    color: "#14ffffff"
+                    color: Theme.fill
                     visible: root.shownCount > 0 && !clearButton.confirming && root.width > 470
 
                     Label {
@@ -166,10 +166,10 @@ Rectangle {
                         anchors.centerIn: parent
                         width: Math.min(implicitWidth, summaryChip.width - 16)
                         text: (root.shownCount === 1 ? qsTr("1 track") : qsTr("%1 tracks").arg(root.shownCount)) + "  ·  "
-                              + (!root.viewingQueue ? Theme.formatLongDuration(PlaylistsController.viewedDurationMs)
+                              + (!root.viewingQueue ? Util.formatLongDuration(PlaylistsController.viewedDurationMs)
                                  : summaryChip.currentLeft > 0
-                                 ? qsTr("%1 left").arg(Theme.formatLongDuration(PlaylistController.queueUpcomingMs + summaryChip.currentLeft))
-                                 : Theme.formatLongDuration(PlaylistController.queueUpcomingMs))
+                                 ? qsTr("%1 left").arg(Util.formatLongDuration(PlaylistController.queueUpcomingMs + summaryChip.currentLeft))
+                                 : Util.formatLongDuration(PlaylistController.queueUpcomingMs))
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSizeSmall
                         elide: Text.ElideRight

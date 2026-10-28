@@ -87,7 +87,7 @@ Item {
 
             background: Rectangle {
                 radius: height / 2
-                color: field.activeFocus ? "#24ffffff" : "#14ffffff"
+                color: field.activeFocus ? Theme.fillStrong : Theme.fill
                 border.width: field.activeFocus ? 1 : 0
                 border.color: Theme.accent
 

@@ -28,12 +28,19 @@ ApplicationWindow {
     }
 
     // Background tone from the playing track's cover (blended by the strength
-    // set in Settings); fades on track change.
+    // set in Settings); fades on track change. Light mode blends a pastel of
+    // the cover's color (same hue, kept light), so dark covers can't muddy it.
+    readonly property color coverTone: Theme.isDark ? CoverPalette.color
+                                       : Qt.hsla(CoverPalette.color.hslHue, CoverPalette.color.hslSaturation, 0.86, 1)
     property color tint: CoverPalette.hasColor
-                         ? Qt.tint(Theme.background, Qt.rgba(CoverPalette.color.r, CoverPalette.color.g,
-                                                             CoverPalette.color.b, SettingsController.coverTintStrength))
+                         ? Qt.tint(Theme.background, Qt.rgba(coverTone.r, coverTone.g, coverTone.b,
+                                                             SettingsController.coverTintStrength))
                          : Theme.background
     Behavior on tint { ColorAnimation { duration: 800; easing.type: Easing.InOutQuad } }
+
+    // The tooltip style (frontend/style) can't read Theme: it takes these.
+    palette.toolTipBase: Theme.tooltip
+    palette.toolTipText: Theme.text
 
     width: 1100
     height: 680
@@ -126,7 +133,8 @@ ApplicationWindow {
         anchors.fill: parent
         gradient: Gradient {
             GradientStop { position: 0.0; color: window.tint }
-            GradientStop { position: 1.0; color: Qt.darker(window.tint, 2.2) }
+            // Dark mode: deepens to near black; light mode: only a slight shade.
+            GradientStop { position: 1.0; color: Qt.darker(window.tint, Theme.isDark ? 2.2 : 1.12) }
         }
     }
 
@@ -356,7 +364,7 @@ ApplicationWindow {
         anchors.fill: parent
         anchors.margins: Theme.cardGap
         radius: Theme.radiusCard
-        color: Qt.darker(window.tint, 1.6)
+        color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
         scale: 0.96 + 0.04 * drawer.position
         opacity: 0.4 + 0.6 * drawer.position
     }
