@@ -1,0 +1,541 @@
+#include "backend/audioengine/player/player.h"
+
+#include "backend/youtube/streamresolver/streamresolver.h"
+
+#include <algorithm>
+#include <cmath>
+#include <thread>
+
+namespace {
+
+using namespace std::chrono_literals;
+
+constexpr size_t Channels = Decoder::OutputChannels;
+constexpr size_t RingSamples = size_t(1) << 17; // ~1.4 s of stereo at 48 kHz
+constexpr auto WakeInterval = 10ms;
+constexpr auto PositionInterval = 50ms;
+constexpr uint64_t DipFrames = Decoder::OutputRate / 5;       // skip: 0.2 s fade-out ...
+constexpr uint64_t SkipRampFrames = Decoder::OutputRate * 3 / 10; // ... and 0.3 s fade-in
+constexpr float HalfPi = 1.57079632679f;
+
+// Equal-power curves: the sum of both sounds as loud as either alone.
+float fadeOut(float t) { return std::cos(std::min(t, 1.0f) * HalfPi); }
+float fadeIn(float t) { return std::sin(std::min(t, 1.0f) * HalfPi); }
+
+} // namespace
+
+Player::Player(std::string appName, Callbacks callbacks, StreamResolver *resolver)
+    : m_appName(std::move(appName))
+    , m_callbacks(std::move(callbacks))
+    , m_resolver(resolver)
+    , m_ring(RingSamples)
+    , m_thread(&Player::run, this)
+{
+}
+
+Player::~Player()
+{
+    post({CommandType::Quit, {}, 0});
+    m_thread.join();
+}
+
+void Player::load(const std::string &path) { post({CommandType::Load, path, 0}); }
+void Player::setNext(const std::string &path, int crossfadeMs) { post({CommandType::SetNext, path, crossfadeMs}); }
+void Player::setSkipFade(bool enabled) { m_skipFade.store(enabled, std::memory_order_relaxed); }
+void Player::unload() { post({CommandType::Unload, {}, 0}); }
+void Player::setOutputDevice(const std::string &deviceId) { post({CommandType::SetDevice, deviceId, 0}); }
+void Player::play() { post({CommandType::Play, {}, 0}); }
+void Player::pause() { post({CommandType::Pause, {}, 0}); }
+void Player::stop() { post({CommandType::Stop, {}, 0}); }
+void Player::seek(int64_t positionMs) { post({CommandType::Seek, {}, positionMs}); }
+
+void Player::setVolume(float volume)
+{
+    const float v = std::clamp(volume, 0.0f, 1.0f);
+    m_gain.store(v * v * v, std::memory_order_relaxed); // cubic: feels linear to the ear
+}
+
+void Player::post(Command command)
+{
+    {
+        std::lock_guard lock(m_mutex);
+        m_commands.push_back(std::move(command));
+    }
+    m_wake.notify_one();
+}
+
+void Player::run()
+{
+    if (!m_output.open(m_appName, Decoder::OutputRate, Decoder::OutputChannels,
+                       [this](float *dst, size_t frames) { return pull(dst, frames); }))
+        reportError(m_output.errorString());
+
+    std::unique_lock lock(m_mutex);
+    for (;;) {
+        m_wake.wait_for(lock, WakeInterval, [this] { return !m_commands.empty(); });
+        std::deque<Command> commands;
+        commands.swap(m_commands);
+        lock.unlock();
+
+        for (const Command &command : commands) {
+            if (command.type == CommandType::Quit) {
+                m_output.close();
+                m_decoder->close();
+                m_incoming.reset();
+                return;
+            }
+            handle(command);
+        }
+
+        fillBuffer();
+        applyTransitions();
+        checkFinished();
+        reportPosition(false);
+
+        lock.lock();
+    }
+}
+
+void Player::handle(const Command &command)
+{
+    switch (command.type) {
+    case CommandType::Load: {
+        const bool fade = m_skipFade.load(std::memory_order_relaxed) && m_state == State::Playing;
+        if (fade)
+            dipOut();
+        m_output.setActive(false);
+        m_transitions.clear();
+        m_nextPath.clear();
+        cancelCrossfade();
+        m_currentPath = command.path;
+        if (!openPath(command.path)) {
+            m_dipMuted.store(false, std::memory_order_relaxed);
+            setDuration(0);
+            resetTimeline(0);
+            setState(State::Stopped);
+            reportPosition(true);
+            return;
+        }
+        setDuration(m_decoder->durationMs());
+        resetTimeline(0);
+        if (fade) {
+            m_rampFrames = SkipRampFrames;
+            m_rampPos = 0;
+        }
+        fillBuffer(); // prefill so playback starts without an underrun
+        m_dipMuted.store(false, std::memory_order_relaxed);
+        m_output.setActive(true);
+        setState(State::Playing);
+        reportPosition(true);
+        break;
+    }
+
+    case CommandType::SetNext:
+        // Ignored once the next track is already in the buffer.
+        // (While fading into a track that is already heard, this queues the one after it.)
+        if (m_transitions.empty()) {
+            m_nextPath = command.path;
+            m_nextCrossfadeMs = int(command.ms);
+            if (m_resolver)
+                m_resolver->prefetch(command.path); // stream address ready before it is needed
+        }
+        break;
+
+    case CommandType::Unload:
+        m_output.setActive(false);
+        m_transitions.clear();
+        m_nextPath.clear();
+        cancelCrossfade();
+        m_currentPath.clear();
+        m_decoder->close();
+        setDuration(0);
+        resetTimeline(0);
+        setState(State::Stopped);
+        reportPosition(true);
+        break;
+
+    case CommandType::SetDevice:
+        m_output.setDevice(command.path);
+        break;
+
+    case CommandType::Play:
+        if (!m_decoder->isOpen() || m_state == State::Playing)
+            return;
+        m_output.setActive(true);
+        setState(State::Playing);
+        break;
+
+    case CommandType::Pause:
+        if (m_state != State::Playing)
+            return;
+        m_output.setActive(false);
+        setState(State::Paused);
+        reportPosition(true);
+        break;
+
+    case CommandType::Stop:
+        if (m_decoder->isOpen())
+            rewind();
+        break;
+
+    case CommandType::Seek: {
+        if (!m_decoder->isOpen() || !restoreCurrentDecoder())
+            return;
+        int64_t ms = std::max<int64_t>(command.ms, 0);
+        if (m_durationMs > 0)
+            ms = std::min(ms, m_durationMs);
+        if (!m_decoder->seek(ms)) {
+            reportError(m_decoder->errorString());
+            return;
+        }
+        resetTimeline(ms);
+        m_decodedFrames = uint64_t(ms) * Decoder::OutputRate / 1000;
+        reportPosition(true);
+        break;
+    }
+
+    case CommandType::Quit:
+        break;
+    }
+}
+
+// If the queued track was already opened (but is not heard yet), reopen the
+// current one so it can be seeked; the queued track stays queued.
+bool Player::restoreCurrentDecoder()
+{
+    if (m_incoming) {
+        if (m_transitions.empty()) {
+            finishCrossfade(); // the next track is already being heard: it becomes the current one
+            m_rampFrames = 0;
+            return true;
+        }
+        // Fading into the next track, not heard yet: m_decoder is still the current one.
+        m_nextPath = m_transitions.front().path;
+        m_transitions.clear();
+        cancelCrossfade();
+        return true;
+    }
+    if (m_transitions.empty())
+        return true;
+
+    m_nextPath = m_transitions.front().path;
+    m_transitions.clear();
+    return openPath(m_currentPath);
+}
+
+bool Player::openNext()
+{
+    const uint64_t boundary = m_ring.writeIndex();
+    const std::string path = std::move(m_nextPath);
+    m_nextPath.clear();
+
+    if (!openPath(path)) {
+        // Keep the current track seekable; it simply ends as if nothing was queued.
+        openPath(m_currentPath);
+        m_decoderDone = true;
+        return false;
+    }
+
+    m_transitions.push_back({boundary, path, m_decoder->durationMs()});
+    m_decoderDone = false;
+    return true;
+}
+
+bool Player::openPath(Decoder &decoder, const std::string &path)
+{
+    if (&decoder == m_decoder.get())
+        m_decodedFrames = 0;
+    std::optional<std::string> source = path;
+    if (m_resolver && StreamResolver::isYouTube(path)) {
+        source = m_resolver->resolve(path);
+        if (!source) {
+            decoder.close();
+            const std::string reason = m_resolver->lastError();
+            reportError(reason.empty() ? "Couldn't get the YouTube stream (is yt-dlp installed and up to date?)"
+                                       : reason);
+            return false;
+        }
+    }
+    if (!decoder.open(*source)) {
+        reportError(decoder.errorString());
+        return false;
+    }
+    return true;
+}
+
+void Player::rewind()
+{
+    m_output.setActive(false);
+    restoreCurrentDecoder();
+    m_decoder->seek(0);
+    resetTimeline(0);
+    m_decodedFrames = 0;
+    setState(State::Stopped);
+    reportPosition(true);
+}
+
+void Player::resetTimeline(int64_t ms)
+{
+    m_pending.clear();
+    m_pendingOffset = 0;
+    m_decoderDone = false;
+    m_baseIndex = m_ring.writeIndex();
+    m_ring.discardUntil(m_baseIndex);
+    m_baseMs = ms;
+}
+
+void Player::fillBuffer()
+{
+    if (!m_decoder->isOpen())
+        return;
+
+    for (;;) {
+        if (m_pendingOffset < m_pending.size()) {
+            // Keep whole frames together: write an even number of samples.
+            const size_t space = m_ring.writable() / Channels * Channels;
+            const size_t count = std::min(m_pending.size() - m_pendingOffset, space);
+            m_pendingOffset += m_ring.write(m_pending.data() + m_pendingOffset, count);
+            if (m_pendingOffset < m_pending.size())
+                return; // ring is full
+        }
+
+        if (m_decoderDone) {
+            // Current file fully buffered: continue with the queued one, if any.
+            if (m_nextPath.empty() || !openNext())
+                return;
+            continue;
+        }
+
+        m_pending.clear();
+        m_pendingOffset = 0;
+        const bool more = m_decoder->decode(m_pending);
+        m_decodedFrames += m_pending.size() / Channels;
+        if (more)
+            maybeStartCrossfade();
+        if (m_incoming)
+            mixIncoming(m_pending);
+        else
+            applyRampIn(m_pending);
+
+        if (!more) {
+            if (!m_decoder->errorString().empty())
+                reportError(m_decoder->errorString());
+            if (m_incoming) {
+                finishCrossfade(); // its leftover audio is now in m_pending
+                continue;
+            }
+            m_decoderDone = true;
+            m_endIndex = m_ring.writeIndex() + m_pending.size();
+        }
+    }
+}
+
+// The current file is within the crossfade length of its end: start decoding the
+// next one alongside it. Its position 0 is where the fade starts.
+void Player::maybeStartCrossfade()
+{
+    if (m_incoming || m_nextPath.empty() || m_nextCrossfadeMs <= 0)
+        return;
+    const int64_t duration = m_decoder->durationMs();
+    if (duration <= 0 || duration < 3 * int64_t(m_nextCrossfadeMs))
+        return; // unknown length, or a very short track: plain gapless
+    const int64_t decodedMs = int64_t(m_decodedFrames * 1000 / Decoder::OutputRate);
+    if (duration - decodedMs > m_nextCrossfadeMs)
+        return;
+
+    auto incoming = std::make_unique<Decoder>();
+    const std::string path = m_nextPath;
+    m_nextPath.clear();
+    if (!openPath(*incoming, path))
+        return; // the current track simply ends, as if nothing was queued
+
+    m_fadeFrames = std::max<uint64_t>(1, uint64_t(std::max<int64_t>(duration - decodedMs, 1))
+                                             * Decoder::OutputRate / 1000);
+    m_fadePos = 0;
+    m_incomingBuffer.clear();
+    m_incomingDone = false;
+    m_incomingFrames = 0;
+    // The chunk just decoded is the first one mixed; it is written next.
+    m_transitions.push_back({m_ring.writeIndex(), path, incoming->durationMs()});
+    m_incoming = std::move(incoming);
+}
+
+void Player::mixIncoming(std::vector<float> &chunk)
+{
+    const size_t frames = chunk.size() / Channels;
+    while (m_incomingBuffer.size() / Channels < frames && !m_incomingDone) {
+        std::vector<float> more;
+        if (!m_incoming->decode(more))
+            m_incomingDone = true;
+        m_incomingFrames += more.size() / Channels;
+        m_incomingBuffer.insert(m_incomingBuffer.end(), more.begin(), more.end());
+    }
+    const size_t available = std::min(frames, m_incomingBuffer.size() / Channels);
+    for (size_t f = 0; f < frames; ++f) {
+        const float t = float(m_fadePos + f) / float(m_fadeFrames);
+        const float out = fadeOut(t), in = fadeIn(t);
+        for (size_t c = 0; c < Channels; ++c) {
+            float &sample = chunk[f * Channels + c];
+            sample *= out;
+            if (f < available)
+                sample += m_incomingBuffer[f * Channels + c] * in;
+        }
+    }
+    m_incomingBuffer.erase(m_incomingBuffer.begin(), m_incomingBuffer.begin() + ptrdiff_t(available * Channels));
+    m_fadePos += frames;
+}
+
+void Player::finishCrossfade()
+{
+    // Whatever of the next track was decoded but not mixed yet comes next, still fading in
+    // if the current file ended earlier than its length said.
+    m_rampFrames = m_fadeFrames;
+    m_rampPos = std::min(m_fadePos, m_fadeFrames);
+    std::vector<float> leftover = std::move(m_incomingBuffer);
+    applyRampIn(leftover);
+    m_pending.insert(m_pending.end(), leftover.begin(), leftover.end());
+
+    m_decoder = std::move(m_incoming);
+    m_decodedFrames = m_incomingFrames;
+    m_decoderDone = m_incomingDone;
+    if (m_decoderDone)
+        m_endIndex = m_ring.writeIndex() + (m_pending.size() - m_pendingOffset);
+    m_incomingBuffer.clear();
+    m_incomingDone = false;
+}
+
+void Player::cancelCrossfade()
+{
+    m_incoming.reset();
+    m_incomingBuffer.clear();
+    m_incomingDone = false;
+    m_fadeFrames = m_fadePos = 0;
+    m_rampFrames = m_rampPos = 0;
+}
+
+void Player::applyRampIn(std::vector<float> &chunk)
+{
+    if (m_rampPos >= m_rampFrames)
+        return;
+    const size_t frames = chunk.size() / Channels;
+    for (size_t f = 0; f < frames && m_rampPos < m_rampFrames; ++f, ++m_rampPos) {
+        const float gain = fadeIn(float(m_rampPos) / float(m_rampFrames));
+        for (size_t c = 0; c < Channels; ++c)
+            chunk[f * Channels + c] *= gain;
+    }
+}
+
+// Asks the realtime thread to fade the output out, and waits until it has
+// (bounded: the device may not be pulling at all).
+void Player::dipOut()
+{
+    m_dipRemaining.store(int(DipFrames), std::memory_order_relaxed);
+    const auto deadline = std::chrono::steady_clock::now() + 400ms;
+    while (m_dipRemaining.load(std::memory_order_relaxed) > 0 && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(5ms);
+    m_dipRemaining.store(0, std::memory_order_relaxed);
+    m_dipMuted.store(true, std::memory_order_relaxed);
+}
+
+// Playback has reached a queued track: it becomes the current one.
+void Player::applyTransitions()
+{
+    while (!m_transitions.empty() && m_ring.readIndex() >= m_transitions.front().index) {
+        const Transition transition = std::move(m_transitions.front());
+        m_transitions.pop_front();
+
+        m_currentPath = transition.path;
+        m_baseIndex = transition.index;
+        m_baseMs = 0;
+        setDuration(transition.durationMs);
+        if (m_callbacks.trackChanged)
+            m_callbacks.trackChanged(transition.path);
+        reportPosition(true);
+    }
+}
+
+void Player::checkFinished()
+{
+    if (m_state != State::Playing || !m_decoderDone || !m_transitions.empty()
+        || m_ring.readIndex() < m_endIndex)
+        return;
+
+    rewind();
+    if (m_callbacks.trackFinished)
+        m_callbacks.trackFinished();
+}
+
+void Player::reportPosition(bool force)
+{
+    const auto now = std::chrono::steady_clock::now();
+    if (!force && (m_state != State::Playing || now - m_lastReport < PositionInterval))
+        return;
+    m_lastReport = now;
+
+    const int64_t position = currentPositionMs();
+    if (position == m_lastPositionMs)
+        return;
+    m_lastPositionMs = position;
+    if (m_callbacks.positionChanged)
+        m_callbacks.positionChanged(position);
+}
+
+int64_t Player::currentPositionMs() const
+{
+    const uint64_t read = m_ring.readIndex();
+    int64_t ms = m_baseMs;
+    if (read > m_baseIndex)
+        ms += int64_t((read - m_baseIndex) / Channels * 1000 / Decoder::OutputRate);
+    return m_durationMs > 0 ? std::min(ms, m_durationMs) : ms;
+}
+
+void Player::setState(State state)
+{
+    if (state == m_state)
+        return;
+    m_state = state;
+    if (m_callbacks.stateChanged)
+        m_callbacks.stateChanged(state);
+}
+
+void Player::setDuration(int64_t ms)
+{
+    m_durationMs = ms;
+    if (m_callbacks.durationChanged)
+        m_callbacks.durationChanged(ms);
+}
+
+void Player::reportError(const std::string &message)
+{
+    if (m_callbacks.error)
+        m_callbacks.error(message);
+}
+
+size_t Player::pull(float *dst, size_t frames)
+{
+    const size_t got = m_ring.read(dst, frames * Channels) / Channels;
+    if (m_dipMuted.load(std::memory_order_relaxed)) {
+        std::fill(dst, dst + got * Channels, 0.0f);
+        return got;
+    }
+    if (int remaining = m_dipRemaining.load(std::memory_order_relaxed); remaining > 0) {
+        // Skip: fade out over DipFrames, then silence until the new track starts.
+        for (size_t f = 0; f < got; ++f) {
+            const float gain = remaining > 0 ? fadeOut(1.0f - float(remaining) / float(DipFrames)) : 0.0f;
+            for (size_t c = 0; c < Channels; ++c)
+                dst[f * Channels + c] *= gain;
+            if (remaining > 0)
+                --remaining;
+        }
+        if (remaining == 0)
+            m_dipMuted.store(true, std::memory_order_relaxed);
+        m_dipRemaining.store(remaining, std::memory_order_relaxed);
+    }
+    m_spectrum.push(dst, got);
+    const float gain = m_gain.load(std::memory_order_relaxed);
+    if (gain != 1.0f) {
+        for (size_t i = 0; i < got * Channels; ++i)
+            dst[i] *= gain;
+    }
+    return got;
+}

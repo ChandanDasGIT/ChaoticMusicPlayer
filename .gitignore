@@ -1,0 +1,12 @@
+# Build output (also holds the screenshot harness binary and its images)
+build/
+
+# Personal / local files
+.claude/settings.local.json
+claude input.txt
+images
+
+# Editors
+*.user
+.vscode/
+.idea/

@@ -1,0 +1,427 @@
+#include "wrapper/playlist/playlistcontroller.h"
+
+#include "backend/playlist/playliststore/playliststore.h"
+#include "wrapper/player/playercontroller.h"
+#include "wrapper/settings/settingscontroller.h"
+
+#include <QJSEngine>
+#include <QStandardPaths>
+
+namespace {
+
+// "Previous" restarts the track instead when it has played longer than this.
+constexpr qint64 RestartThresholdMs = 3000;
+
+Playlist::SortColumn toBackend(int column)
+{
+    return Playlist::SortColumn(qBound(0, column, int(Playlist::SortColumn::Custom)));
+}
+
+Playlist::RepeatMode toBackendRepeat(int mode)
+{
+    return Playlist::RepeatMode(qBound(0, mode, int(Playlist::RepeatMode::One)));
+}
+
+} // namespace
+
+PlaylistController::PlaylistController(PlayerController *player, SettingsController *settings,
+                                       QObject *parent)
+    : QObject(parent)
+    , m_player(player)
+    , m_settings(settings)
+    , m_model(std::make_unique<PlaylistModel>(m_playlist, nullptr))
+{
+    Q_ASSERT(!s_instance);
+    s_instance = this;
+    QJSEngine::setObjectOwnership(m_model.get(), QJSEngine::CppOwnership);
+
+    m_storePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                  + QStringLiteral("/ChaoticMusicPlayer/playlist.tsv");
+
+    // Restore the last session (before QML exists, so no model signals are needed).
+    m_playlist.sort(toBackend(m_settings->sortColumn()), m_settings->sortDescending());
+    for (Playlist *list : {&m_playlist, &m_context}) {
+        list->setRepeatMode(toBackendRepeat(m_settings->repeatMode()));
+        list->setShuffle(m_settings->shuffle());
+    }
+    m_context.sort(Playlist::SortColumn::Custom, false);
+    if (m_settings->restorePlaylist())
+        m_playlist.setTracks(PlaylistStore::load(m_storePath.toStdString()));
+
+    connect(m_player, &PlayerController::trackChanged, this, &PlaylistController::onTrackChanged);
+    connect(m_player, &PlayerController::trackFinished, this, &PlaylistController::onTrackFinished);
+    // The song kept from a cleared Queue was stopped or replaced: forget it.
+    connect(m_player, &PlayerController::sourceChanged, this, [this] {
+        if (m_detached && !detachedTrack()) {
+            m_detached.reset();
+            emit currentChanged();
+        }
+    });
+    connect(m_settings, &SettingsController::crossfadeSecondsChanged, this, &PlaylistController::queueNext);
+}
+
+PlaylistController::~PlaylistController()
+{
+    save();
+    s_instance = nullptr;
+}
+
+PlaylistController *PlaylistController::create(QQmlEngine *, QJSEngine *)
+{
+    Q_ASSERT(s_instance);
+    QJSEngine::setObjectOwnership(s_instance, QJSEngine::CppOwnership);
+    return s_instance;
+}
+
+const ::Track *PlaylistController::currentTrack() const
+{
+    const int i = m_active->currentIndex();
+    if (i >= 0)
+        return &m_active->at(size_t(i));
+    return detachedTrack();
+}
+
+// The song still playing from a cleared Queue, if it is still the one loaded.
+const ::Track *PlaylistController::detachedTrack() const
+{
+    const bool playing = m_detached && m_active == &m_playlist
+                         && m_player->source() == QString::fromStdString(m_detached->path);
+    return playing ? &*m_detached : nullptr;
+}
+
+QString PlaylistController::currentTitle() const
+{
+    const ::Track *track = currentTrack();
+    return track ? QString::fromStdString(track->title) : QString();
+}
+
+QString PlaylistController::currentSubtitle() const
+{
+    const ::Track *track = currentTrack();
+    return track ? PlaylistModel::artistAlbum(*track) : QString();
+}
+
+QString PlaylistController::currentThumbnail() const
+{
+    const ::Track *track = currentTrack();
+    return track ? QString::fromStdString(track->thumbnailUrl) : QString();
+}
+
+// Queue first, then the playlist being played from.
+const ::Track *PlaylistController::trackForPath(const QString &path) const
+{
+    for (const Playlist *list : {&m_playlist, &m_context}) {
+        const int index = list->indexOf(path.toStdString());
+        if (index >= 0)
+            return &list->at(size_t(index));
+    }
+    if (const ::Track *detached = detachedTrack(); detached && detached->path == path.toStdString())
+        return detached;
+    return nullptr;
+}
+
+void PlaylistController::addAndPlay(std::vector<::Track> tracks, bool play)
+{
+    if (tracks.empty())
+        return;
+    const std::string first = tracks.front().path;
+    addTracks(std::move(tracks));
+    save();
+    if (play)
+        playIndex(m_playlist.indexOf(first));
+}
+
+void PlaylistController::playFromList(std::vector<::Track> tracks, int startIndex)
+{
+    if (startIndex < 0 || size_t(startIndex) >= tracks.size())
+        return;
+
+    // The Queue stops showing a playing row; it is otherwise untouched.
+    const int previousQueueRow = m_playlist.currentIndex();
+    m_playlist.deselect();
+    m_model->refreshCurrent(previousQueueRow);
+
+    m_context.setTracks(std::move(tracks));
+    m_context.select(startIndex);
+    const bool switched = m_active != &m_context;
+    m_active = &m_context;
+    if (switched)
+        emit playingFromListChanged();
+    emit currentChanged();
+    loadCurrent();
+}
+
+void PlaylistController::updateListTracks(std::vector<::Track> tracks)
+{
+    const ::Track *current = m_context.currentIndex() >= 0 ? &m_context.at(size_t(m_context.currentIndex())) : nullptr;
+    const std::string currentPath = current ? current->path : std::string();
+
+    m_context.setTracks(std::move(tracks));
+    if (const int index = m_context.indexOf(currentPath); index >= 0)
+        m_context.select(index);
+    if (m_active == &m_context) {
+        emit currentChanged();
+        queueNext();
+    }
+}
+
+void PlaylistController::activateQueue()
+{
+    if (m_active == &m_playlist)
+        return;
+    m_context.deselect();
+    m_active = &m_playlist;
+    emit playingFromListChanged();
+}
+
+void PlaylistController::setShuffle(bool shuffle)
+{
+    if (shuffle == m_playlist.shuffle())
+        return;
+    m_playlist.setShuffle(shuffle);
+    m_context.setShuffle(shuffle);
+    m_settings->setShuffle(shuffle);
+    emit shuffleChanged();
+    emit currentChanged(); // hasNext
+    queueNext();
+}
+
+void PlaylistController::setRepeatMode(RepeatMode mode)
+{
+    if (mode == repeatMode())
+        return;
+    m_playlist.setRepeatMode(toBackendRepeat(mode));
+    m_context.setRepeatMode(toBackendRepeat(mode));
+    m_settings->setRepeatMode(int(mode));
+    emit repeatModeChanged();
+    emit currentChanged(); // hasNext
+    queueNext();
+}
+
+void PlaylistController::cycleRepeatMode()
+{
+    setRepeatMode(RepeatMode((int(repeatMode()) + 1) % 3));
+}
+
+int PlaylistController::addTracks(std::vector<::Track> tracks, std::vector<std::string> *addedPaths)
+{
+    // The batch in album / disc / track order, then appended after the last song.
+    Playlist batch;
+    batch.setTracks(std::move(tracks)); // default sort: album, disc, track
+
+    int added = 0;
+    for (const ::Track &track : batch.tracks()) {
+        if (m_model->appendTrack(track)) {
+            ++added;
+            if (addedPaths)
+                addedPaths->push_back(track.path);
+        }
+    }
+
+    if (added > 0) {
+        setQueueCustomOrder();
+        emit countChanged();
+        emit currentChanged(); // hasNext may have changed
+        queueNext();           // e.g. the last track was playing and now there is a next one
+    }
+    return added;
+}
+
+void PlaylistController::setQueueCustomOrder()
+{
+    if (m_playlist.sortColumn() == Playlist::SortColumn::Custom)
+        return;
+    m_playlist.sort(Playlist::SortColumn::Custom, false); // keeps the current order
+    m_settings->setSort(int(Playlist::SortColumn::Custom), false);
+    emit sortChanged();
+}
+
+void PlaylistController::playFirstIfIdle(const std::vector<std::string> &paths)
+{
+    if (m_player->state() != PlayerController::Stopped)
+        return; // playing or paused: don't interrupt
+
+    int first = -1;
+    for (const std::string &path : paths) {
+        const int index = m_playlist.indexOf(path);
+        if (index >= 0 && (first < 0 || index < first))
+            first = index;
+    }
+    if (first >= 0)
+        playIndex(first);
+}
+
+void PlaylistController::save() const
+{
+    PlaylistStore::save(m_storePath.toStdString(), m_playlist.tracks());
+}
+
+void PlaylistController::playIndex(int index)
+{
+    if (index < 0 || index >= count())
+        return;
+    activateQueue();
+    changeCurrent([&] { m_playlist.select(index); });
+    loadCurrent();
+}
+
+void PlaylistController::removeIndex(int index)
+{
+    if (index < 0 || index >= count())
+        return;
+
+    // Only the Queue's playing row counts here (while playing from a playlist, there is none).
+    const bool removingCurrent = m_active == &m_playlist && index == m_playlist.currentIndex();
+    QString continueWith;
+    if (removingCurrent && m_player->playing()) {
+        const int next = m_playlist.nextIndex();
+        if (next >= 0 && next != index)
+            continueWith = pathAt(next);
+    }
+
+    m_model->removeTrack(index);
+    emit countChanged();
+
+    if (!removingCurrent) {
+        emit currentChanged(); // hasNext may have changed
+        queueNext();
+    } else if (!continueWith.isEmpty()) {
+        playIndex(m_playlist.indexOf(continueWith.toStdString()));
+    } else {
+        m_player->unload();
+        emit currentChanged();
+    }
+    save();
+}
+
+void PlaylistController::moveIndex(int from, int to)
+{
+    if (from < 0 || to < 0 || from >= count() || to >= count() || from == to)
+        return;
+    setQueueCustomOrder();
+    m_model->moveTrack(from, to);
+    emit currentChanged(); // hasNext / upcoming may have changed
+    queueNext();
+    save();
+}
+
+void PlaylistController::clear()
+{
+    if (count() == 0)
+        return;
+    // The playing song keeps playing (also from the Queue); nothing follows it.
+    if (m_active == &m_playlist) {
+        if (const ::Track *track = currentTrack(); track && m_player->hasTrack())
+            m_detached = *track;
+        m_player->setNext(QString());
+    }
+    m_model->clear();
+    emit countChanged();
+    emit currentChanged();
+    save();
+}
+
+QString PlaylistController::pathAt(int index) const
+{
+    return index >= 0 && index < count() ? QString::fromStdString(m_playlist.at(size_t(index)).path)
+                                         : QString();
+}
+
+void PlaylistController::playPause()
+{
+    if (m_player->hasTrack())
+        m_player->togglePlayPause();
+    else if (m_active->currentIndex() >= 0)
+        loadCurrent();
+    else if (count() > 0)
+        playIndex(0);
+}
+
+void PlaylistController::next()
+{
+    if (m_active->nextIndex() < 0)
+        return;
+    changeCurrent([&] { m_active->goNext(); });
+    loadCurrent();
+}
+
+void PlaylistController::previous()
+{
+    if (m_active->previousIndex() < 0 || m_player->position() > RestartThresholdMs) {
+        m_player->seek(0);
+        return;
+    }
+    changeCurrent([&] { m_active->goPrevious(); });
+    loadCurrent();
+}
+
+void PlaylistController::sortBy(int column)
+{
+    const Playlist::SortColumn sortColumn = toBackend(column);
+    const bool descending = sortColumn == m_playlist.sortColumn() ? !m_playlist.sortDescending() : false;
+
+    m_model->sort(sortColumn, descending);
+    m_settings->setSort(int(sortColumn), descending);
+    emit sortChanged();
+    emit currentChanged();
+    queueNext();
+    save();
+}
+
+void PlaylistController::changeCurrent(const std::function<void()> &change)
+{
+    const int previousQueueRow = m_playlist.currentIndex();
+    change();
+    m_model->refreshCurrent(previousQueueRow);
+    emit currentChanged();
+}
+
+void PlaylistController::loadCurrent()
+{
+    const ::Track *track = currentTrack();
+    if (!track || track == detachedTrack())
+        return;
+    m_detached.reset();
+    m_player->load(QString::fromStdString(track->path));
+    queueNext();
+}
+
+void PlaylistController::queueNext()
+{
+    const int current = m_active->currentIndex();
+    if (!m_player->hasTrack() || current < 0)
+        return;
+
+    const int next = m_active->repeatMode() == Playlist::RepeatMode::One ? current : m_active->nextIndex();
+    if (next < 0) {
+        m_player->setNext(QString());
+        return;
+    }
+    const ::Track &from = m_active->at(size_t(current));
+    const ::Track &to = m_active->at(size_t(next));
+    m_player->setNext(QString::fromStdString(to.path), continuesAlbum(from, to) ? 0 : m_settings->crossfadeSeconds() * 1000);
+}
+
+// The next track follows straight on in the same album (live or concept albums
+// run songs into each other): play those gaplessly, never crossfade them.
+bool PlaylistController::continuesAlbum(const ::Track &from, const ::Track &to)
+{
+    return !from.album.empty() && from.album == to.album && from.disc == to.disc && from.track > 0
+           && to.track == from.track + 1;
+}
+
+// The player continued gaplessly with the queued track.
+void PlaylistController::onTrackChanged(const QString &path)
+{
+    changeCurrent([&] { m_active->follow(path.toStdString()); });
+    queueNext();
+}
+
+// Reached the end with nothing queued (or the queued file failed to open).
+void PlaylistController::onTrackFinished()
+{
+    if (m_active->repeatMode() == Playlist::RepeatMode::One && m_active->currentIndex() >= 0)
+        loadCurrent();
+    else if (m_active->nextIndex() >= 0)
+        next();
+}

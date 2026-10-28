@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=ChaoticMusicPlayer
+GenericName=Music Player
+Comment=Play your music library, playlists and YouTube Music
+Exec=@EXEC@
+TryExec=@TRYEXEC@
+Icon=chaoticmusicplayer
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;player;audio;playlist;lyrics;youtube;
+StartupNotify=true
+StartupWMClass=ChaoticMusicPlayer
+SingleMainWindow=true

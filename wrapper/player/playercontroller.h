@@ -1,0 +1,134 @@
+#pragma once
+
+#include <QObject>
+#include <QString>
+#include <QThreadPool>
+#include <QVariantList>
+#include <QtQml/qqmlregistration.h>
+
+#include <memory>
+
+class Player;
+class SpectrumAnalyzer;
+class StreamResolver;
+class QJSEngine;
+class QQmlEngine;
+
+// Exposes the backend Player to QML as the `PlayerController` singleton.
+// Backend callbacks arrive on the player thread and are queued onto the GUI thread.
+class PlayerController : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
+
+    Q_PROPERTY(State state READ state NOTIFY stateChanged)
+    Q_PROPERTY(bool playing READ playing NOTIFY stateChanged)
+    Q_PROPERTY(qint64 position READ position NOTIFY positionChanged)
+    Q_PROPERTY(qint64 duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    Q_PROPERTY(bool muted READ muted WRITE setMuted NOTIFY mutedChanged)
+    Q_PROPERTY(bool hasTrack READ hasTrack NOTIFY sourceChanged)
+    Q_PROPERTY(QString source READ source NOTIFY sourceChanged)
+    Q_PROPERTY(QString title READ title NOTIFY sourceChanged)
+    Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
+    // e.g. "44.1 kHz · 941 kbps · FLAC"; empty until known
+    Q_PROPERTY(QString qualityText READ qualityText NOTIFY qualityTextChanged)
+    // Audio outputs: [{ id, name }]; id "" = system default (always first)
+    Q_PROPERTY(QVariantList outputDevices READ outputDevices NOTIFY outputDevicesChanged)
+    Q_PROPERTY(QString outputDevice READ outputDevice WRITE setOutputDevice NOTIFY outputDeviceChanged)
+
+public:
+    enum State { Stopped, Playing, Paused };
+    Q_ENUM(State)
+
+    // No default argument: otherwise QML would construct its own instance
+    // instead of calling create().
+    explicit PlayerController(QObject *parent);
+    ~PlayerController() override;
+
+    // QML singleton factory: returns the instance created in main().
+    static PlayerController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+
+    State state() const { return m_state; }
+    bool playing() const { return m_state == Playing; }
+    qint64 position() const { return m_position; }
+    qint64 duration() const { return m_duration; }
+    qreal volume() const { return m_volume; }
+    void setVolume(qreal volume);
+    bool muted() const { return m_muted; }
+    void setMuted(bool muted);
+    bool hasTrack() const { return !m_source.isEmpty(); }
+    QString source() const { return m_source; }
+    QString title() const;
+    QString errorString() const { return m_errorString; }
+    QString qualityText() const { return m_qualityText; }
+    QVariantList outputDevices() const { return m_outputDevices; }
+    QString outputDevice() const { return m_outputDevice; }
+    void setOutputDevice(const QString &deviceId);
+
+    Q_INVOKABLE void load(const QString &path);
+    Q_INVOKABLE void play();
+    Q_INVOKABLE void pause();
+    Q_INVOKABLE void togglePlayPause();
+    Q_INVOKABLE void stop();
+    Q_INVOKABLE void seek(qint64 positionMs);
+    // Stop and forget the current file (nothing playing afterwards).
+    Q_INVOKABLE void unload();
+
+    // Track to continue with when the current one ends (empty clears);
+    // crossfadeMs = 0: gapless.
+    void setNext(const QString &path, int crossfadeMs = 0);
+    // Short fade instead of a cut when switching tracks (Next, Previous, ...).
+    void setSkipFade(bool enabled);
+
+    // Re-reads the list of audio outputs (in the background).
+    Q_INVOKABLE void refreshOutputDevices();
+
+    // Browser whose YouTube session yt-dlp may use ("" = none).
+    void setYtCookiesBrowser(const QString &browser);
+
+    // Analysis of what is being played (for VisualizerController).
+    SpectrumAnalyzer &spectrum();
+
+signals:
+    void stateChanged();
+    void positionChanged();
+    void durationChanged();
+    void volumeChanged();
+    void mutedChanged();
+    void sourceChanged();
+    void errorStringChanged();
+    void qualityTextChanged();
+    void outputDevicesChanged();
+    void outputDeviceChanged();
+    void trackFinished();
+    void trackChanged(const QString &path); // gapless switch to the queued track
+    void seeked(qint64 positionMs);         // the user jumped to a new position
+
+private:
+    void setState(State state);
+    void setPosition(qint64 position);
+    void setDuration(qint64 duration);
+    void setErrorString(const QString &error);
+    void applyVolume();
+    void updateQuality();
+
+    static inline PlayerController *s_instance = nullptr;
+
+    State m_state = Stopped;
+    qint64 m_position = 0;
+    qint64 m_duration = 0;
+    qreal m_volume = 0.8;
+    bool m_muted = false;
+    QString m_source;
+    QString m_errorString;
+    QString m_qualityText;
+    int m_qualityGeneration = 0;
+    QVariantList m_outputDevices;
+    QString m_outputDevice;
+    QThreadPool m_probePool;
+
+    std::unique_ptr<StreamResolver> m_resolver; // before m_player: outlives it
+    std::unique_ptr<Player> m_player;
+};

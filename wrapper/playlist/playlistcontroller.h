@@ -1,0 +1,150 @@
+#pragma once
+
+#include "backend/library/track/track.h"
+#include "backend/playlist/playlist/playlist.h"
+#include "wrapper/playlist/playlistmodel.h" // full type needed for the Q_PROPERTY
+
+#include <QObject>
+#include <QString>
+#include <QtQml/qqmlregistration.h>
+
+#include <functional>
+#include <memory>
+#include <optional>
+#include <vector>
+
+class PlayerController;
+class QJSEngine;
+class QQmlEngine;
+class SettingsController;
+
+// Playlist logic for QML (`PlaylistController` singleton): the Queue (sorting,
+// saving / restoring it between sessions) and what plays next (shuffle /
+// repeat / gapless queueing).
+//
+// Playback runs from the *active list*: the Queue, or - after playFromList()
+// - a named playlist's songs (the "context"), which leaves the Queue untouched.
+// count / currentIndex / model / tracks describe the Queue; current* and
+// hasNext / upcomingMs describe whatever is playing.
+class PlaylistController : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
+
+    Q_PROPERTY(PlaylistModel *model READ model CONSTANT)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentChanged)
+    Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentChanged)
+    Q_PROPERTY(QString currentSubtitle READ currentSubtitle NOTIFY currentChanged)
+    Q_PROPERTY(QString currentThumbnail READ currentThumbnail NOTIFY currentChanged) // YouTube tracks
+    Q_PROPERTY(bool hasNext READ hasNext NOTIFY currentChanged)
+    // Length of everything that plays after the current track.
+    Q_PROPERTY(qint64 upcomingMs READ upcomingMs NOTIFY currentChanged)
+    // Same, for the Queue only (its whole length while a playlist plays).
+    Q_PROPERTY(qint64 queueUpcomingMs READ queueUpcomingMs NOTIFY currentChanged)
+    Q_PROPERTY(SortColumn sortColumn READ sortColumn NOTIFY sortChanged)
+    Q_PROPERTY(bool sortDescending READ sortDescending NOTIFY sortChanged)
+    Q_PROPERTY(bool shuffle READ shuffle WRITE setShuffle NOTIFY shuffleChanged)
+    Q_PROPERTY(RepeatMode repeatMode READ repeatMode WRITE setRepeatMode NOTIFY repeatModeChanged)
+    // true while playing from a named playlist instead of the Queue
+    Q_PROPERTY(bool playingFromList READ playingFromList NOTIFY playingFromListChanged)
+
+public:
+    // Same order as Playlist::SortColumn. (`Track` here hides the ::Track struct.)
+    // Custom = not sorted: the order the tracks were added in.
+    enum SortColumn { Title, ArtistAlbum, Track, Duration, Custom };
+    Q_ENUM(SortColumn)
+
+    // Same order as Playlist::RepeatMode.
+    enum RepeatMode { RepeatOff, RepeatAll, RepeatOne };
+    Q_ENUM(RepeatMode)
+
+    PlaylistController(PlayerController *player, SettingsController *settings, QObject *parent);
+    ~PlaylistController() override;
+
+    static PlaylistController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
+
+    PlaylistModel *model() const { return m_model.get(); }
+    int count() const { return int(m_playlist.size()); }
+    int currentIndex() const { return m_playlist.currentIndex(); } // playing row of the Queue, or -1
+    QString currentTitle() const;
+    QString currentSubtitle() const;
+    const ::Track *currentTrack() const; // nullptr when nothing is current
+    const ::Track *trackForPath(const QString &path) const;
+    QString currentThumbnail() const;
+    const std::vector<::Track> &tracks() const { return m_playlist.tracks(); }
+    bool hasNext() const { return m_active->nextIndex() >= 0; }
+    qint64 upcomingMs() const { return m_active->upcomingDurationMs(); }
+    qint64 queueUpcomingMs() const { return m_playlist.upcomingDurationMs(); }
+    bool playingFromList() const { return m_active == &m_context; }
+    SortColumn sortColumn() const { return SortColumn(m_playlist.sortColumn()); }
+    bool sortDescending() const { return m_playlist.sortDescending(); }
+    bool shuffle() const { return m_playlist.shuffle(); }
+    void setShuffle(bool shuffle);
+    RepeatMode repeatMode() const { return RepeatMode(m_playlist.repeatMode()); }
+    void setRepeatMode(RepeatMode mode);
+
+    // Appends tracks to the Queue (each batch ordered album / disc / track),
+    // skipping duplicates; returns how many were added. A Queue sorted by a column
+    // becomes custom order. Paths of the added tracks go to `addedPaths` if given.
+    int addTracks(std::vector<::Track> tracks, std::vector<std::string> *addedPaths = nullptr);
+    // If nothing is playing or paused, plays whichever of `paths` comes first in
+    // the playlist (used after a folder drop).
+    void playFirstIfIdle(const std::vector<std::string> &paths);
+    // Adds tracks (e.g. from YouTube) and, if `play`, starts the first of them.
+    void addAndPlay(std::vector<::Track> tracks, bool play);
+    // Plays `tracks` (a named playlist) from `startIndex`, without touching the Queue.
+    void playFromList(std::vector<::Track> tracks, int startIndex);
+    // The playing playlist changed (songs added / removed): keep playing the same song.
+    void updateListTracks(std::vector<::Track> tracks);
+    void save() const;
+
+    Q_INVOKABLE void playIndex(int index);
+    // Removing the playing track moves on to the next one if music is playing,
+    // otherwise stops.
+    Q_INVOKABLE void removeIndex(int index);
+    // Manual reordering (drag handle); the Queue becomes custom order.
+    Q_INVOKABLE void moveIndex(int from, int to);
+    Q_INVOKABLE void clear();
+    Q_INVOKABLE QString pathAt(int index) const;
+    Q_INVOKABLE void playPause();
+    Q_INVOKABLE void next();
+    Q_INVOKABLE void previous();
+    // Sorts by `column`; the same column again reverses the order.
+    Q_INVOKABLE void sortBy(int column);
+    // Off -> All -> One -> Off
+    Q_INVOKABLE void cycleRepeatMode();
+
+signals:
+    void countChanged();
+    void currentChanged();
+    void sortChanged();
+    void shuffleChanged();
+    void repeatModeChanged();
+    void playingFromListChanged();
+
+private:
+    // Runs `change` on the playlist and notifies the model / QML about the new current track.
+    void changeCurrent(const std::function<void()> &change);
+    void loadCurrent();
+    const ::Track *detachedTrack() const;
+    void queueNext(); // tells the player what to continue with gaplessly
+    static bool continuesAlbum(const ::Track &from, const ::Track &to);
+    void onTrackChanged(const QString &path);
+    void onTrackFinished();
+    void activateQueue();      // back to playing from the Queue
+    void setQueueCustomOrder(); // the Queue is no longer sorted by a column
+
+    static inline PlaylistController *s_instance = nullptr;
+
+    PlayerController *m_player;
+    SettingsController *m_settings;
+    QString m_storePath;
+    Playlist m_playlist;                    // the Queue
+    std::unique_ptr<PlaylistModel> m_model; // after m_playlist: destroyed first
+    Playlist m_context;                     // the named playlist being played from
+    Playlist *m_active = &m_playlist;
+    // The song that keeps playing after the Queue was cleared (until it ends or is stopped).
+    std::optional<::Track> m_detached;
+};
