@@ -5,6 +5,8 @@
 #include "wrapper/settings/settingscontroller.h"
 
 #include <QJSEngine>
+
+#include <algorithm>
 #include <QStandardPaths>
 
 namespace {
@@ -424,14 +426,60 @@ void PlaylistController::changeCurrent(const std::function<void()> &change)
     emit currentChanged();
 }
 
-void PlaylistController::loadCurrent()
+void PlaylistController::loadCurrent(qint64 startMs, bool paused)
 {
     const ::Track *track = currentTrack();
     if (!track || track == detachedTrack())
         return;
     m_detached.reset();
-    m_player->load(QString::fromStdString(track->path));
+    if (paused)
+        m_player->loadPaused(QString::fromStdString(track->path), startMs);
+    else
+        m_player->load(QString::fromStdString(track->path));
     queueNext();
+}
+
+bool PlaylistController::resumeInQueue(const QString &path, qint64 positionMs)
+{
+    const int index = m_playlist.indexOf(path.toStdString());
+    if (index < 0)
+        return false;
+    activateQueue();
+    changeCurrent([&] { m_playlist.select(index); });
+    loadCurrent(positionMs, true);
+    return true;
+}
+
+bool PlaylistController::resumeFromList(std::vector<::Track> tracks, const QString &path, qint64 positionMs)
+{
+    // As playFromList(), but loaded paused at the saved position.
+    const bool found = std::any_of(tracks.begin(), tracks.end(),
+                                   [&](const ::Track &track) { return track.path == path.toStdString(); });
+    if (!found)
+        return false;
+    const int previousQueueRow = m_playlist.currentIndex();
+    m_playlist.deselect();
+    m_model->refreshCurrent(previousQueueRow);
+    m_context.setTracks(std::move(tracks));
+    m_context.select(m_context.indexOf(path.toStdString()));
+    const bool switched = m_active != &m_context;
+    m_active = &m_context;
+    if (switched)
+        emit playingFromListChanged();
+    emit currentChanged();
+    loadCurrent(positionMs, true);
+    return true;
+}
+
+bool PlaylistController::resumeAlone(const ::Track &track, qint64 positionMs)
+{
+    if (track.path.empty())
+        return false;
+    activateQueue();
+    m_detached = track; // shown as the current song, like after clearing the Queue
+    m_player->loadPaused(QString::fromStdString(track.path), positionMs);
+    emit currentChanged();
+    return true;
 }
 
 void PlaylistController::queueNext()

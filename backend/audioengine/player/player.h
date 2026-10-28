@@ -61,7 +61,8 @@ public:
     Player(const Player &) = delete;
     Player &operator=(const Player &) = delete;
 
-    void load(const std::string &path); // opens the file and starts playing; clears the queued track
+    // Opens the file and starts playing (or stays paused) at `startMs`; clears the queued track.
+    void load(const std::string &path, int64_t startMs = 0, bool paused = false);
     // Track to continue with when the current one ends; empty clears.
     // crossfadeMs = 0: gapless; otherwise overlap and fade over that long.
     void setNext(const std::string &path, int crossfadeMs = 0);
@@ -85,6 +86,7 @@ private:
         CommandType type;
         std::string path;
         int64_t ms = 0;
+        bool paused = false; // Load: stay paused once opened
     };
 
     // A queued track that is already in the ring buffer, starting at `index`.

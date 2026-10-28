@@ -100,6 +100,11 @@ public:
     void playNext(const std::vector<::Track> &tracks);
     // Plays `tracks` (a named playlist) from `startIndex`, without touching the Queue.
     void playFromList(std::vector<::Track> tracks, int startIndex);
+    // Resuming the last session: the song is loaded paused at `positionMs`.
+    // false if the song isn't there.
+    bool resumeInQueue(const QString &path, qint64 positionMs);
+    bool resumeFromList(std::vector<::Track> tracks, const QString &path, qint64 positionMs);
+    bool resumeAlone(const ::Track &track, qint64 positionMs); // in neither (e.g. the Queue was cleared)
     // The playing playlist changed (songs added / removed): keep playing the same song.
     void updateListTracks(std::vector<::Track> tracks);
     void save() const;
@@ -131,7 +136,7 @@ signals:
 private:
     // Runs `change` on the playlist and notifies the model / QML about the new current track.
     void changeCurrent(const std::function<void()> &change);
-    void loadCurrent();
+    void loadCurrent(qint64 startMs = 0, bool paused = false);
     const ::Track *detachedTrack() const;
     void placeNext(Playlist &list, const ::Track &track, int placed);
     void queueNext(); // tells the player what to continue with gaplessly

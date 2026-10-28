@@ -8,6 +8,7 @@
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/playlists/playlistscontroller.h"
+#include "wrapper/session/sessioncontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 #include "wrapper/visualizer/visualizercontroller.h"
 #include "wrapper/singleinstance/singleinstance.h"
@@ -61,6 +62,9 @@ int main(int argc, char *argv[])
     YouTubeController youtube(&playlist, &settings, nullptr);
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
+    // Reopen the last song, paused where it was (Settings > General).
+    SessionController session(&player, &playlist, &playlists, &settings, nullptr);
+    session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);
     // Crossfade on: switching tracks fades too, instead of cutting.
     player.setSkipFade(settings.crossfadeSeconds() > 0);

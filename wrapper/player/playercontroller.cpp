@@ -117,6 +117,16 @@ void PlayerController::load(const QString &path)
     m_player->load(path.toStdString());
 }
 
+void PlayerController::loadPaused(const QString &path, qint64 positionMs)
+{
+    setErrorString({});
+    setPosition(positionMs); // shown at once, before the file is open (and before
+                             // sourceChanged, whose listeners may save it)
+    m_source = path;
+    emit sourceChanged();
+    m_player->load(path.toStdString(), positionMs, true);
+}
+
 void PlayerController::play()
 {
     m_player->play();

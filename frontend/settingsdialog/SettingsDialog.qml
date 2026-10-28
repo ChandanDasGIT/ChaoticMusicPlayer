@@ -210,6 +210,17 @@ Popup {
 
                         SettingsRow {
                             Layout.fillWidth: true
+                            title: qsTr("Resume where you left off")
+                            description: qsTr("Reopen on the last song, paused where it was.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.resumeSession
+                                onToggled: SettingsController.resumeSession = checked
+                            }
+                        }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
                             title: qsTr("Keep playing after closing the window")
                             description: qsTr("Closing hides the window; open the app again to bring it back. Quit with the power button or Ctrl+Q.")
 

@@ -29,6 +29,11 @@ constexpr const char *VolumeStepKey = "volume.step";
 constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
 constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *ResumeKey = "playback.resume";
+constexpr const char *SessionPathKey = "session.path";
+constexpr const char *SessionPositionKey = "session.positionMs";
+constexpr const char *SessionDurationKey = "session.durationMs";
+constexpr const char *SessionListKey = "session.list";
 constexpr const char *OldDarkModeKey = "appearance.dark"; // before "Follow system": a dark / light switch
 constexpr const char *OutputDeviceKey = "audio.outputDevice";
 constexpr const char *ShowRemainingKey = "seekbar.showRemaining";
@@ -233,6 +238,52 @@ void SettingsController::setBackgroundPlayback(bool enabled)
     m_settings->setBool(BackgroundPlaybackKey, enabled);
     scheduleSave();
     emit backgroundPlaybackChanged();
+}
+
+bool SettingsController::resumeSession() const
+{
+    return m_settings->boolValue(ResumeKey, true);
+}
+
+void SettingsController::setResumeSession(bool resume)
+{
+    if (resume == resumeSession())
+        return;
+    m_settings->setBool(ResumeKey, resume);
+    scheduleSave();
+    emit resumeSessionChanged();
+}
+
+QString SettingsController::sessionPath() const
+{
+    return QString::fromStdString(m_settings->value(SessionPathKey));
+}
+
+qint64 SettingsController::sessionPosition() const
+{
+    return QString::fromStdString(m_settings->value(SessionPositionKey)).toLongLong();
+}
+
+qint64 SettingsController::sessionDuration() const
+{
+    return QString::fromStdString(m_settings->value(SessionDurationKey)).toLongLong();
+}
+
+QString SettingsController::sessionList() const
+{
+    return QString::fromStdString(m_settings->value(SessionListKey));
+}
+
+void SettingsController::setSession(const QString &path, qint64 positionMs, qint64 durationMs, const QString &list)
+{
+    const std::string position = std::to_string(positionMs);
+    if (path == sessionPath() && m_settings->value(SessionPositionKey) == position && list == sessionList())
+        return;
+    m_settings->setValue(SessionPathKey, path.toStdString());
+    m_settings->setValue(SessionPositionKey, position);
+    m_settings->setValue(SessionDurationKey, std::to_string(durationMs));
+    m_settings->setValue(SessionListKey, list.toStdString());
+    scheduleSave();
 }
 
 QString SettingsController::themeMode() const

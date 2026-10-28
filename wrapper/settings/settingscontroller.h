@@ -34,6 +34,7 @@ class SettingsController : public QObject
     Q_PROPERTY(bool restorePlaylist READ restorePlaylist WRITE setRestorePlaylist NOTIFY restorePlaylistChanged)
     Q_PROPERTY(bool backgroundPlayback READ backgroundPlayback WRITE setBackgroundPlayback NOTIFY backgroundPlaybackChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
+    Q_PROPERTY(bool resumeSession READ resumeSession WRITE setResumeSession NOTIFY resumeSessionChanged)
     Q_PROPERTY(int volumeStep READ volumeStep WRITE setVolumeStep NOTIFY volumeStepChanged)
     Q_PROPERTY(bool showRemainingTime READ showRemainingTime WRITE setShowRemainingTime NOTIFY showRemainingTimeChanged)
     // Seconds the end of a song overlaps the next one (0 = gapless)
@@ -88,6 +89,16 @@ public:
     void setBackgroundPlayback(bool enabled);
     QString themeMode() const; // "system" (follow the desktop), "dark" (default) or "light"
     void setThemeMode(const QString &mode);
+    bool resumeSession() const; // reopen on the last song, paused where it was
+    void setResumeSession(bool resume);
+
+    // The last session (SessionController): song, position, length, and the
+    // list it played from ("queue" or a playlist id).
+    QString sessionPath() const;
+    qint64 sessionPosition() const;
+    qint64 sessionDuration() const;
+    QString sessionList() const;
+    void setSession(const QString &path, qint64 positionMs, qint64 durationMs, const QString &list);
     QString outputDevice() const;    // "" = system default; applied by main()
     void setOutputDevice(const QString &deviceId);
     int volumeStep() const;          // percent per mouse-wheel notch
@@ -146,6 +157,7 @@ signals:
     void restorePlaylistChanged();
     void backgroundPlaybackChanged();
     void themeModeChanged();
+    void resumeSessionChanged();
     void showRemainingTimeChanged();
     void crossfadeSecondsChanged();
     void lyricsSourcesChanged();

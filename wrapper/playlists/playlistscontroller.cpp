@@ -123,6 +123,15 @@ void PlaylistsController::playViewed(int index)
     setPlayingFrom(m_viewedId);
 }
 
+bool PlaylistsController::resumePlaylist(const QString &id, const QString &path, qint64 positionMs)
+{
+    const PlaylistLibrary::Entry *entry = m_library->find(id.toStdString());
+    if (!entry || !m_queue->resumeFromList(entry->tracks, path, positionMs))
+        return false;
+    setPlayingFrom(id);
+    return true;
+}
+
 void PlaylistsController::removeFromViewed(int index)
 {
     if (m_viewedId.isEmpty())

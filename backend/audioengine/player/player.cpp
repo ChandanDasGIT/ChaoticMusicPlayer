@@ -39,7 +39,10 @@ Player::~Player()
     m_thread.join();
 }
 
-void Player::load(const std::string &path) { post({CommandType::Load, path, 0}); }
+void Player::load(const std::string &path, int64_t startMs, bool paused)
+{
+    post({CommandType::Load, path, startMs, paused});
+}
 void Player::setNext(const std::string &path, int crossfadeMs) { post({CommandType::SetNext, path, crossfadeMs}); }
 void Player::setSkipFade(bool enabled) { m_skipFade.store(enabled, std::memory_order_relaxed); }
 void Player::unload() { post({CommandType::Unload, {}, 0}); }
@@ -117,15 +120,27 @@ void Player::handle(const Command &command)
             return;
         }
         setDuration(m_decoder->durationMs());
-        resetTimeline(0);
-        if (fade) {
+        // Resuming: start where the listener left off (from the start if that fails).
+        int64_t start = std::max<int64_t>(command.ms, 0);
+        if (m_durationMs > 0)
+            start = std::min(start, m_durationMs);
+        if (start > 0 && m_decoder->seek(start))
+            m_decodedFrames = uint64_t(start) * Decoder::OutputRate / 1000;
+        else
+            start = 0;
+        resetTimeline(start);
+        if (fade && !command.paused) {
             m_rampFrames = SkipRampFrames;
             m_rampPos = 0;
         }
         fillBuffer(); // prefill so playback starts without an underrun
         m_dipMuted.store(false, std::memory_order_relaxed);
-        m_output.setActive(true);
-        setState(State::Playing);
+        if (command.paused) {
+            setState(State::Paused); // the output starts on Play
+        } else {
+            m_output.setActive(true);
+            setState(State::Playing);
+        }
         reportPosition(true);
         break;
     }

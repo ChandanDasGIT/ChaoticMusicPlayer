@@ -68,6 +68,8 @@ public:
     void setOutputDevice(const QString &deviceId);
 
     Q_INVOKABLE void load(const QString &path);
+    // Loads `path` paused at `positionMs` (resuming the last session).
+    void loadPaused(const QString &path, qint64 positionMs);
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
     Q_INVOKABLE void togglePlayPause();

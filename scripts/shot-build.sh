@@ -29,8 +29,18 @@ hook = '''    // ---- screenshot harness
             song.insert(QStringLiteral("thumbnail"), qEnvironmentVariable("SHOT_THUMB"));
             youtube.play(song);
         }
-        else
-            playlist.playIndex(0);
+        else if (!qEnvironmentVariableIsSet("SHOT_NO_PLAY")) // (SHOT_NO_PLAY: e.g. to see a resumed session)
+            playlist.playIndex(qEnvironmentVariableIntValue("SHOT_PLAY_AT"));
+        if (qEnvironmentVariableIsSet("SHOT_SEEK")) // ms, a moment after starting
+            QTimer::singleShot(600, [&] { player.seek(qEnvironmentVariableIntValue("SHOT_SEEK")); });
+        if (qEnvironmentVariableIsSet("SHOT_STATE")) // print what is loaded, now and later
+            for (int t : {0, 1500})
+                QTimer::singleShot(t, [&, t] {
+                    std::printf("state +%dms: source=%s pos=%lld playing=%d title=%s fromList=%d\\n", t,
+                                qPrintable(QFileInfo(player.source()).fileName()), qint64(player.position()),
+                                int(player.playing()), qPrintable(playlist.currentTitle()), int(playlist.playingFromList()));
+                    std::fflush(stdout);
+                });
         if (qEnvironmentVariableIsSet("SHOT_ADD_DIR")) // like dropping a folder
             library.addUrls({QUrl::fromLocalFile(qEnvironmentVariable("SHOT_ADD_DIR"))});
         if (qEnvironmentVariableIsSet("SHOT_VIEW")) {

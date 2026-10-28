@@ -109,6 +109,8 @@ qt_add_executable(ChaoticMusicPlayer
     # Not QML types, so not part of the QML module below
     wrapper/mpris/mprisadaptor.cpp
     wrapper/mpris/mprisadaptor.h
+    wrapper/session/sessioncontroller.cpp
+    wrapper/session/sessioncontroller.h
     wrapper/singleinstance/singleinstance.cpp
     wrapper/singleinstance/singleinstance.h
 )

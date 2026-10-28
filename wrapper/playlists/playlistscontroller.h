@@ -61,6 +61,8 @@ public:
     qint64 viewedDurationMs() const;
     QString playingFromId() const { return m_playingFromId; }
     QString playingFromName() const;
+    // Resuming the last session in playlist `id` (false if it or the song is gone).
+    bool resumePlaylist(const QString &id, const QString &path, qint64 positionMs);
 
     Q_INVOKABLE void view(const QString &id); // "" = back to the Queue
     Q_INVOKABLE void playViewed(int index);   // load the viewed playlist into the Queue and play
