@@ -181,6 +181,15 @@ hook = '''    // ---- screenshot harness
         QTimer::singleShot(2350, [send] { send(QEvent::MouseButtonRelease, clickPos, Qt::NoButton); });
         QTimer::singleShot(2600, [&] { std::printf("after click pinned=%d\\n", int(settings.playlistPinned())); });
     }
+    if (qEnvironmentVariableIsSet("SHOT_PANEL_SIZES")) // print the size of every visible panel card
+        QTimer::singleShot(3000, [&, findItems] {
+            for (const char *type : {"PlaylistPanel", "YouTubePanel", "LibraryPanel"})
+                for (QQuickItem *panel : findItems(type))
+                    if (panel->isVisible() && panel->opacity() > 0.99)
+                        std::printf("%s: x=%.0f width=%.0f height=%.0f\\n", type, panel->mapToScene({0, 0}).x(), panel->width(),
+                                    panel->height());
+            std::fflush(stdout);
+        });
     if (qEnvironmentVariableIsSet("SHOT_TOOLTIP")) // hover the settings button like a real mouse
         QTimer::singleShot(2000, [&, findItems] {
             auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());

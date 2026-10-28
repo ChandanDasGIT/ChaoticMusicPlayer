@@ -13,8 +13,19 @@ ApplicationWindow {
     readonly property bool playlistDocked: !compact && SettingsController.playlistPinned
     readonly property bool youtubeDocked: !compact && SettingsController.youtubePanelPinned
     readonly property bool libraryDocked: !compact && SettingsController.libraryPanelPinned
+    // The width a panel would have if it were pinned right now (the window split
+    // equally between the open columns), so a sliding panel matches its pinned
+    // size. The right-hand side holds one panel at a time (YouTube or Library).
+    function pinnedWidth(rightSide, minimumWidth) {
+        const otherSide = rightSide ? playlistDocked : (youtubeDocked || libraryDocked)
+        const columns = 2 + (otherSide ? 1 : 0)
+        return Math.max(minimumWidth, (split.width - (columns - 1) * Theme.cardGap) / columns)
+    }
+    // Drawer width for a panel: its pinned width plus the gap around its card.
     // Phone size: an opened panel covers the whole window, nothing peeks through.
-    function drawerWidth(normal) { return compact ? width : Math.min(width * 0.9, normal) }
+    function drawerWidth(rightSide, minimumWidth) {
+        return compact ? width : Math.min(width, pinnedWidth(rightSide, minimumWidth) + 2 * Theme.cardGap)
+    }
 
     // Background tone from the playing track's cover (blended by the strength
     // set in Settings); fades on track change.
@@ -193,7 +204,7 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(440 + Theme.cardGap)
+        width: window.drawerWidth(false, playlistSlot.minimumWidth)
         height: window.height
         padding: 0
         interactive: !window.playlistDocked
@@ -228,7 +239,7 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(440 + Theme.cardGap)
+        width: window.drawerWidth(true, youtubeSlot.minimumWidth)
         height: window.height
         padding: 0
         interactive: !window.youtubeDocked && !drawerYoutube.swipeBlocked
@@ -267,7 +278,7 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(520 + Theme.cardGap)
+        width: window.drawerWidth(true, librarySlot.minimumWidth)
         height: window.height
         padding: 0
         interactive: !window.libraryDocked
