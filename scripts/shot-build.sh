@@ -190,6 +190,29 @@ hook = '''    // ---- screenshot harness
                                     panel->height());
             std::fflush(stdout);
         });
+    if (qEnvironmentVariableIsSet("SHOT_KEYS")) { // press these key sequences (space-separated), print the state after each
+        const QStringList keys = qEnvironmentVariable("SHOT_KEYS").split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        for (int i = 0; i < keys.size(); ++i)
+            QTimer::singleShot(2000 + i * 400, [&, keys, i] {
+                auto *w = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+                QTest::keySequence(w, QKeySequence(keys[i]));
+                QTimer::singleShot(250, [&, w, key = keys[i]] {
+                    QObject *root = engine.rootObjects().constFirst();
+                    const auto opened = [&](const char *name) {
+                        QObject *o = root->findChild<QObject *>(name);
+                        return o && o->property("opened").toBool() ? 1 : 0;
+                    };
+                    QObject *now = root->findChild<QObject *>("nowPlaying");
+                    QQuickItem *focus = w->activeFocusItem();
+                    std::printf("%-12s playing=%d pos=%5lld vol=%.2f muted=%d shuffle=%d repeat=%d index=%d title=%s lyrics=%d queueDrawer=%d yt=%d lib=%d focus=%s\\n",
+                                qPrintable(key), int(player.playing()), qint64(player.position()), player.volume(), int(player.muted()),
+                                int(playlist.shuffle()), int(playlist.repeatMode()), playlist.currentIndex(), qPrintable(playlist.currentTitle()),
+                                now ? int(now->property("lyricsOpen").toBool()) : -1, opened("playlistDrawer"), opened("youtubeDrawer"),
+                                opened("libraryDrawer"), focus ? focus->metaObject()->className() : "none");
+                    std::fflush(stdout);
+                });
+            });
+    }
     if (qEnvironmentVariableIsSet("SHOT_TOOLTIP")) // hover the settings button like a real mouse
         QTimer::singleShot(2000, [&, findItems] {
             auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());

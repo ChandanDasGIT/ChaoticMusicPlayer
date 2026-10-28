@@ -17,6 +17,12 @@ Rectangle {
     // A drag inside must not close the drawer holding this panel (see YtHomeView).
     readonly property bool swipeBlocked: homeView.swipeBlocked
 
+    // Ctrl+F: the Search tab, ready to type.
+    function focusSearch() {
+        tab = 1
+        searchView.focusField()
+    }
+
     signal pinToggled()
     signal closeRequested()
     signal settingsRequested()
@@ -163,6 +169,7 @@ Rectangle {
             }
 
             YtSearchView {
+                id: searchView
                 anchors.fill: parent
                 opacity: root.tab === 1 ? 1 : 0
                 visible: opacity > 0

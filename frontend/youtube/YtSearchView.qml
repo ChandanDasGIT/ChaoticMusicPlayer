@@ -8,6 +8,11 @@ import QtQuick.Layouts
 Item {
     id: root
 
+    function focusField() {
+        field.forceActiveFocus()
+        field.selectAll()
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: Theme.spacing

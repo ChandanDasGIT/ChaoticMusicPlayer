@@ -603,6 +603,77 @@ Popup {
                     }
                 }
 
+                SettingsCard {
+                    title: qsTr("Keyboard shortcuts")
+
+                    // Mirrors frontend/layout/AppShortcuts.qml.
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        columnSpacing: Theme.padding
+                        rowSpacing: 6
+
+                        Repeater {
+                            model: [
+                                [qsTr("Play / pause"), "Space"],
+                                [qsTr("Next / previous song"), "Ctrl+→  /  Ctrl+←"],
+                                [qsTr("Seek 5 s forward / back"), "→  /  ←"],
+                                [qsTr("Seek 30 s forward / back"), "Shift+→  /  Shift+←"],
+                                [qsTr("Volume up / down"), "Ctrl+↑  /  Ctrl+↓"],
+                                [qsTr("Mute"), "M"],
+                                [qsTr("Shuffle"), "Ctrl+S"],
+                                [qsTr("Repeat (cycles)"), "Ctrl+R"],
+                                [qsTr("Lyrics"), "Ctrl+L"],
+                                [qsTr("Search (Library if open, else YouTube Music)"), "Ctrl+F"],
+                                [qsTr("Queue / YouTube Music / Library"), "Ctrl+1  /  2  /  3"],
+                                [qsTr("Settings"), "Ctrl+,"],
+                                [qsTr("Close lyrics, panel or dialog"), "Esc"],
+                                [qsTr("Quit"), "Ctrl+Q"]
+                            ]
+
+                            delegate: Item {
+                                id: shortcutRow
+
+                                required property var modelData
+
+                                Layout.columnSpan: 2
+                                Layout.fillWidth: true
+                                implicitHeight: 26
+
+                                Label {
+                                    anchors.left: parent.left
+                                    anchors.right: keys.left
+                                    anchors.rightMargin: Theme.padding
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: shortcutRow.modelData[0]
+                                    color: Theme.text
+                                    font.pixelSize: Theme.fontSize
+                                    elide: Text.ElideRight
+                                }
+
+                                Rectangle {
+                                    id: keys
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: keysLabel.implicitWidth + 16
+                                    height: 24
+                                    radius: 6
+                                    color: Theme.surfaceAlt
+
+                                    Label {
+                                        id: keysLabel
+                                        anchors.centerIn: parent
+                                        text: shortcutRow.modelData[1]
+                                        color: Theme.textMuted
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        font.weight: Font.DemiBold
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Item { implicitHeight: Theme.spacing }
             }
         }

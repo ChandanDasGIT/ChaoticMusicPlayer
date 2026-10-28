@@ -60,10 +60,62 @@ ApplicationWindow {
         }
     }
 
-    Shortcut {
-        sequence: StandardKey.Quit
-        context: Qt.ApplicationShortcut
-        onActivated: window.quitApp()
+    // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
+    function toggleQueue() {
+        if (!playlistDocked)
+            playlistDrawer.opened ? playlistDrawer.close() : playlistDrawer.open()
+    }
+    function toggleYoutube() {
+        if (youtubeDocked)
+            SettingsController.youtubePanelPinned = false
+        else if (youtubeDrawer.opened)
+            youtubeDrawer.close()
+        else {
+            libraryDrawer.close()
+            youtubeDrawer.open()
+        }
+    }
+    function toggleLibrary() {
+        if (libraryDocked)
+            SettingsController.libraryPanelPinned = false
+        else if (libraryDrawer.opened)
+            libraryDrawer.close()
+        else {
+            youtubeDrawer.close()
+            libraryDrawer.open()
+        }
+    }
+    // Ctrl+F: the Library's search if the Library is showing, else YouTube Music's.
+    // A drawer takes the focus itself once it has opened, so a drawer that is
+    // still opening gets the search focused then (searchOnOpen).
+    property bool searchOnOpen: false
+    function focusSearch() {
+        if (libraryDocked) {
+            dockedLibrary.focusSearch()
+        } else if (libraryDrawer.visible) {
+            drawerLibrary.focusSearch()
+            searchOnOpen = !libraryDrawer.opened
+        } else if (youtubeDocked) {
+            dockedYoutube.focusSearch()
+        } else {
+            if (!youtubeDrawer.visible)
+                toggleYoutube()
+            drawerYoutube.focusSearch()
+            searchOnOpen = !youtubeDrawer.opened
+        }
+    }
+
+    AppShortcuts {
+        escapeEnabled: nowPlaying.lyricsOpen && !playlistDrawer.opened && !youtubeDrawer.opened
+                       && !libraryDrawer.opened && !settingsDialog.opened && !detailsDialog.opened
+        onEscapePressed: nowPlaying.lyricsOpen = false
+        onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
+        onFocusSearch: window.focusSearch()
+        onToggleQueue: window.toggleQueue()
+        onToggleYoutube: window.toggleYoutube()
+        onToggleLibrary: window.toggleLibrary()
+        onOpenSettings: settingsDialog.open()
+        onQuit: window.quitApp()
     }
 
     onPlaylistDockedChanged: if (playlistDocked) playlistDrawer.close()
@@ -124,6 +176,7 @@ ApplicationWindow {
         }
 
         NowPlayingPanel {
+            id: nowPlaying
             objectName: "nowPlaying"
             SplitView.fillWidth: true
             SplitView.minimumWidth: 280
@@ -134,26 +187,8 @@ ApplicationWindow {
             onQuitRequested: window.quitApp()
             youtubeOpen: window.youtubeDocked || youtubeDrawer.opened
             libraryOpen: window.libraryDocked || libraryDrawer.opened
-            onLibraryRequested: {
-                if (window.libraryDocked)
-                    SettingsController.libraryPanelPinned = false
-                else if (libraryDrawer.opened) {
-                    libraryDrawer.close()
-                } else {
-                    youtubeDrawer.close()
-                    libraryDrawer.open()
-                }
-            }
-            onYoutubeRequested: {
-                if (window.youtubeDocked)
-                    SettingsController.youtubePanelPinned = false
-                else if (youtubeDrawer.opened)
-                    youtubeDrawer.close()
-                else {
-                    libraryDrawer.close()
-                    youtubeDrawer.open()
-                }
-            }
+            onLibraryRequested: window.toggleLibrary()
+            onYoutubeRequested: window.toggleYoutube()
         }
 
         DockSlot {
@@ -181,6 +216,7 @@ ApplicationWindow {
             leftSide: false
 
             LibraryPanel {
+                id: dockedLibrary
                 anchors.fill: parent
                 pinned: true
                 showCloseButton: false
@@ -243,6 +279,8 @@ ApplicationWindow {
         height: window.height
         padding: 0
         interactive: !window.youtubeDocked && !drawerYoutube.swipeBlocked
+        onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
+        onClosed: window.searchOnOpen = false
         background: Item {}
 
         DrawerCard {
@@ -282,6 +320,8 @@ ApplicationWindow {
         height: window.height
         padding: 0
         interactive: !window.libraryDocked
+        onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
+        onClosed: window.searchOnOpen = false
         background: Item {}
 
         DrawerCard {
@@ -289,6 +329,7 @@ ApplicationWindow {
             transformOrigin: Item.Right
 
             LibraryPanel {
+                id: drawerLibrary
                 objectName: "libraryPanel"
                 anchors.fill: parent
                 showMiniPlayer: true

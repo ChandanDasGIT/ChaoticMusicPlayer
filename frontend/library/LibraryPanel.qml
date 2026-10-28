@@ -27,6 +27,13 @@ Rectangle {
 
     onTabChanged: LocalLibraryController.closeDetail()
 
+    // Ctrl+F: the Songs tab's search, ready to type.
+    function focusSearch() {
+        tab = 0
+        searchField.forceActiveFocus()
+        searchField.selectAll()
+    }
+
     color: "#4d000000" // darkens the cover tint behind it
     radius: Theme.radiusCard
     border.color: Theme.border
