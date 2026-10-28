@@ -160,6 +160,7 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/Icon.qml
         frontend/controls/ControlButton.qml
         frontend/controls/FadeLabel.qml
+        frontend/controls/ListPopulate.qml
         frontend/controls/PillButton.qml
         frontend/controls/PlayingBars.qml
         frontend/controls/SeekBar.qml

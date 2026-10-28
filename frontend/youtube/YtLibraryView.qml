@@ -130,6 +130,7 @@ Item {
         }
 
         ListView {
+            populate: ListPopulate {}
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true

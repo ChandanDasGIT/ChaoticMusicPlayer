@@ -49,6 +49,7 @@ Item {
 
         ListView {
             id: list
+            populate: ListPopulate {}
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true

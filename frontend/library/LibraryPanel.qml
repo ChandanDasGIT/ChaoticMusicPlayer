@@ -230,6 +230,7 @@ Rectangle {
             // ---- Albums (grid of covers)
             GridView {
                 id: albumGrid
+                populate: ListPopulate {}
 
                 readonly property int columns: Math.max(2, Math.floor(width / 150))
 
@@ -326,6 +327,7 @@ Rectangle {
 
             // ---- Artists
             ListView {
+                populate: ListPopulate {}
                 anchors.fill: parent
                 anchors.leftMargin: Theme.spacing
                 anchors.rightMargin: Theme.spacing
@@ -515,6 +517,7 @@ Rectangle {
                 }
 
                 ListView {
+                    populate: ListPopulate {}
                     Layout.fillWidth: true
                     Layout.preferredHeight: contentHeight
                     Layout.maximumHeight: pages.height * 0.6
@@ -678,6 +681,7 @@ Rectangle {
     // A list of library songs.
     component SongList: ListView {
         id: list
+        populate: ListPopulate {}
 
         property bool inDetail: false
         property bool showAlbum: true

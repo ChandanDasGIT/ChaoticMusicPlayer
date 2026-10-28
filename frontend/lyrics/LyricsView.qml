@@ -14,8 +14,18 @@ Item {
     property bool showSynced: SettingsController.lyricsSyncedByDefault
     readonly property bool syncedView: showSynced && LyricsController.synced
     readonly property bool following: syncedView && LyricsController.currentLine >= 0
+    // 0 = closed .. 1 = open: the parts come in one after another (see phase()).
+    property real progress: 1
+    // Where the big cover lands when the lyrics open (NowPlayingPanel flies it here).
+    readonly property Item coverSlot: capsuleCover
 
     signal closeRequested()
+
+    // 0 before `from`, 1 after `to`, smooth in between.
+    function phase(from, to) {
+        const t = Math.max(0, Math.min(1, (progress - from) / (to - from)))
+        return t * t * (3 - 2 * t)
+    }
 
     // ---- Mini "now playing" capsule ---------------------------------------
     Rectangle {
@@ -26,6 +36,7 @@ Item {
         height: 52
         radius: height / 2
         color: "#33000000"
+        opacity: root.phase(0.45, 1)
 
         RowLayout {
             id: capsuleRow
@@ -35,11 +46,13 @@ Item {
             spacing: 10
 
             Rectangle {
+                id: capsuleCover
                 Layout.preferredWidth: 40
                 Layout.preferredHeight: 40
                 radius: 20
                 color: Theme.surfaceAlt
                 clip: true
+                opacity: root.phase(0.85, 1) // takes over from the flying cover at the end
 
                 Icon {
                     anchors.centerIn: parent
@@ -86,6 +99,7 @@ Item {
     // looks like the highlighting is broken).
     Label {
         id: untimedNote
+        opacity: root.phase(0.35, 1)
         anchors.top: capsule.bottom
         anchors.topMargin: Theme.spacing
         anchors.horizontalCenter: parent.horizontalCenter
@@ -101,6 +115,8 @@ Item {
     // ---- Lines -------------------------------------------------------------
     ListView {
         id: list
+        opacity: root.phase(0.35, 1)
+        transform: Translate { y: 32 * (1 - root.phase(0.2, 1)) } // rises into place
         anchors.top: untimedNote.visible ? untimedNote.bottom : capsule.bottom
         anchors.topMargin: Theme.padding
         anchors.bottom: footer.top
@@ -160,7 +176,7 @@ Item {
         anchors.centerIn: list
         width: list.width - 2 * Theme.padding
         spacing: Theme.spacing
-        opacity: LyricsController.status === LyricsController.Found ? 0 : 1
+        opacity: (LyricsController.status === LyricsController.Found ? 0 : 1) * root.phase(0.35, 1)
         visible: opacity > 0
 
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
@@ -203,6 +219,7 @@ Item {
     // ---- Footer: back | Synced / Static | source ---------------------------
     RowLayout {
         id: footer
+        opacity: root.phase(0.5, 1)
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: Theme.spacing

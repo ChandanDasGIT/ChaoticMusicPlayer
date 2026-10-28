@@ -328,6 +328,7 @@ Rectangle {
 
         ListView {
             id: list
+            populate: ListPopulate {}
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: root.shownCount > 0

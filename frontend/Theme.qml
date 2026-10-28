@@ -37,9 +37,9 @@ QtObject {
     readonly property int animSlow:   420
     readonly property int easing:     Easing.OutCubic
     readonly property int easingBack: Easing.OutBack
-    // Panels: long, soft deceleration ("spring-like")
-    readonly property int animPanel:  480
-    readonly property int easingPanel: Easing.OutQuint
+    // Panels: quick, soft deceleration
+    readonly property int animPanel:  300
+    readonly property int easingPanel: Easing.OutCubic
 
     // Below this window width the app switches to the phone-like layout.
     readonly property int compactBreakpoint: 700

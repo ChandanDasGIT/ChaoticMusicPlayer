@@ -8,9 +8,12 @@ Rectangle {
     property bool showPlaylistButton: false
     // Lyrics replace the cover and title; the seek bar and controls stay.
     property bool lyricsOpen: false
-    property real coverOpacity: lyricsOpen ? 0 : 1
+    // 0 = cover .. 1 = lyrics. The cover flies into the lyrics' mini cover
+    // while the titles fade out and the lyrics rise in; closing runs it backwards.
+    property real lyricsProgress: lyricsOpen ? 1 : 0
+    readonly property real titlesOpacity: 1 - Math.min(1, lyricsProgress * 2)
 
-    Behavior on coverOpacity { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
+    Behavior on lyricsProgress { NumberAnimation { duration: 460; easing.type: Easing.InOutCubic } }
 
     signal playlistRequested()
     signal detailsRequested()
@@ -113,14 +116,32 @@ Rectangle {
 
         // Square, shrinks to leave room for the controls.
         AlbumArt {
+            id: art
+
+            // Where it flies to: the lyrics' mini cover, in this column's coordinates.
+            readonly property point target: {
+                root.lyricsProgress // re-evaluated on every animation step
+                return lyrics.coverSlot.mapToItem(content, 0, 0)
+            }
+
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.max(80, Math.min(parent.width, area.height - content.otherHeight))
             height: width
             path: PlayerController.source
             thumbnail: PlaylistController.currentThumbnail
-            playing: PlayerController.playing
-            opacity: root.coverOpacity
-            scale: 0.9 + 0.1 * root.coverOpacity // shrinks away as the lyrics come in
+            playing: PlayerController.playing || root.lyricsOpen // full size while it flies
+            // (stays "visible": the column must keep its place, or the controls jump)
+            opacity: 1 - lyrics.phase(0.85, 1) // the mini cover takes over at the end
+            transform: [
+                Scale {
+                    xScale: 1 + (lyrics.coverSlot.width / art.width - 1) * root.lyricsProgress
+                    yScale: xScale
+                },
+                Translate {
+                    x: (art.target.x - art.x) * root.lyricsProgress
+                    y: (art.target.y - art.y) * root.lyricsProgress
+                }
+            ]
         }
 
         Item { id: spacer; width: 1; height: Theme.spacing }
@@ -128,7 +149,7 @@ Rectangle {
         FadeLabel {
             id: titleLabel
             width: parent.width
-            opacity: root.coverOpacity
+            opacity: root.titlesOpacity
             text: PlaylistController.currentTitle !== "" ? PlaylistController.currentTitle
                 : PlayerController.hasTrack ? PlayerController.title : qsTr("Nothing playing")
             color: Theme.text
@@ -140,7 +161,7 @@ Rectangle {
         FadeLabel {
             id: subtitleLabel
             width: parent.width
-            opacity: root.coverOpacity
+            opacity: root.titlesOpacity
             text: PlayerController.errorString !== "" ? PlayerController.errorString
                 : PlaylistController.currentTitle !== "" ? PlaylistController.currentSubtitle
                 : PlayerController.hasTrack ? "" : qsTr("Drop a folder to start")
@@ -178,13 +199,13 @@ Rectangle {
 
     // Fills the space of the cover and title, above the seek bar.
     LyricsView {
+        id: lyrics
         x: area.x + (area.width - width) / 2
         y: area.y
         width: Math.min(area.width - 2 * Theme.padding, 640)
         height: Math.max(0, content.y + seekBar.y - Theme.padding - y)
-        opacity: 1 - root.coverOpacity
-        visible: opacity > 0
-        scale: 0.96 + 0.04 * opacity
+        progress: root.lyricsProgress
+        visible: progress > 0
         onCloseRequested: root.lyricsOpen = false
     }
 }
