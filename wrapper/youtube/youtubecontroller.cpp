@@ -163,6 +163,29 @@ void YouTubeController::search(const QString &query)
              });
 }
 
+void YouTubeController::suggest(const QString &input)
+{
+    const QString text = input.trimmed();
+    const int generation = ++m_suggestGeneration;
+    if (text.isEmpty()) {
+        if (!m_suggestions.isEmpty()) {
+            m_suggestions.clear();
+            emit suggestionsChanged();
+        }
+        return;
+    }
+
+    runAsync([text] { return YtMusicClient::searchSuggestions(text.toStdString()); },
+             [this, generation](const std::optional<std::vector<std::string>> &found) {
+                 if (generation != m_suggestGeneration || !found)
+                     return; // a newer request is running, or no answer (keep the old ones)
+                 m_suggestions.clear();
+                 for (const std::string &suggestion : *found)
+                     m_suggestions << QString::fromStdString(suggestion);
+                 emit suggestionsChanged();
+             });
+}
+
 void YouTubeController::loadHome()
 {
     if (m_homeLoading)

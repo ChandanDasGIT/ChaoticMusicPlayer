@@ -53,6 +53,8 @@ class YtMusicClient
 {
 public:
     static std::optional<std::vector<YtSong>> searchSongs(const std::string &query);
+    // Suggested searches for what has been typed so far ("arijit si" -> "arijit singh", ...).
+    static std::optional<std::vector<std::string>> searchSuggestions(const std::string &input);
     static std::optional<std::string> albumYear(const std::string &albumId); // "" if unknown
     static std::optional<YtLyrics> lyrics(const std::string &videoId);
 
