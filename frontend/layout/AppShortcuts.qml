@@ -15,6 +15,9 @@ Item {
     }
 
     property bool escapeEnabled: false
+    // A dialog is open: the window shortcuts (panels, lyrics, search, settings)
+    // would act behind it, so only playback and Quit stay on.
+    property bool dialogOpen: false
 
     signal escapePressed()
     signal toggleLyrics()
@@ -51,14 +54,16 @@ Item {
     AppShortcut { sequence: "Ctrl+R"; onActivated: PlaylistController.cycleRepeatMode() }
 
     // ---- Window --------------------------------------------------------------
-    AppShortcut { sequence: "Ctrl+L"; onActivated: root.toggleLyrics() }
-    AppShortcut { sequence: "Ctrl+F"; onActivated: root.focusSearch() }
-    AppShortcut { sequence: "Ctrl+1"; onActivated: root.toggleQueue() }
-    AppShortcut { sequence: "Ctrl+2"; onActivated: root.toggleYoutube() }
-    AppShortcut { sequence: "Ctrl+3"; onActivated: root.toggleLibrary() }
-    AppShortcut { sequence: "Ctrl+,"; onActivated: root.openSettings() }
-    // Only when nothing else wants Esc (open drawers and dialogs close on it themselves).
-    AppShortcut { sequence: "Escape"; enabled: root.escapeEnabled; onActivated: root.escapePressed() }
+    AppShortcut { sequence: "Ctrl+L"; enabled: !root.dialogOpen; onActivated: root.toggleLyrics() }
+    AppShortcut { sequence: "Ctrl+F"; enabled: !root.dialogOpen; onActivated: root.focusSearch() }
+    AppShortcut { sequence: "Ctrl+1"; enabled: !root.dialogOpen; onActivated: root.toggleQueue() }
+    AppShortcut { sequence: "Ctrl+2"; enabled: !root.dialogOpen; onActivated: root.toggleYoutube() }
+    AppShortcut { sequence: "Ctrl+3"; enabled: !root.dialogOpen; onActivated: root.toggleLibrary() }
+    AppShortcut { sequence: "Ctrl+,"; enabled: !root.dialogOpen; onActivated: root.openSettings() }
+    // Only when nothing else wants Esc: open drawers and dialogs close on it
+    // themselves, and a text field being typed in gets it first (e.g. to hide
+    // the search suggestions).
+    AppShortcut { sequence: "Escape"; enabled: root.escapeEnabled && !root.typing; onActivated: root.escapePressed() }
     AppShortcut { sequence: "Ctrl+Q"; onActivated: root.quit() }
 
     component AppShortcut: Shortcut {

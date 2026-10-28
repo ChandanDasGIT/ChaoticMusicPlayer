@@ -113,8 +113,10 @@ ApplicationWindow {
     }
 
     AppShortcuts {
-        escapeEnabled: nowPlaying.lyricsOpen && !playlistDrawer.opened && !youtubeDrawer.opened
-                       && !libraryDrawer.opened && !settingsDialog.opened && !detailsDialog.opened
+        dialogOpen: settingsDialog.visible || detailsDialog.visible || nameDialog.visible || confirmDialog.visible
+                    || folderPicker.visible
+        escapeEnabled: nowPlaying.lyricsOpen && !dialogOpen && !playlistDrawer.opened && !youtubeDrawer.opened
+                       && !libraryDrawer.opened
         onEscapePressed: nowPlaying.lyricsOpen = false
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()

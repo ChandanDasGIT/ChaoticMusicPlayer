@@ -134,16 +134,20 @@ Item {
             }
         }
 
-        YtStatus {
-            anchors.centerIn: parent
-            width: parent.width - 2 * Theme.padding
-            loading: YouTubeController.homeLoading
-            loadingText: qsTr("Loading YouTube Music…")
-            errorText: YouTubeController.homeError
-            emptyText: YouTubeController.homeShelves.length === 0 && !YouTubeController.homeLoading
-                       && YouTubeController.homeError === "" ? qsTr("Nothing here right now.") : ""
-            onRetry: YouTubeController.loadHome()
-        }
+    }
+
+    // Over the view, not inside the shelves' scroll area: with no shelves that
+    // area is only a few pixels tall and would clip the message.
+    YtStatus {
+        anchors.centerIn: parent
+        width: parent.width - 2 * Theme.padding
+        visible: !YouTubeController.collectionOpen && (loading || errorText !== "" || emptyText !== "")
+        loading: YouTubeController.homeLoading
+        loadingText: qsTr("Loading YouTube Music…")
+        errorText: YouTubeController.homeError
+        emptyText: YouTubeController.homeShelves.length === 0 && !YouTubeController.homeLoading
+                   && YouTubeController.homeError === "" ? qsTr("Nothing here right now.") : ""
+        onRetry: YouTubeController.loadHome()
     }
 
     // ---- An opened playlist / album -------------------------------------------
