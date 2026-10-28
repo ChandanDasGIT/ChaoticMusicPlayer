@@ -170,6 +170,15 @@ void PlaylistsController::addToQueue(const QVariantList &items)
     emit notice(count == 1 ? tr("Added to the queue") : tr("Added %1 songs to the queue").arg(count));
 }
 
+void PlaylistsController::playNext(const QVariantList &items)
+{
+    const std::vector<::Track> tracks = tracksFromItems(items);
+    if (tracks.empty())
+        return;
+    m_queue->playNext(tracks);
+    emit notice(tracks.size() == 1 ? tr("Plays next") : tr("%1 songs play next").arg(tracks.size()));
+}
+
 void PlaylistsController::requestNewPlaylist(const QVariantList &items)
 {
     m_pending = Pending::Create;

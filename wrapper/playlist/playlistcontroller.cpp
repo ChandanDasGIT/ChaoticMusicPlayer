@@ -131,6 +131,54 @@ void PlaylistController::addAndPlay(std::vector<::Track> tracks, bool play)
         playIndex(m_playlist.indexOf(first));
 }
 
+void PlaylistController::playNext(const std::vector<::Track> &tracks)
+{
+    if (tracks.empty())
+        return;
+    if (m_active == &m_playlist)
+        setQueueCustomOrder(); // songs are placed by hand now
+    int placed = 0;
+    for (const ::Track &track : tracks) {
+        placeNext(*m_active, track, placed);
+        ++placed;
+    }
+    if (m_active == &m_playlist) {
+        emit countChanged();
+        save();
+    }
+    emit currentChanged(); // hasNext / upcoming changed
+    queueNext();
+}
+
+// Moves (or adds) `track` to the slot `placed` songs after the playing one.
+// The Queue goes through its model so the view follows; the playlist being
+// played from is only a copy for playback (the saved playlist is unchanged).
+void PlaylistController::placeNext(Playlist &list, const ::Track &track, int placed)
+{
+    const bool viaModel = &list == &m_playlist;
+    const int current = list.currentIndex();
+    int existing = list.indexOf(track.path);
+    if (existing >= 0 && existing == current)
+        return; // the playing song itself
+    if (existing < 0) {
+        if (viaModel)
+            m_model->appendTrack(track);
+        else
+            list.append(track);
+        existing = list.indexOf(track.path);
+        if (existing < 0)
+            return;
+    }
+    // Where it ends up once taken out of its old slot.
+    const int target = (existing < current ? current : current + 1) + placed;
+    if (target == existing || target >= int(list.size()))
+        return;
+    if (viaModel)
+        m_model->moveTrack(existing, target);
+    else
+        list.move(size_t(existing), size_t(target));
+}
+
 void PlaylistController::playFromList(std::vector<::Track> tracks, int startIndex)
 {
     if (startIndex < 0 || size_t(startIndex) >= tracks.size())

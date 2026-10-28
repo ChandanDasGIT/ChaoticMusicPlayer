@@ -268,6 +268,23 @@ hook = '''    // ---- screenshot harness
                 std::fflush(stdout);
                 QMetaObject::invokeMethod(root, "quitApp"); // what Ctrl+Q / the power button / MPRIS Quit call
                 QTimer::singleShot(1000, [] { std::printf("STILL RUNNING 1 s after quit\\n"); std::fflush(stdout); });
+            } else if (action == QStringLiteral("playnext")) { // play SHOT_PLAY_AT, then "Play next" SHOT_PLAYNEXT (indices)
+                const auto order = [&] {
+                    QStringList names;
+                    for (int i = 0; i < playlist.count(); ++i)
+                        names << QFileInfo(playlist.pathAt(i)).baseName();
+                    return names.join(QLatin1Char(' '));
+                };
+                playlist.playIndex(qEnvironmentVariableIntValue("SHOT_PLAY_AT"));
+                QVariantList items;
+                for (const QString &i : qEnvironmentVariable("SHOT_PLAYNEXT").split(QLatin1Char(',')))
+                    items << QVariantMap{{QStringLiteral("path"), playlist.pathAt(i.toInt())}};
+                std::printf("before: %s | playing %s\\n", qPrintable(order()), qPrintable(playlist.currentTitle()));
+                playlists.playNext(items);
+                std::printf("after:  %s | playing %s\\n", qPrintable(order()), qPrintable(playlist.currentTitle()));
+                playlist.next();
+                std::printf("next -> %s\\n", qPrintable(playlist.currentTitle()));
+                std::fflush(stdout);
             } else if (action == QStringLiteral("pinyt")) { // pin YouTube: the Library must unpin
                 settings.setYoutubePanelPinned(true);
                 std::printf("pinned youtube: youtube=%d library=%d\\n", int(settings.youtubePanelPinned()),

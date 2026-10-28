@@ -1,11 +1,18 @@
 import QtQuick
 import QtQuick.Controls
 
-// "⋮" menu of a YouTube song: queue, playlists, saved.
+// "⋮" menu of a YouTube song: play next, queue, playlists, saved.
 ThemedMenu {
     id: root
 
     property var song: ({})
+
+    Action {
+        text: qsTr("Play next")
+        icon.name: "next"
+        enabled: "ytmusic:" + (root.song.videoId || "") !== PlayerController.source
+        onTriggered: PlaylistsController.playNext([root.song])
+    }
 
     Action {
         text: qsTr("Add to queue")

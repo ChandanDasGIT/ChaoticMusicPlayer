@@ -68,6 +68,8 @@ public:
     Q_INVOKABLE void moveInViewed(int from, int to); // manual reordering
     Q_INVOKABLE void addToPlaylist(const QString &id, const QVariantList &items);
     Q_INVOKABLE void addToQueue(const QVariantList &items);
+    // Right after the playing song ([{ path }] or YouTube song maps).
+    Q_INVOKABLE void playNext(const QVariantList &items);
 
     Q_INVOKABLE void requestNewPlaylist(const QVariantList &items = {});
     Q_INVOKABLE void requestRename(const QString &id);

@@ -18,6 +18,13 @@ ThemedMenu {
     }
 
     Action {
+        text: qsTr("Play next")
+        icon.name: "next"
+        enabled: root.path !== PlayerController.source
+        onTriggered: PlaylistsController.playNext([{ path: root.path }])
+    }
+
+    Action {
         text: qsTr("Add to queue")
         icon.name: "plus"
         onTriggered: LocalLibraryController.addToQueue(root.inDetail, root.index)

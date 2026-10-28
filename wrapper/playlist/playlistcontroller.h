@@ -94,6 +94,10 @@ public:
     void playFirstIfIdle(const std::vector<std::string> &paths);
     // Adds tracks (e.g. from YouTube) and, if `play`, starts the first of them.
     void addAndPlay(std::vector<::Track> tracks, bool play);
+    // Puts `tracks` right after the playing song, in the list being played (the
+    // Queue, or the playlist played from; nothing playing: the Queue's top). A
+    // song already there is moved instead of added twice.
+    void playNext(const std::vector<::Track> &tracks);
     // Plays `tracks` (a named playlist) from `startIndex`, without touching the Queue.
     void playFromList(std::vector<::Track> tracks, int startIndex);
     // The playing playlist changed (songs added / removed): keep playing the same song.
@@ -129,6 +133,7 @@ private:
     void changeCurrent(const std::function<void()> &change);
     void loadCurrent();
     const ::Track *detachedTrack() const;
+    void placeNext(Playlist &list, const ::Track &track, int placed);
     void queueNext(); // tells the player what to continue with gaplessly
     static bool continuesAlbum(const ::Track &from, const ::Track &to);
     void onTrackChanged(const QString &path);
