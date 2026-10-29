@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Controls
 
-// Now-playing panel: album art, track info and playback controls.
+// Now-playing panel: album art, track info and playback controls. Track
+// details (and Quit, with background playing) sit at the top right; the way to
+// the other panels is the navigation bar at the bottom of the window.
 Rectangle {
     id: root
 
-    property bool showPlaylistButton: false
     // Lyrics replace the cover and title; the seek bar and controls stay.
     property bool lyricsOpen: false
     // 0 = cover .. 1 = lyrics. The cover flies into the lyrics' mini cover
@@ -15,50 +16,17 @@ Rectangle {
 
     Behavior on lyricsProgress { NumberAnimation { duration: 460; easing.type: Easing.InOutCubic } }
 
-    signal playlistRequested()
     signal detailsRequested()
-    signal settingsRequested()
     signal equalizerRequested()
-    signal youtubeRequested()
-    signal libraryRequested()
     signal quitRequested()
 
-    property bool youtubeOpen: false
-    property bool libraryOpen: false
-
     color: "transparent" // the window's cover-tinted gradient shows through
-
-    PillButton {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.margins: Theme.spacing
-        iconName: "list"
-        iconSize: 14
-        implicitWidth: 40
-        implicitHeight: 40
-        visible: opacity > 0
-        opacity: root.showPlaylistButton ? 1 : 0
-        ToolTip.visible: hovered
-        ToolTip.text: qsTr("Show playlist")
-        onClicked: root.playlistRequested()
-    }
 
     Row {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Theme.spacing
         spacing: 6
-
-        PillButton {
-            iconName: "cloud"
-            iconSize: 14
-            implicitWidth: 40
-            implicitHeight: 40
-            active: root.youtubeOpen
-            ToolTip.visible: hovered
-            ToolTip.text: root.youtubeOpen ? qsTr("Hide YouTube Music") : qsTr("YouTube Music")
-            onClicked: root.youtubeRequested()
-        }
 
         PillButton {
             iconName: "info"
@@ -69,16 +37,6 @@ Rectangle {
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Track details")
             onClicked: root.detailsRequested()
-        }
-
-        PillButton {
-            iconName: "settings"
-            iconSize: 14
-            implicitWidth: 40
-            implicitHeight: 40
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Settings")
-            onClicked: root.settingsRequested()
         }
 
         // With background playing, closing the window doesn't quit: this does.
@@ -181,8 +139,6 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             lyricsOpen: root.lyricsOpen
             onLyricsToggled: root.lyricsOpen = !root.lyricsOpen
-            libraryOpen: root.libraryOpen
-            onLibraryToggled: root.libraryRequested()
         }
 
         VolumeSlider {

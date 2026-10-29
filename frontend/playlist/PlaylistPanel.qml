@@ -13,7 +13,6 @@ Rectangle {
     property bool showPinButton: false
     property bool pinned: false
     property bool showCloseButton: false
-    property bool showMiniPlayer: false // when this panel covers the player
     property bool acceptsDrops: false
 
     // Dragged songs would go before this row (-1: not over the panel).
@@ -49,7 +48,6 @@ Rectangle {
 
     signal pinToggled()
     signal closeRequested()
-    signal openPlayerRequested()
     signal detailsRequested(string path)
     signal importM3uRequested()
     signal exportM3uRequested(string id, string name) // id "" = the Queue
@@ -547,17 +545,6 @@ Rectangle {
             }
         }
 
-        MiniPlayer {
-            id: miniPlayer
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.rightMargin: Theme.spacing
-            Layout.bottomMargin: shown ? Theme.spacing : 0
-            Layout.topMargin: shown ? 4 : 0
-            Layout.preferredHeight: implicitHeight
-            active: root.showMiniPlayer
-            onOpenPlayerRequested: root.openPlayerRequested()
-        }
     }
 
     // Songs dragged from the Library or YouTube. An empty list says where they

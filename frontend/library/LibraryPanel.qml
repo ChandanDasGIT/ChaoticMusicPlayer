@@ -12,7 +12,6 @@ import QtQuick.Layouts
 Rectangle {
     id: root
 
-    property bool showMiniPlayer: false // when this panel covers the player
     property bool showPinButton: true
     property bool pinned: false
     property bool showCloseButton: true
@@ -22,7 +21,6 @@ Rectangle {
 
     signal pinToggled()
     signal closeRequested()
-    signal openPlayerRequested()
     signal settingsRequested()
     signal detailsRequested(string path)
     signal foldersSettingsRequested() // the music folders are chosen in Settings
@@ -747,17 +745,6 @@ Rectangle {
             }
         }
 
-        MiniPlayer {
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.rightMargin: Theme.spacing
-            Layout.bottomMargin: shown ? Theme.spacing : 0
-            Layout.topMargin: shown ? 4 : 0
-            Layout.preferredHeight: implicitHeight
-            active: root.showMiniPlayer
-            acceptsDrops: true
-            onOpenPlayerRequested: root.openPlayerRequested()
-        }
     }
 
     // A list of library songs.

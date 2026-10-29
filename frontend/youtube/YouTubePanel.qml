@@ -12,7 +12,6 @@ Rectangle {
     property bool showPinButton: true
     property bool pinned: false
     property bool showCloseButton: false
-    property bool showMiniPlayer: false // when this panel covers the player
     property int tab: 0
     // A drag inside must not close the drawer holding this panel (see YtHomeView).
     readonly property bool swipeBlocked: homeView.swipeBlocked
@@ -26,7 +25,6 @@ Rectangle {
     signal pinToggled()
     signal closeRequested()
     signal settingsRequested()
-    signal openPlayerRequested()
 
     function notice(text) {
         toastLabel.text = text
@@ -195,18 +193,6 @@ Rectangle {
             }
         }
 
-        MiniPlayer {
-            id: miniPlayer
-            Layout.fillWidth: true
-            Layout.leftMargin: Theme.spacing
-            Layout.rightMargin: Theme.spacing
-            Layout.bottomMargin: shown ? Theme.spacing : 0
-            Layout.topMargin: shown ? 4 : 0
-            Layout.preferredHeight: implicitHeight
-            active: root.showMiniPlayer
-            acceptsDrops: true
-            onOpenPlayerRequested: root.openPlayerRequested()
-        }
 
     }
 

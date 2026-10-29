@@ -3,15 +3,13 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Big stadium buttons (previous | play/pause | next) and, below them, a
-// grouped row of toggles (shuffle | repeat | lyrics | library).
+// grouped row of toggles (shuffle | repeat | lyrics).
 ColumnLayout {
     id: root
 
     property bool lyricsOpen: false
-    property bool libraryOpen: false
 
     signal lyricsToggled()
-    signal libraryToggled()
 
     spacing: Theme.padding
 
@@ -153,18 +151,6 @@ ColumnLayout {
                 onClicked: root.lyricsToggled()
                 ToolTip.visible: hovered
                 ToolTip.text: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Show lyrics")
-            }
-
-            PillButton {
-                iconName: "compactDisc"
-                iconSize: 14
-                implicitWidth: 60
-                implicitHeight: 38
-                transparentIdle: true
-                active: root.libraryOpen
-                onClicked: root.libraryToggled()
-                ToolTip.visible: hovered
-                ToolTip.text: root.libraryOpen ? qsTr("Hide library") : qsTr("Library")
             }
         }
     }

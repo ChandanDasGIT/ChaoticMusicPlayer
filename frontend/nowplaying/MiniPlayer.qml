@@ -15,7 +15,8 @@ Rectangle {
 
     signal openPlayerRequested()
 
-    implicitHeight: shown ? 64 : 0
+    readonly property real fullHeight: 64
+    implicitHeight: shown ? fullHeight : 0
     radius: Theme.radiusLarge
     color: Theme.miniPlayer
     border.color: Theme.border

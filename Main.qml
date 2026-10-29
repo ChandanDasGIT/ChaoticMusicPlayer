@@ -154,10 +154,17 @@ ApplicationWindow {
     }
 
     // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
+    // Phone size shows one panel at a time: opening one closes the others.
     function toggleQueue() {
-        if (compact)
-            playlistDrawer.opened ? playlistDrawer.close() : playlistDrawer.open()
-        else
+        if (compact) {
+            if (playlistDrawer.opened) {
+                playlistDrawer.close()
+            } else {
+                youtubeDrawer.close()
+                libraryDrawer.close()
+                playlistDrawer.open()
+            }
+        } else
             playlistDocked ? closePanel("queue") : openPanel("queue")
     }
     function toggleYoutube() {
@@ -166,6 +173,7 @@ ApplicationWindow {
         else if (youtubeDrawer.opened)
             youtubeDrawer.close()
         else {
+            playlistDrawer.close()
             libraryDrawer.close()
             youtubeDrawer.open()
         }
@@ -176,6 +184,7 @@ ApplicationWindow {
         else if (libraryDrawer.opened)
             libraryDrawer.close()
         else {
+            playlistDrawer.close()
             youtubeDrawer.close()
             libraryDrawer.open()
         }
@@ -245,8 +254,9 @@ ApplicationWindow {
 
         anchors.fill: parent
         anchors.margins: Theme.cardGap
-        // Room for the floating mini player under the columns
-        anchors.bottomMargin: Theme.cardGap + (floatingMini.visible ? floatingMini.height + Theme.cardGap : 0)
+        // Room for the navigation bar and the floating mini player under the columns
+        anchors.bottomMargin: window.height - navBar.y + Theme.cardGap
+                              + (floatingMini.visible ? floatingMini.height + Theme.cardGap : 0)
         orientation: Qt.Horizontal
 
         // The gap between cards; a small bar appears while hovered or dragged.
@@ -305,16 +315,9 @@ ApplicationWindow {
                 id: nowPlaying
                 objectName: "nowPlaying"
                 anchors.fill: parent
-                showPlaylistButton: !window.playlistDocked
-                onPlaylistRequested: window.toggleQueue()
                 onDetailsRequested: detailsDialog.show(PlayerController.source)
-                onSettingsRequested: settingsDialog.open()
                 onEqualizerRequested: settingsDialog.openPage(settingsDialog.equalizerPage)
                 onQuitRequested: window.quitApp()
-                youtubeOpen: window.youtubeDocked || youtubeDrawer.opened
-                libraryOpen: window.libraryDocked || libraryDrawer.opened
-                onLibraryRequested: window.toggleLibrary()
-                onYoutubeRequested: window.toggleYoutube()
             }
 
             // Songs dragged from the Library or YouTube: dropped here, they join the Queue.
@@ -397,21 +400,59 @@ ApplicationWindow {
         onTriggered: window.openPanel(rightSlot.rightPanel)
     }
 
-    // Half layout with the player pushed out: a floating mini player under the
-    // columns stands in for it (tap the cover or title to bring the player back).
+    // Whenever the player is out of sight (pushed out in the half layout, or
+    // covered by a panel at phone size), a floating mini player above the
+    // navigation bar stands in for it; tap the cover or title to bring it back.
+    readonly property bool anyDrawerOpen: playlistDrawer.visible || youtubeDrawer.visible || libraryDrawer.visible
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: Theme.cardGap
+        anchors.bottom: navBar.top
+        anchors.leftMargin: Theme.cardGap
+        anchors.rightMargin: Theme.cardGap
+        anchors.bottomMargin: Theme.cardGap
         height: implicitHeight
         radius: Theme.radiusCard
-        active: window.layout === "half" && !window.playerShown
+        z: 5
+        active: (window.layout === "half" && !window.playerShown) || (window.compact && window.anyDrawerOpen)
         acceptsDrops: true
-        onOpenPlayerRequested: window.showPlayer()
+        onOpenPlayerRequested: {
+            if (window.compact) {
+                playlistDrawer.close()
+                youtubeDrawer.close()
+                libraryDrawer.close()
+            } else {
+                window.showPlayer()
+            }
+        }
     }
+
+    // The way around: Queue, YouTube Music, Library and Settings, always at the bottom.
+    NavBar {
+        id: navBar
+        objectName: "navBar"
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.cardGap
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: window.compact ? parent.width - 2 * Theme.cardGap : Math.min(parent.width - 2 * Theme.cardGap, 480)
+        height: implicitHeight
+        z: 5
+        queueOpen: window.playlistDocked || playlistDrawer.visible
+        youtubeOpen: window.youtubeDocked || youtubeDrawer.visible
+        libraryOpen: window.libraryDocked || libraryDrawer.visible
+        settingsOpen: settingsDialog.visible
+        onQueueClicked: window.toggleQueue()
+        onYoutubeClicked: window.toggleYoutube()
+        onLibraryClicked: window.toggleLibrary()
+        onSettingsClicked: settingsDialog.open()
+    }
+
+    // Phone size: the drawers end above the mini player and the navigation bar,
+    // which stay usable (so the drawers don't dim the window or close on a tap
+    // outside them: Esc, a swipe or the bar closes them).
+    readonly property real drawerHeight: navBar.y - (PlayerController.hasTrack ? floatingMini.fullHeight + Theme.cardGap : 0)
 
     // Phone size: the playlist card slides in from the left, over the player.
     Drawer {
@@ -425,8 +466,11 @@ ApplicationWindow {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
         width: window.width
-        height: window.height
+        height: window.drawerHeight
         padding: 0
+        modal: false
+        dim: false
+        closePolicy: Popup.CloseOnEscape
         interactive: window.compact
         background: Item {}
 
@@ -437,9 +481,7 @@ ApplicationWindow {
             PlaylistPanel {
                 anchors.fill: parent
                 showCloseButton: true
-                showMiniPlayer: true
                 onCloseRequested: playlistDrawer.close()
-                onOpenPlayerRequested: playlistDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onImportM3uRequested: window.importM3u()
                 onExportM3uRequested: (id, name) => window.exportM3u(id, name)
@@ -459,8 +501,11 @@ ApplicationWindow {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
         width: window.width
-        height: window.height
+        height: window.drawerHeight
         padding: 0
+        modal: false
+        dim: false
+        closePolicy: Popup.CloseOnEscape
         interactive: window.compact && !drawerYoutube.swipeBlocked
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
         onClosed: window.searchOnOpen = false
@@ -476,9 +521,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 showPinButton: false
                 showCloseButton: true
-                showMiniPlayer: true
                 onCloseRequested: youtubeDrawer.close()
-                onOpenPlayerRequested: youtubeDrawer.close()
                 onSettingsRequested: {
                     youtubeDrawer.close()
                     settingsDialog.open()
@@ -499,8 +542,11 @@ ApplicationWindow {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
         width: window.width
-        height: window.height
+        height: window.drawerHeight
         padding: 0
+        modal: false
+        dim: false
+        closePolicy: Popup.CloseOnEscape
         interactive: window.compact
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: window.searchOnOpen = false
@@ -514,10 +560,8 @@ ApplicationWindow {
                 id: drawerLibrary
                 objectName: "libraryPanel"
                 anchors.fill: parent
-                showMiniPlayer: true
                 showPinButton: false
                 onCloseRequested: libraryDrawer.close()
-                onOpenPlayerRequested: libraryDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onSettingsRequested: {
                     libraryDrawer.close()
