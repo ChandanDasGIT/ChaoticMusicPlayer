@@ -26,6 +26,8 @@ add_library(backend STATIC
     backend/audioengine/audiooutput/audiooutput.h
     backend/audioengine/decoder/decoder.cpp
     backend/audioengine/decoder/decoder.h
+    backend/playlist/smartplaylist/smartplaylist.cpp
+    backend/playlist/smartplaylist/smartplaylist.h
     backend/history/listeninghistory/listeninghistory.cpp
     backend/history/listeninghistory/listeninghistory.h
     backend/audioengine/equalizer/equalizer.cpp
@@ -162,6 +164,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/playlist/playlistmodel.h
         wrapper/playlists/playlistscontroller.cpp
         wrapper/playlists/playlistscontroller.h
+        wrapper/smartplaylists/smartplaylistscontroller.cpp
+        wrapper/smartplaylists/smartplaylistscontroller.h
         wrapper/settings/settingscontroller.cpp
         wrapper/settings/settingscontroller.h
         wrapper/visualizer/visualizercontroller.cpp
@@ -200,6 +204,7 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/layout/NavBar.qml
         frontend/home/HomePanel.qml
         frontend/home/HomeSongRow.qml
+        frontend/home/SmartPlaylistDialog.qml
         frontend/library/LibraryFolderRow.qml
         frontend/library/LibraryPanel.qml
         frontend/library/LibrarySongMenu.qml
@@ -245,6 +250,7 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
     wrapper/playlist
     wrapper/playlists
     wrapper/settings
+    wrapper/smartplaylists
     wrapper/visualizer
     wrapper/youtube
 )

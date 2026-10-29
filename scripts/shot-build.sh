@@ -371,6 +371,12 @@ hook = '''    // ---- screenshot harness
                         std::printf("artist: %s | %d songs\\n", qPrintable(m.value(QStringLiteral("name")).toString()),
                                     m.value(QStringLiteral("count")).toInt());
                     }
+                } else if (step == QLatin1String("printsmart")) { // the smart playlists
+                    for (const QVariant &v : smartPlaylists.playlists()) {
+                        const QVariantMap m = v.toMap();
+                        std::printf("smart: %s | %d songs | %d rules\\n", qPrintable(m.value(QStringLiteral("name")).toString()),
+                                    m.value(QStringLiteral("count")).toInt(), int(m.value(QStringLiteral("rules")).toList().size()));
+                    }
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {

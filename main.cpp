@@ -11,6 +11,7 @@
 #include "wrapper/playlists/playlistscontroller.h"
 #include "wrapper/session/sessioncontroller.h"
 #include "wrapper/settings/settingscontroller.h"
+#include "wrapper/smartplaylists/smartplaylistscontroller.h"
 #include "wrapper/visualizer/visualizercontroller.h"
 #include "wrapper/singleinstance/singleinstance.h"
 #include "wrapper/youtube/ytmetadatacontroller.h"
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).
     HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);
+    SmartPlaylistsController smartPlaylists(&history, &localLibrary, &playlist, nullptr);
     SessionController session(&player, &playlist, &playlists, &settings, nullptr);
     session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);

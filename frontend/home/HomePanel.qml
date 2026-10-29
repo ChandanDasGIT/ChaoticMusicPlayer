@@ -273,6 +273,43 @@ Rectangle {
                 }
             }
 
+            // Smart playlists: they fill themselves (right-click or ⋮ to change one)
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.spacing
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Smart playlists")
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSizeLarge
+                    font.weight: Font.DemiBold
+                }
+
+                PillButton {
+                    text: qsTr("New")
+                    iconName: "plus"
+                    iconSize: 10
+                    implicitHeight: 30
+                    transparentIdle: true
+                    onClicked: smartDialog.edit(null)
+                }
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: Theme.spacing
+
+                Repeater {
+                    model: SmartPlaylistsController.playlists
+
+                    delegate: SmartCard {
+                        required property var modelData
+
+                        playlist: modelData
+                    }
+                }
+            }
+
             // Recommended: the Mix of the YouTube song played most
             SectionTitle {
                 visible: recommended.visible
@@ -717,6 +754,87 @@ Rectangle {
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
                 }
+            }
+        }
+    }
+
+    SmartPlaylistDialog {
+        id: smartDialog
+    }
+
+    // A smart playlist: its name and how many songs it has now. A click plays
+    // it; right-click or ⋮ edits it; hold and drag to drop its songs on the Queue.
+    component SmartCard: Rectangle {
+        id: smart
+
+        property var playlist
+
+        width: 186
+        height: 64
+        radius: Theme.radiusLarge
+        color: smartHover.hovered ? Theme.accentSoftHover : Theme.accentSoft
+        opacity: playlist.count > 0 ? 1 : 0.6
+
+        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+        HoverHandler {
+            id: smartHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            onTapped: SmartPlaylistsController.play(smart.playlist.id)
+        }
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: smartDialog.edit(smart.playlist)
+        }
+        DragSource {
+            payload: function() {
+                return { items: SmartPlaylistsController.items(smart.playlist.id), title: smart.playlist.name,
+                         subtitle: Util.songCount(smart.playlist.count) }
+            }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 4
+            spacing: 10
+
+            Icon {
+                name: "sliders"
+                size: 14
+                color: Theme.accent
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+
+                Label {
+                    Layout.fillWidth: true
+                    text: smart.playlist.name
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSize
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: Util.songCount(smart.playlist.count)
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+            }
+
+            ControlButton {
+                iconName: "more"
+                iconSize: 12
+                iconColor: Theme.textMuted
+                opacity: smartHover.hovered ? 1 : 0
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Edit")
+                onClicked: smartDialog.edit(smart.playlist)
             }
         }
     }
