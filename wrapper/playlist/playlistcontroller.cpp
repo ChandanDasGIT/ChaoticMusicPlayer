@@ -1,6 +1,7 @@
 #include "wrapper/playlist/playlistcontroller.h"
 
 #include "backend/playlist/playliststore/playliststore.h"
+#include "backend/youtube/streamresolver/streamresolver.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 
@@ -39,6 +40,8 @@ PlaylistController::PlaylistController(PlayerController *player, SettingsControl
 
     m_storePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                   + QStringLiteral("/ChaoticMusicPlayer/playlist.tsv");
+    m_youTubeStorePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                         + QStringLiteral("/ChaoticMusicPlayer/youtube-playing.tsv");
 
     // Restore the last session (before QML exists, so no model signals are needed).
     m_playlist.sort(toBackend(m_settings->sortColumn()), m_settings->sortDescending());
@@ -183,6 +186,18 @@ void PlaylistController::placeNext(Playlist &list, const ::Track &track, int pla
 
 void PlaylistController::playFromList(std::vector<::Track> tracks, int startIndex)
 {
+    startContext(std::move(tracks), startIndex, QString(), false);
+}
+
+void PlaylistController::playYouTube(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless)
+{
+    startContext(std::move(tracks), startIndex, title, endless);
+    saveYouTubeContext();
+}
+
+void PlaylistController::startContext(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless,
+                                      bool load)
+{
     if (startIndex < 0 || size_t(startIndex) >= tracks.size())
         return;
 
@@ -193,12 +208,76 @@ void PlaylistController::playFromList(std::vector<::Track> tracks, int startInde
 
     m_context.setTracks(std::move(tracks));
     m_context.select(startIndex);
-    const bool switched = m_active != &m_context;
+    m_contextTitle = title;
+    m_contextEndless = endless;
+    m_moreRequested = false;
+    m_waitingForMore = false;
+    m_followUp.clear();
     m_active = &m_context;
-    if (switched)
-        emit playingFromListChanged();
+    emit playingFromListChanged(); // also when only the title changed
     emit currentChanged();
-    loadCurrent();
+    if (load)
+        loadCurrent();
+    else
+        queueNext();
+}
+
+void PlaylistController::extendList(const std::vector<::Track> &tracks)
+{
+    if (m_active != &m_context || !m_contextEndless)
+        return;
+    int added = 0;
+    for (const ::Track &track : tracks) {
+        if (m_context.indexOf(track.path) < 0) {
+            m_context.append(track);
+            ++added;
+        }
+    }
+    if (added == 0)
+        return; // nothing new: don't keep asking
+    m_moreRequested = false;
+    saveYouTubeContext();
+    emit currentChanged(); // hasNext / upcoming changed
+    if (m_waitingForMore) {
+        m_waitingForMore = false;
+        next();
+    } else {
+        queueNext();
+    }
+}
+
+void PlaylistController::setFollowUp(std::vector<::Track> tracks, const QString &title)
+{
+    if (m_active != &m_playlist || tracks.empty())
+        return;
+    m_followUp = std::move(tracks);
+    m_followUpTitle = title;
+    if (m_waitingForMore) {
+        startFollowUp(true);
+        return;
+    }
+    emit currentChanged(); // hasNext
+    queueNext();
+}
+
+// The Queue is over: its Mix takes over (`load` false: already playing its first song).
+void PlaylistController::startFollowUp(bool load)
+{
+    std::vector<::Track> tracks = std::move(m_followUp);
+    m_followUp.clear();
+    startContext(std::move(tracks), 0, m_followUpTitle, true, load);
+    saveYouTubeContext();
+}
+
+void PlaylistController::saveYouTubeContext() const
+{
+    if (m_active == &m_context && !m_contextTitle.isEmpty())
+        PlaylistStore::save(m_youTubeStorePath.toStdString(), m_context.tracks());
+}
+
+bool PlaylistController::hasNext() const
+{
+    return m_active->nextIndex() >= 0 || (m_active == &m_playlist && !m_followUp.empty());
 }
 
 void PlaylistController::updateListTracks(std::vector<::Track> tracks)
@@ -217,10 +296,14 @@ void PlaylistController::updateListTracks(std::vector<::Track> tracks)
 
 void PlaylistController::activateQueue()
 {
+    m_waitingForMore = false;
     if (m_active == &m_playlist)
         return;
     m_context.deselect();
     m_active = &m_playlist;
+    m_contextTitle.clear();
+    m_contextEndless = false;
+    m_moreRequested = false;
     emit playingFromListChanged();
 }
 
@@ -417,8 +500,11 @@ void PlaylistController::playPause()
 
 void PlaylistController::next()
 {
-    if (m_active->nextIndex() < 0)
+    if (m_active->nextIndex() < 0) {
+        if (m_active == &m_playlist && !m_followUp.empty())
+            startFollowUp(true);
         return;
+    }
     changeCurrent([&] { m_active->goNext(); });
     loadCurrent();
 }
@@ -490,11 +576,25 @@ bool PlaylistController::resumeFromList(std::vector<::Track> tracks, const QStri
     m_model->refreshCurrent(previousQueueRow);
     m_context.setTracks(std::move(tracks));
     m_context.select(m_context.indexOf(path.toStdString()));
-    const bool switched = m_active != &m_context;
+    m_contextTitle.clear();
+    m_contextEndless = false;
+    m_moreRequested = false;
     m_active = &m_context;
-    if (switched)
-        emit playingFromListChanged();
+    emit playingFromListChanged();
     emit currentChanged();
+    loadCurrent(positionMs, true);
+    return true;
+}
+
+bool PlaylistController::resumeYouTube(const QString &path, qint64 positionMs, const QString &title, bool endless)
+{
+    std::vector<::Track> tracks = PlaylistStore::load(m_youTubeStorePath.toStdString());
+    const auto it = std::find_if(tracks.begin(), tracks.end(),
+                                 [&](const ::Track &track) { return track.path == path.toStdString(); });
+    if (it == tracks.end() || title.isEmpty())
+        return false;
+    const int index = int(it - tracks.begin());
+    startContext(std::move(tracks), index, title, endless, false);
     loadCurrent(positionMs, true);
     return true;
 }
@@ -515,15 +615,50 @@ void PlaylistController::queueNext()
     const int current = m_active->currentIndex();
     if (!m_player->hasTrack() || current < 0)
         return;
+    checkRunningOut();
 
     const int next = m_active->repeatMode() == Playlist::RepeatMode::One ? current : m_active->nextIndex();
-    if (next < 0) {
+    const ::Track &from = m_active->at(size_t(current));
+    // The Queue ends here: on into its Mix, if one is waiting.
+    const ::Track *to = next >= 0 ? &m_active->at(size_t(next))
+                      : m_active == &m_playlist && !m_followUp.empty() ? &m_followUp.front()
+                                                                         : nullptr;
+    if (!to) {
         m_player->setNext(QString());
         return;
     }
-    const ::Track &from = m_active->at(size_t(current));
-    const ::Track &to = m_active->at(size_t(next));
-    m_player->setNext(QString::fromStdString(to.path), continuesAlbum(from, to) ? 0 : m_settings->crossfadeSeconds() * 1000);
+    m_player->setNext(QString::fromStdString(to->path), continuesAlbum(from, *to) ? 0 : m_settings->crossfadeSeconds() * 1000);
+}
+
+// Near the end of a Mix (or of the Queue, on a YouTube song): asks once for
+// what YouTube plays next.
+void PlaylistController::checkRunningOut()
+{
+    const int current = m_active->currentIndex();
+    if (current < 0 || m_active->repeatMode() == Playlist::RepeatMode::One)
+        return;
+    QString seed;
+    if (m_active == &m_context) {
+        const int left = int(m_context.size()) - 1 - current;
+        const bool nearEnd = m_context.shuffle() ? m_context.nextIndex() < 0 : left <= 2;
+        if (!m_contextEndless || m_moreRequested || !nearEnd)
+            return;
+        // The Mix goes on from where the list ends (an album: its last song).
+        seed = QString::fromStdString(m_context.at(m_context.size() - 1).path);
+    } else {
+        if (m_playlist.nextIndex() >= 0) { // more Queue to come (again)
+            m_followUp.clear();
+            m_moreRequested = false;
+            return;
+        }
+        const ::Track &track = m_playlist.at(size_t(current));
+        if (!m_settings->ytQueueMix() || m_moreRequested || !m_followUp.empty()
+            || !StreamResolver::isYouTube(track.path))
+            return;
+        seed = QString::fromStdString(track.path);
+    }
+    m_moreRequested = true;
+    emit moreWanted(seed, m_active == &m_playlist);
 }
 
 // The next track follows straight on in the same album (live or concept albums
@@ -537,6 +672,10 @@ bool PlaylistController::continuesAlbum(const ::Track &from, const ::Track &to)
 // The player continued gaplessly with the queued track.
 void PlaylistController::onTrackChanged(const QString &path)
 {
+    if (m_active == &m_playlist && !m_followUp.empty() && path.toStdString() == m_followUp.front().path) {
+        startFollowUp(false); // the Queue ended and the player went on into its Mix
+        return;
+    }
     changeCurrent([&] { m_active->follow(path.toStdString()); });
     queueNext();
 }
@@ -546,6 +685,8 @@ void PlaylistController::onTrackFinished()
 {
     if (m_active->repeatMode() == Playlist::RepeatMode::One && m_active->currentIndex() >= 0)
         loadCurrent();
-    else if (m_active->nextIndex() >= 0)
+    else if (m_active->nextIndex() >= 0 || (m_active == &m_playlist && !m_followUp.empty()))
         next();
+    else if (m_moreRequested)
+        m_waitingForMore = true; // more songs are on the way: they start playing when they come
 }

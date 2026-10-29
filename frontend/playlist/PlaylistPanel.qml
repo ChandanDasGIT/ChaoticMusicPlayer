@@ -121,17 +121,22 @@ Rectangle {
                 PillButton {
                     id: playlistsButton
 
-                    // Viewing a playlist: its name. Otherwise the playlist playing ("pinned"), if any.
-                    readonly property bool showsPlaying: root.viewingQueue && PlaylistsController.playingFromId !== ""
+                    // Viewing a playlist: its name. Otherwise the playlist playing ("pinned"), if
+                    // any, or the YouTube Mix / album playing.
+                    readonly property string playingName: PlaylistController.contextTitle !== ""
+                                                          ? PlaylistController.contextTitle
+                                                          : PlaylistsController.playingFromName
+                    readonly property bool showsPlaying: root.viewingQueue && (PlaylistsController.playingFromId !== ""
+                                                                               || PlaylistController.contextTitle !== "")
                     readonly property string label: !root.viewingQueue ? PlaylistsController.viewedName
-                                                  : showsPlaying ? PlaylistsController.playingFromName
+                                                  : showsPlaying ? playingName
                                                   : qsTr("Playlists")
 
                     implicitHeight: 32
                     implicitWidth: 10 + 6 + playlistsLabel.width + 6 + 9 + 28 // icon, label, chevron, padding
                     active: !root.viewingQueue
                     ToolTip.visible: hovered && showsPlaying
-                    ToolTip.text: qsTr("Playing from “%1”").arg(PlaylistsController.playingFromName)
+                    ToolTip.text: qsTr("Playing from “%1”").arg(playingName)
                     onClicked: playlistsMenu.popup(playlistsButton, 0, playlistsButton.height + 4)
 
                     contentItem: Item {

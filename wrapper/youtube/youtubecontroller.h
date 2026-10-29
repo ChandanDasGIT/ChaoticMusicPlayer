@@ -98,10 +98,12 @@ public:
     Q_INVOKABLE void fetchCollection(const QString &browseId, const QString &title);
     Q_INVOKABLE void loadLibrary();
 
-    Q_INVOKABLE void play(const QVariantMap &song);       // add to the playlist and play now
-    Q_INVOKABLE void enqueue(const QVariantMap &song);    // add to the playlist
+    // Playing never adds to the Queue: a song plays as a Mix (YouTube's "up
+    // next" after it, if autoplay is on), a list (album, playlist...) as is.
+    Q_INVOKABLE void play(const QVariantMap &song);
+    Q_INVOKABLE void playList(const QVariantList &songs, int index, const QString &title);
+    Q_INVOKABLE void enqueue(const QVariantMap &song);    // add to the Queue
     Q_INVOKABLE void save(const QVariantMap &song);       // add to Saved
-    Q_INVOKABLE void playAll(const QVariantList &songs);  // add all, play the first
     Q_INVOKABLE void addLink(const QString &url);         // video or playlist link -> Saved
     Q_INVOKABLE void removeSaved(int index);
 
@@ -122,6 +124,8 @@ private:
     void runAsync(Work work, Done done);
 
     static inline YouTubeController *s_instance = nullptr;
+
+    void fetchMore(const QString &seedPath, bool forQueue);
 
     PlaylistController *m_playlist;
     SettingsController *m_settings;

@@ -760,6 +760,28 @@ Popup {
 
                         SettingsRow {
                             Layout.fillWidth: true
+                            title: qsTr("Autoplay similar songs")
+                            description: qsTr("After a song, an album or a playlist, keep playing what YouTube Music plays next (a Mix). Playing YouTube songs never adds them to the Queue.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.ytAutoplay
+                                onToggled: SettingsController.ytAutoplay = checked
+                            }
+                        }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("Continue with a Mix when the Queue ends")
+                            description: qsTr("If the Queue's last song is from YouTube, its Mix plays after it. The Queue itself stays as it is.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.ytQueueMix
+                                onToggled: SettingsController.ytQueueMix = checked
+                            }
+                        }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
                             title: qsTr("yt-dlp")
                             description: YouTubeController.available
                                          ? qsTr("Installed (version %1). It plays YouTube songs; keep it up to date.").arg(YouTubeController.ytDlpVersion)

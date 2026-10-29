@@ -8,7 +8,7 @@ mkdir -p build/shot
 python3 -I - <<'PY'
 import pathlib
 s = pathlib.Path("main.cpp").read_text()
-s = "#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
+s = "#include \"backend/library/metadata/metadata.h\"\n#include <QDir>\n#include <QTest>\n#include <cstdio>\n#include <QQuickWindow>\n#include <QTimer>\n#include <QImage>\n#include <functional>\n#include <QMouseEvent>\n#include <QQuickItem>\n#include <QUrl>\n#include <QMimeData>\n#include <QDropEvent>\n#include <QWheelEvent>\n" + s
 hook = '''    // ---- screenshot harness
     if (qEnvironmentVariableIsSet("SHOT_SIZE")) { // e.g. 400x780
         const QStringList wh = qEnvironmentVariable("SHOT_SIZE").split(QLatin1Char('x'));
@@ -41,6 +41,23 @@ hook = '''    // ---- screenshot harness
                                 int(player.playing()), qPrintable(playlist.currentTitle()), int(playlist.playingFromList()));
                     std::fflush(stdout);
                 });
+        if (qEnvironmentVariableIsSet("SHOT_MIX")) { // a pretend Mix of the files in that folder (no YouTube):
+            // starts with the first; each "more, please" gets the next file
+            static std::vector<::Track> pool;
+            for (const QString &f : QDir(qEnvironmentVariable("SHOT_MIX")).entryList({QStringLiteral("*.flac")}, QDir::Files, QDir::Name))
+                pool.push_back(Metadata::read((qEnvironmentVariable("SHOT_MIX") + QLatin1Char('/') + f).toStdString()));
+            QObject::connect(&playlist, &PlaylistController::moreWanted, &playlist, [&playlist](const QString &seed, bool forQueue) {
+                std::printf("moreWanted seed=%s forQueue=%d (pool %zu)\\n", qPrintable(QFileInfo(seed).baseName()), int(forQueue), pool.size());
+                if (pool.empty())
+                    return;
+                std::vector<::Track> more = {pool.front()};
+                pool.erase(pool.begin());
+                QTimer::singleShot(300, &playlist, [&playlist, more] { playlist.extendList(more); });
+            });
+            std::vector<::Track> first = {pool.front()};
+            pool.erase(pool.begin());
+            playlist.playYouTube(first, 0, QStringLiteral("Mix – test"), true);
+        }
         if (qEnvironmentVariableIsSet("SHOT_LIB_DIR")) // a Library folder
             localLibrary.addFolder(qEnvironmentVariable("SHOT_LIB_DIR"));
         if (qEnvironmentVariableIsSet("SHOT_ADD_DIR")) // like dropping a folder
@@ -312,6 +329,13 @@ hook = '''    // ---- screenshot harness
                     if (qEnvironmentVariableIsSet("SHOT_HOLD_SHOT")) // the screen while still dragging
                         w->grabWindow().save(QStringLiteral("build/shot/hold.png"));
                     QTest::mouseRelease(w, Qt::LeftButton, {}, from + by);
+                } else if (step == QLatin1String("next")) {
+                    playlist.next();
+                } else if (step == QLatin1String("printctx")) { // what is playing, and from where
+                    std::printf("ctx: title=\\"%s\\" fromList=%d current=\\"%s\\" hasNext=%d upcomingMin=%.1f queue=%d\\n",
+                                qPrintable(playlist.contextTitle()), int(playlist.playingFromList()),
+                                qPrintable(playlist.currentTitle()), int(playlist.hasNext()), playlist.upcomingMs() / 60000.0,
+                                playlist.count());
                 } else if (step == QLatin1String("printq")) { // the Queue's songs in order
                     std::printf("queue:");
                     for (int r = 0; r < playlist.count(); ++r)

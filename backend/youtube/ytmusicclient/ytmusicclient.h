@@ -62,6 +62,9 @@ public:
     static std::optional<std::vector<YtShelf>> home();
     // Songs of a playlist or album (first page, up to ~100).
     static std::optional<std::vector<YtSong>> collection(const std::string &browseId);
+    // What YouTube Music plays after this song (its radio / "up next" list,
+    // ~25-50 songs). The song itself comes first.
+    static std::optional<std::vector<YtSong>> upNext(const std::string &videoId);
 
     static std::string watchUrl(const std::string &videoId);
 };

@@ -125,7 +125,7 @@ Item {
                 iconSize: 11
                 text: qsTr("Play all")
                 implicitHeight: 34
-                onClicked: YouTubeController.playAll(YouTubeController.librarySongs)
+                onClicked: YouTubeController.playList(YouTubeController.librarySongs, 0, qsTr("Liked songs"))
             }
         }
 

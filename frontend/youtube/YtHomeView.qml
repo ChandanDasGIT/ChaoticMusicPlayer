@@ -199,7 +199,7 @@ Item {
                 iconSize: 11
                 text: qsTr("Play all")
                 implicitHeight: 34
-                onClicked: YouTubeController.playAll(YouTubeController.collectionSongs)
+                onClicked: YouTubeController.playList(YouTubeController.collectionSongs, 0, YouTubeController.collectionTitle)
             }
         }
 
@@ -212,9 +212,14 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {}
 
+            // A song here plays the album / playlist from that song.
             delegate: YtTrackRow {
                 required property var modelData
+                required property int index
                 song: modelData
+                listSongs: YouTubeController.collectionSongs
+                listIndex: index
+                listTitle: YouTubeController.collectionTitle
                 x: 4
                 width: ListView.view.width - 8
             }

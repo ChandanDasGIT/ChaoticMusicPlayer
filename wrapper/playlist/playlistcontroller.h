@@ -24,6 +24,9 @@ class SettingsController;
 //
 // Playback runs from the *active list*: the Queue, or - after playFromList()
 // - a named playlist's songs (the "context"), which leaves the Queue untouched.
+// YouTube songs play as a context too (playYouTube): a single song as a Mix
+// (YouTube's "up next", topped up as it runs out), an album / playlist as is.
+// When the Queue ends on a YouTube song, its Mix can follow (setFollowUp).
 // count / currentIndex / model / tracks describe the Queue; current* and
 // hasNext / upcomingMs describe whatever is playing.
 class PlaylistController : public QObject
@@ -49,6 +52,8 @@ class PlaylistController : public QObject
     Q_PROPERTY(RepeatMode repeatMode READ repeatMode WRITE setRepeatMode NOTIFY repeatModeChanged)
     // true while playing from a named playlist instead of the Queue
     Q_PROPERTY(bool playingFromList READ playingFromList NOTIFY playingFromListChanged)
+    // The YouTube Mix / album / playlist playing ("" otherwise, also for named playlists)
+    Q_PROPERTY(QString contextTitle READ contextTitle NOTIFY playingFromListChanged)
 
 public:
     // Same order as Playlist::SortColumn. (`Track` here hides the ::Track struct.)
@@ -74,10 +79,12 @@ public:
     const ::Track *trackForPath(const QString &path) const;
     QString currentThumbnail() const;
     const std::vector<::Track> &tracks() const { return m_playlist.tracks(); }
-    bool hasNext() const { return m_active->nextIndex() >= 0; }
+    bool hasNext() const;
     qint64 upcomingMs() const { return m_active->upcomingDurationMs(); }
     qint64 queueUpcomingMs() const { return m_playlist.upcomingDurationMs(); }
     bool playingFromList() const { return m_active == &m_context; }
+    QString contextTitle() const { return m_active == &m_context ? m_contextTitle : QString(); }
+    bool contextEndless() const { return m_active == &m_context && m_contextEndless; } // a Mix
     SortColumn sortColumn() const { return SortColumn(m_playlist.sortColumn()); }
     bool sortDescending() const { return m_playlist.sortDescending(); }
     bool shuffle() const { return m_playlist.shuffle(); }
@@ -103,11 +110,19 @@ public:
     int insertTracks(const std::vector<::Track> &tracks, int row);
     // Plays `tracks` (a named playlist) from `startIndex`, without touching the Queue.
     void playFromList(std::vector<::Track> tracks, int startIndex);
+    // YouTube songs from `startIndex`, without touching the Queue, shown as
+    // `title`. `endless`: when they run out, more are asked for (moreWanted).
+    void playYouTube(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless);
+    // More songs for the endless list playing (those already in it are skipped).
+    void extendList(const std::vector<::Track> &tracks);
+    // A Mix to go on with once the Queue ends (the answer to moreWanted(.., true)).
+    void setFollowUp(std::vector<::Track> tracks, const QString &title);
     // Resuming the last session: the song is loaded paused at `positionMs`.
     // false if the song isn't there.
     bool resumeInQueue(const QString &path, qint64 positionMs);
     bool resumeFromList(std::vector<::Track> tracks, const QString &path, qint64 positionMs);
     bool resumeAlone(const ::Track &track, qint64 positionMs); // in neither (e.g. the Queue was cleared)
+    bool resumeYouTube(const QString &path, qint64 positionMs, const QString &title, bool endless);
     // The playing playlist changed (songs added / removed): keep playing the same song.
     void updateListTracks(std::vector<::Track> tracks);
     void save() const;
@@ -135,6 +150,9 @@ signals:
     void shuffleChanged();
     void repeatModeChanged();
     void playingFromListChanged();
+    // Running out: what YouTube plays after `seedPath`, please. forQueue: for
+    // after the Queue's last song (setFollowUp), else for the list (extendList).
+    void moreWanted(const QString &seedPath, bool forQueue);
 
 private:
     // Runs `change` on the playlist and notifies the model / QML about the new current track.
@@ -143,6 +161,12 @@ private:
     const ::Track *detachedTrack() const;
     void placeNext(Playlist &list, const ::Track &track, int placed);
     void queueNext(); // tells the player what to continue with gaplessly
+    void checkRunningOut();
+    // `load` false: the player already went on to that song by itself.
+    void startContext(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless,
+                      bool load = true);
+    void startFollowUp(bool load);
+    void saveYouTubeContext() const;
     static bool continuesAlbum(const ::Track &from, const ::Track &to);
     void onTrackChanged(const QString &path);
     void onTrackFinished();
@@ -156,8 +180,15 @@ private:
     QString m_storePath;
     Playlist m_playlist;                    // the Queue
     std::unique_ptr<PlaylistModel> m_model; // after m_playlist: destroyed first
-    Playlist m_context;                     // the named playlist being played from
+    Playlist m_context;                     // the named playlist / YouTube songs being played from
     Playlist *m_active = &m_playlist;
+    QString m_contextTitle;      // YouTube: shown as "Playing from" ("" for named playlists)
+    bool m_contextEndless = false; // a Mix: topped up from YouTube
+    bool m_moreRequested = false;  // moreWanted sent, no answer yet (or nothing new came)
+    bool m_waitingForMore = false; // the music ran out before the answer came
+    std::vector<::Track> m_followUp; // the Mix after the Queue's last song
+    QString m_followUpTitle;
+    QString m_youTubeStorePath;    // the YouTube songs playing, for resuming them
     // The song that keeps playing after the Queue was cleared (until it ends or is stopped).
     std::optional<::Track> m_detached;
 };

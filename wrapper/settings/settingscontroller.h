@@ -46,6 +46,10 @@ class SettingsController : public QObject
     Q_PROPERTY(bool lyricsLatinScript READ lyricsLatinScript WRITE setLyricsLatinScript NOTIFY lyricsLatinScriptChanged)
     // YouTube
     Q_PROPERTY(bool ytBackgroundLookup READ ytBackgroundLookup WRITE setYtBackgroundLookup NOTIFY ytBackgroundLookupChanged)
+    // After a YouTube song / album / playlist: keep going with YouTube's "up next" (a Mix).
+    Q_PROPERTY(bool ytAutoplay READ ytAutoplay WRITE setYtAutoplay NOTIFY ytAutoplayChanged)
+    // When the Queue ends on a YouTube song: continue with its Mix.
+    Q_PROPERTY(bool ytQueueMix READ ytQueueMix WRITE setYtQueueMix NOTIFY ytQueueMixChanged)
     // Browser whose YouTube session yt-dlp reads ("" = not signed in)
     Q_PROPERTY(QString ytCookiesBrowser READ ytCookiesBrowser WRITE setYtCookiesBrowser NOTIFY ytCookiesBrowserChanged)
     // Album art for songs without one: look it up online for the playing song;
@@ -119,6 +123,10 @@ public:
     QString ytCookiesBrowser() const;
     void setYtCookiesBrowser(const QString &browser);
     void setYtBackgroundLookup(bool enabled);
+    bool ytAutoplay() const;
+    void setYtAutoplay(bool enabled);
+    bool ytQueueMix() const;
+    void setYtQueueMix(bool enabled);
     bool coversOnline() const;
     void setCoversOnline(bool online);
     QVariantList coverSources() const;
@@ -164,6 +172,8 @@ signals:
     void lyricsSyncedByDefaultChanged();
     void lyricsLatinScriptChanged();
     void ytBackgroundLookupChanged();
+    void ytAutoplayChanged();
+    void ytQueueMixChanged();
     void ytCookiesBrowserChanged();
     void coverTintStrengthChanged();
     void coversOnlineChanged();

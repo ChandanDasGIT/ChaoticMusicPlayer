@@ -16,6 +16,11 @@ Rectangle {
     required property var song
     property bool showSave: true
     property bool showRemove: false
+    // In an album / playlist: playing the song plays that list from it
+    // (otherwise the song plays alone, followed by its Mix).
+    property var listSongs: null
+    property int listIndex: -1
+    property string listTitle: ""
 
     readonly property bool isCurrent: (root.song.videoId || "") !== ""
                                       && PlayerController.source === "ytmusic:" + root.song.videoId
@@ -39,6 +44,8 @@ Rectangle {
     function playOrToggle() {
         if (root.isCurrent)
             PlayerController.togglePlayPause()
+        else if (root.listSongs)
+            YouTubeController.playList(root.listSongs, root.listIndex, root.listTitle)
         else
             YouTubeController.play(root.song)
     }

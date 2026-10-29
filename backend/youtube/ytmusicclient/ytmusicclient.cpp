@@ -181,6 +181,39 @@ std::optional<YtSong> parseSong(const json &item)
     return song;
 }
 
+// An "up next" entry: title, "Artist • Album • 2024" byline, length.
+std::optional<YtSong> parsePanelSong(const json &item)
+{
+    YtSong song;
+    song.videoId = text(at(item, {"videoId"}));
+    song.title = text(at(item, {"title", "runs", size_t(0), "text"}));
+    if (song.videoId.empty() || song.title.empty())
+        return std::nullopt;
+    if (const json *runs = at(item, {"longBylineText", "runs"}); runs && runs->is_array()) {
+        std::string unlinkedArtists; // artists without a link come before the first " • "
+        bool beforeFirstDot = true;
+        for (const json &run : *runs) {
+            const std::string value = text(at(run, {"text"}));
+            const std::string type = pageType(run);
+            if (value == " • ") {
+                beforeFirstDot = false;
+            } else if (type == "MUSIC_PAGE_TYPE_ARTIST") {
+                song.artists.push_back(value);
+            } else if (type == "MUSIC_PAGE_TYPE_ALBUM") {
+                song.album = value;
+                song.albumId = text(at(run, {"navigationEndpoint", "browseEndpoint", "browseId"}));
+            } else if (beforeFirstDot && value != " & " && value != ", ") {
+                unlinkedArtists += value;
+            }
+        }
+        if (song.artists.empty() && !unlinkedArtists.empty())
+            song.artists.push_back(unlinkedArtists);
+    }
+    song.durationMs = parseDuration(text(at(item, {"lengthText", "runs", size_t(0), "text"})));
+    song.thumbnailUrl = largestThumbnail(at(item, {"thumbnail", "thumbnails"}));
+    return song;
+}
+
 std::string runsText(const json *runs)
 {
     std::string out;
@@ -355,6 +388,39 @@ std::optional<std::vector<YtShelf>> YtMusicClient::home()
             result.push_back(std::move(shelf));
     }
     return result;
+}
+
+std::optional<std::vector<YtSong>> YtMusicClient::upNext(const std::string &videoId)
+{
+    // The song's radio, as music.youtube.com asks for it when a song starts.
+    const auto response = call("next", {{"videoId", videoId},
+                                        {"playlistId", "RDAMVM" + videoId},
+                                        {"enablePersistentPlaylistPanel", true},
+                                        {"isAudioOnly", true},
+                                        {"tunerSettingValue", "AUTOMIX_SETTING_NORMAL"}});
+    if (!response)
+        return std::nullopt;
+    // The list's own entries only: each may also hold its music video version
+    // ("counterpart"), which is not a separate song.
+    std::vector<const json *> panels;
+    collect(*response, "playlistPanelRenderer", panels);
+    std::vector<YtSong> songs;
+    for (const json *panel : panels) {
+        const json *contents = at(*panel, {"contents"});
+        if (!contents || !contents->is_array())
+            continue;
+        for (const json &entry : *contents) {
+            const json *item = at(entry, {"playlistPanelVideoRenderer"});
+            if (!item)
+                item = at(entry, {"playlistPanelVideoWrapperRenderer", "primaryRenderer", "playlistPanelVideoRenderer"});
+            if (item)
+                if (auto song = parsePanelSong(*item))
+                    songs.push_back(std::move(*song));
+        }
+        if (!songs.empty())
+            break;
+    }
+    return songs;
 }
 
 std::optional<std::vector<YtSong>> YtMusicClient::collection(const std::string &browseId)

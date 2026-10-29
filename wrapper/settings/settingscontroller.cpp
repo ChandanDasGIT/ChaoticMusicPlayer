@@ -43,6 +43,8 @@ constexpr const char *LyricsSourcesKey = "lyrics.sources";
 constexpr const char *LyricsSyncedKey = "lyrics.syncedByDefault";
 constexpr const char *LyricsLatinKey = "lyrics.latinScript";
 constexpr const char *YtLookupKey = "youtube.backgroundLookup";
+constexpr const char *YtAutoplayKey = "youtube.autoplay";
+constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *YtCookiesKey = "youtube.cookiesBrowser";
 constexpr const char *TintStrengthKey = "appearance.tintStrength";
 constexpr const char *CoversOnlineKey = "covers.online";
@@ -480,6 +482,34 @@ void SettingsController::setYtBackgroundLookup(bool enabled)
     m_settings->setBool(YtLookupKey, enabled);
     scheduleSave();
     emit ytBackgroundLookupChanged();
+}
+
+bool SettingsController::ytAutoplay() const
+{
+    return m_settings->boolValue(YtAutoplayKey, true);
+}
+
+void SettingsController::setYtAutoplay(bool enabled)
+{
+    if (enabled == ytAutoplay())
+        return;
+    m_settings->setBool(YtAutoplayKey, enabled);
+    scheduleSave();
+    emit ytAutoplayChanged();
+}
+
+bool SettingsController::ytQueueMix() const
+{
+    return m_settings->boolValue(YtQueueMixKey, true);
+}
+
+void SettingsController::setYtQueueMix(bool enabled)
+{
+    if (enabled == ytQueueMix())
+        return;
+    m_settings->setBool(YtQueueMixKey, enabled);
+    scheduleSave();
+    emit ytQueueMixChanged();
 }
 
 QString SettingsController::ytCookiesBrowser() const

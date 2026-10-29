@@ -42,7 +42,12 @@ SessionController::SessionController(PlayerController *player, PlaylistControlle
 void SessionController::save()
 {
     const QString path = m_player->source();
+    // YouTube songs playing (a Mix, an album...): "youtube:mix:<title>" / "youtube:list:<title>".
     const QString list = path.isEmpty() ? QString()
+                       : !m_playlist->contextTitle().isEmpty()
+                           ? QStringLiteral("youtube:%1:%2").arg(m_playlist->contextEndless() ? QStringLiteral("mix")
+                                                                                              : QStringLiteral("list"),
+                                                                 m_playlist->contextTitle())
                        : m_playlist->playingFromList() ? m_playlists->playingFromId()
                                                        : QStringLiteral("queue");
     m_settings->setSession(path, path.isEmpty() ? 0 : m_player->position(), m_player->duration(), list);
@@ -59,6 +64,10 @@ void SessionController::restore()
         position = 0;
 
     const QString list = m_settings->sessionList();
+    if (list.startsWith(QLatin1String("youtube:"))
+        && m_playlist->resumeYouTube(path, position, list.section(QLatin1Char(':'), 2),
+                                     list.section(QLatin1Char(':'), 1, 1) == QLatin1String("mix")))
+        return;
     if (!list.isEmpty() && list != QLatin1String("queue") && m_playlists->resumePlaylist(list, path, position))
         return;
     if (m_playlist->resumeInQueue(path, position))

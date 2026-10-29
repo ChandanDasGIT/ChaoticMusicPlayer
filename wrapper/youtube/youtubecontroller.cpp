@@ -83,6 +83,7 @@ YouTubeController::YouTubeController(PlaylistController *playlist, SettingsContr
     m_links = std::make_unique<LinkLibrary>(file.toStdString());
     m_links->load();
 
+    connect(m_playlist, &PlaylistController::moreWanted, this, &YouTubeController::fetchMore);
     connect(m_settings, &SettingsController::ytCookiesBrowserChanged, this, [this] {
         m_librarySongs.clear();
         m_libraryError.clear();
@@ -291,13 +292,47 @@ void YouTubeController::loadLibrary()
 
 void YouTubeController::play(const QVariantMap &song)
 {
-    m_playlist->addAndPlay({trackFromMap(song)}, true);
+    const QString title = song.value(QStringLiteral("title")).toString();
+    const bool mix = m_settings->ytAutoplay();
+    m_playlist->playYouTube({trackFromMap(song)}, 0, mix ? tr("Mix – %1").arg(title) : title, mix);
+}
+
+void YouTubeController::playList(const QVariantList &songs, int index, const QString &title)
+{
+    std::vector<::Track> tracks;
+    for (const QVariant &song : songs)
+        tracks.push_back(trackFromMap(song.toMap()));
+    m_playlist->playYouTube(std::move(tracks), index, title, m_settings->ytAutoplay());
+}
+
+// What YouTube plays after `seedPath`: more for the Mix playing, or a Mix for
+// after the Queue's last song.
+void YouTubeController::fetchMore(const QString &seedPath, bool forQueue)
+{
+    const std::string videoId = StreamResolver::videoId(seedPath.toStdString());
+    const ::Track *seed = m_playlist->trackForPath(seedPath);
+    const QString seedTitle = seed ? QString::fromStdString(seed->title) : QString();
+    runAsync([videoId] { return YtMusicClient::upNext(videoId); },
+             [this, videoId, seedTitle, forQueue](const std::optional<std::vector<YtSong>> &songs) {
+                 if (!songs) {
+                     emit notice(errorText("up next"));
+                     return;
+                 }
+                 std::vector<::Track> tracks;
+                 for (const YtSong &song : *songs)
+                     if (song.videoId != videoId)
+                         tracks.push_back(trackFromMap(toVariant(song)));
+                 if (forQueue)
+                     m_playlist->setFollowUp(std::move(tracks), tr("Mix – %1").arg(seedTitle));
+                 else
+                     m_playlist->extendList(tracks);
+             });
 }
 
 void YouTubeController::enqueue(const QVariantMap &song)
 {
     m_playlist->addAndPlay({trackFromMap(song)}, false);
-    emit notice(tr("Added “%1” to the playlist").arg(song.value(QStringLiteral("title")).toString()));
+    emit notice(tr("Added “%1” to the Queue").arg(song.value(QStringLiteral("title")).toString()));
 }
 
 void YouTubeController::save(const QVariantMap &song)
@@ -309,14 +344,6 @@ void YouTubeController::save(const QVariantMap &song)
     } else {
         emit notice(tr("Already saved"));
     }
-}
-
-void YouTubeController::playAll(const QVariantList &songs)
-{
-    std::vector<::Track> tracks;
-    for (const QVariant &song : songs)
-        tracks.push_back(trackFromMap(song.toMap()));
-    m_playlist->addAndPlay(std::move(tracks), true);
 }
 
 void YouTubeController::addLink(const QString &url)

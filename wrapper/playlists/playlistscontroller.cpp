@@ -35,8 +35,8 @@ PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerContro
 
     connect(m_player, &PlayerController::sourceChanged, this, &PlaylistsController::updateViewCurrent);
     connect(m_queue, &PlaylistController::playingFromListChanged, this, [this] {
-        if (!m_queue->playingFromList())
-            setPlayingFrom({}); // a Queue song was played
+        if (!m_queue->playingFromList() || !m_queue->contextTitle().isEmpty())
+            setPlayingFrom({}); // a Queue song, or YouTube songs, were played
     });
 }
 
