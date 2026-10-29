@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The floating bar at the bottom of the window: Home, Queue, YouTube Music,
+// The floating bar at the bottom of the window: YouTube Music, Queue, Home,
 // Library and Settings, each an icon over its name. What is open is marked with a pill
 // behind its icon. Wide windows get a compact, centered bar; phone-size ones a
 // full-width bar.
@@ -33,11 +33,11 @@ Rectangle {
         spacing: 0
 
         NavButton {
-            iconName: "home"
-            label: qsTr("Home")
-            active: root.homeOpen
-            tip: qsTr("Home")
-            onClicked: root.homeClicked()
+            iconName: "cloud"
+            label: qsTr("YouTube")
+            active: root.youtubeOpen
+            tip: qsTr("YouTube Music (Ctrl+2)")
+            onClicked: root.youtubeClicked()
         }
         NavButton {
             iconName: "listMusic"
@@ -47,11 +47,11 @@ Rectangle {
             onClicked: root.queueClicked()
         }
         NavButton {
-            iconName: "cloud"
-            label: qsTr("YouTube")
-            active: root.youtubeOpen
-            tip: qsTr("YouTube Music (Ctrl+2)")
-            onClicked: root.youtubeClicked()
+            iconName: "home"
+            label: qsTr("Home")
+            active: root.homeOpen
+            tip: qsTr("Home")
+            onClicked: root.homeClicked()
         }
         NavButton {
             iconName: "compactDisc"

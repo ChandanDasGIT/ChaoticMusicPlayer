@@ -91,7 +91,7 @@ local music and can also browse and play YouTube Music.
 
 ### Look and layout
 
-- A navigation bar at the bottom: Home, Queue, YouTube Music, Library and
+- A navigation bar at the bottom: YouTube Music, Queue, Home, Library and
   Settings.
 - The layout follows how much of the screen the window covers, on any
   monitor:

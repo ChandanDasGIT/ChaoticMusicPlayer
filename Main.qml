@@ -525,7 +525,7 @@ ApplicationWindow {
         }
     }
 
-    // The way around: Home, Queue, YouTube Music, Library and Settings, always at the bottom.
+    // The way around: YouTube Music, Queue, Home, Library and Settings, always at the bottom.
     NavBar {
         id: navBar
         objectName: "navBar"
