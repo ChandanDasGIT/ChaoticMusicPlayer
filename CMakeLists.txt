@@ -51,7 +51,6 @@ find_package(nlohmann_json 3 REQUIRED)
 # Backend: pure C++ engine. Must never link Qt.
 # ---------------------------------------------------------------------------
 add_library(backend STATIC
-    backend/audioengine/audiooutput/audiooutput.cpp
     backend/audioengine/audiooutput/audiooutput.h
     backend/audioengine/decoder/decoder.cpp
     backend/audioengine/decoder/decoder.h
@@ -86,7 +85,6 @@ add_library(backend STATIC
     backend/network/httpclient/httpclient.cpp
     backend/network/httpclient/httpclient.h
     backend/storage/tsv/tsv.h
-    backend/system/process/process.cpp
     backend/system/process/process.h
     backend/youtube/linklibrary/linklibrary.cpp
     backend/youtube/linklibrary/linklibrary.h
@@ -111,6 +109,18 @@ add_library(backend STATIC
     backend/settings/settings/settings.cpp
     backend/settings/settings/settings.h
 )
+
+# The platform's parts (see CMP_PLATFORM above)
+if(CMP_PLATFORM STREQUAL "linux")
+    target_sources(backend PRIVATE
+        backend/audioengine/audiooutput/audiooutput_linux.cpp
+        backend/system/process/process_posix.cpp
+    )
+elseif(CMP_PLATFORM STREQUAL "android")
+    target_sources(backend PRIVATE
+        backend/system/process/process_posix.cpp
+    )
+endif()
 
 set_target_properties(backend PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_include_directories(backend PUBLIC ${CMAKE_SOURCE_DIR})
@@ -146,13 +156,22 @@ qt_add_qml_module(chaoticstyle
 qt_add_executable(ChaoticMusicPlayer
     main.cpp
     # Not QML types, so not part of the QML module below
-    wrapper/mpris/mprisadaptor.cpp
-    wrapper/mpris/mprisadaptor.h
     wrapper/session/sessioncontroller.cpp
     wrapper/session/sessioncontroller.h
     wrapper/singleinstance/singleinstance.cpp
     wrapper/singleinstance/singleinstance.h
+    wrapper/systemmedia/systemmedia.h
 )
+
+# The platform's parts (see CMP_PLATFORM above)
+if(CMP_PLATFORM STREQUAL "linux")
+    target_sources(ChaoticMusicPlayer PRIVATE
+        wrapper/mpris/mprisadaptor.cpp
+        wrapper/mpris/mprisadaptor.h
+        wrapper/notifications/notificationcontroller_linux.cpp
+        wrapper/systemmedia/systemmedia_linux.cpp
+    )
+endif()
 
 set_source_files_properties(frontend/Theme.qml PROPERTIES
     QT_QML_SINGLETON_TYPE TRUE

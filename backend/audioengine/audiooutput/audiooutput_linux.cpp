@@ -19,13 +19,16 @@ void ensureInitialized()
 
 } // namespace
 
-struct AudioOutput::PipeWire
+struct AudioOutput::Impl
 {
     pw_thread_loop *loop = nullptr;
     pw_stream *stream = nullptr;
     pw_stream_events events{};
 
-    ~PipeWire()
+    static bool connectStream(AudioOutput &self);
+    static void onProcess(void *userData);
+
+    ~Impl()
     {
         if (loop)
             pw_thread_loop_stop(loop);
@@ -55,17 +58,17 @@ bool AudioOutput::open(const std::string &name, int sampleRate, int channels, Pu
     m_channels = channels;
     m_deviceId = deviceId;
     m_active = false;
-    m_pw = std::make_unique<PipeWire>();
+    m_impl = std::make_unique<Impl>();
 
-    m_pw->loop = pw_thread_loop_new("chaotic-audio", nullptr);
-    if (!m_pw->loop) {
-        m_pw.reset();
+    m_impl->loop = pw_thread_loop_new("chaotic-audio", nullptr);
+    if (!m_impl->loop) {
+        m_impl.reset();
         m_error = "Cannot create PipeWire thread loop";
         return false;
     }
 
-    m_pw->events.version = PW_VERSION_STREAM_EVENTS;
-    m_pw->events.process = &AudioOutput::onProcess;
+    m_impl->events.version = PW_VERSION_STREAM_EVENTS;
+    m_impl->events.process = &Impl::onProcess;
 
     pw_properties *props = pw_properties_new(
         PW_KEY_MEDIA_TYPE, "Audio",
@@ -77,22 +80,22 @@ bool AudioOutput::open(const std::string &name, int sampleRate, int channels, Pu
     if (!deviceId.empty())
         pw_properties_set(props, PW_KEY_TARGET_OBJECT, deviceId.c_str());
 
-    m_pw->stream = pw_stream_new_simple(pw_thread_loop_get_loop(m_pw->loop),
-                                        name.c_str(), props, &m_pw->events, this);
-    if (!m_pw->stream) {
-        m_pw.reset();
+    m_impl->stream = pw_stream_new_simple(pw_thread_loop_get_loop(m_impl->loop),
+                                        name.c_str(), props, &m_impl->events, this);
+    if (!m_impl->stream) {
+        m_impl.reset();
         m_error = "Cannot create PipeWire stream";
         return false;
     }
 
-    if (!connectStream()) {
-        m_pw.reset();
+    if (!Impl::connectStream(*this)) {
+        m_impl.reset();
         m_error = "Cannot connect to PipeWire";
         return false;
     }
 
-    if (pw_thread_loop_start(m_pw->loop) < 0) {
-        m_pw.reset();
+    if (pw_thread_loop_start(m_impl->loop) < 0) {
+        m_impl.reset();
         m_error = "Cannot start PipeWire thread loop";
         return false;
     }
@@ -101,13 +104,13 @@ bool AudioOutput::open(const std::string &name, int sampleRate, int channels, Pu
 
 // Connects the stream with our format; the target (if any) comes from the
 // stream's properties. Call with the loop locked or before it is started.
-bool AudioOutput::connectStream()
+bool AudioOutput::Impl::connectStream(AudioOutput &self)
 {
     spa_audio_info_raw info{};
     info.format = SPA_AUDIO_FORMAT_F32;
-    info.rate = uint32_t(m_sampleRate);
-    info.channels = uint32_t(m_channels);
-    if (m_channels == 2) {
+    info.rate = uint32_t(self.m_sampleRate);
+    info.channels = uint32_t(self.m_channels);
+    if (self.m_channels == 2) {
         info.position[0] = SPA_AUDIO_CHANNEL_FL;
         info.position[1] = SPA_AUDIO_CHANNEL_FR;
     }
@@ -120,25 +123,25 @@ bool AudioOutput::connectStream()
     };
 
     int flags = PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS;
-    if (!m_active)
+    if (!self.m_active)
         flags |= PW_STREAM_FLAG_INACTIVE;
-    return pw_stream_connect(m_pw->stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
+    return pw_stream_connect(self.m_impl->stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
                              static_cast<pw_stream_flags>(flags), params, 1) >= 0;
 }
 
 void AudioOutput::close()
 {
-    m_pw.reset();
+    m_impl.reset();
 }
 
 void AudioOutput::setActive(bool active)
 {
     m_active = active;
-    if (!m_pw)
+    if (!m_impl)
         return;
-    pw_thread_loop_lock(m_pw->loop);
-    pw_stream_set_active(m_pw->stream, active);
-    pw_thread_loop_unlock(m_pw->loop);
+    pw_thread_loop_lock(m_impl->loop);
+    pw_stream_set_active(m_impl->stream, active);
+    pw_thread_loop_unlock(m_impl->loop);
 }
 
 void AudioOutput::setDevice(const std::string &deviceId)
@@ -146,27 +149,27 @@ void AudioOutput::setDevice(const std::string &deviceId)
     if (deviceId == m_deviceId)
         return;
     m_deviceId = deviceId;
-    if (!m_pw)
+    if (!m_impl)
         return;
 
     // Reconnect with the new target; WirePlumber links us to it (or to the
     // default output when the id is empty / the device is gone).
-    pw_thread_loop_lock(m_pw->loop);
-    pw_stream_disconnect(m_pw->stream);
+    pw_thread_loop_lock(m_impl->loop);
+    pw_stream_disconnect(m_impl->stream);
     const spa_dict_item item = SPA_DICT_ITEM_INIT(PW_KEY_TARGET_OBJECT,
                                                   deviceId.empty() ? nullptr : deviceId.c_str());
     const spa_dict dict = SPA_DICT_INIT(&item, 1);
-    pw_stream_update_properties(m_pw->stream, &dict);
-    if (!connectStream())
+    pw_stream_update_properties(m_impl->stream, &dict);
+    if (!Impl::connectStream(*this))
         m_error = "Cannot reconnect to PipeWire";
-    pw_thread_loop_unlock(m_pw->loop);
+    pw_thread_loop_unlock(m_impl->loop);
 }
 
 // Realtime thread.
-void AudioOutput::onProcess(void *userData)
+void AudioOutput::Impl::onProcess(void *userData)
 {
     auto *self = static_cast<AudioOutput *>(userData);
-    pw_stream *stream = self->m_pw->stream;
+    pw_stream *stream = self->m_impl->stream;
 
     pw_buffer *buffer = pw_stream_dequeue_buffer(stream);
     if (!buffer)

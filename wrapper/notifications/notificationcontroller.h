@@ -23,6 +23,7 @@ public:
 private:
     void onPosition();
     void notify();
+    // Shows it: notificationcontroller_<platform>.cpp
     void send(const QString &title, const QString &subtitle, const QString &coverFile);
     // The cover saved for the desktop to show, or "" (any thread)
     static QString saveCover(const QString &path, const QString &thumbnail);
@@ -31,5 +32,5 @@ private:
     PlaylistController *const m_playlist;
     SettingsController *const m_settings;
     bool m_pending = false; // a new song was loaded: tell once it plays
-    uint m_lastId = 0;      // the notification to replace
+    uint m_lastId = 0;      // the notification to replace (where the platform has ids)
 };

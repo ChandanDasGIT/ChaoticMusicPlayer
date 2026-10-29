@@ -14,8 +14,9 @@ struct AudioDevice
     std::string name;
 };
 
-// Plays interleaved float32 audio. The Linux implementation uses PipeWire;
-// other platforms will provide their own .cpp behind the same interface.
+// Plays interleaved float32 audio. Each platform has its own
+// audiooutput_<platform>.cpp behind this interface (Linux: PipeWire); CMake
+// picks the one for the platform being built.
 //
 // Samples are pulled from the audio system's realtime thread through PullFn,
 // which must be fast and must not block or allocate. The stream starts
@@ -36,7 +37,7 @@ public:
     bool open(const std::string &name, int sampleRate, int channels, PullFn pull,
               const std::string &deviceId = {});
     void close();
-    bool isOpen() const { return m_pw != nullptr; }
+    bool isOpen() const { return m_impl != nullptr; }
 
     void setActive(bool active);
     // Moves playback to another output ("" = system default). Keeps playing.
@@ -48,12 +49,9 @@ public:
     const std::string &errorString() const { return m_error; }
 
 private:
-    struct PipeWire;
+    struct Impl; // the platform's part (sound system objects, callbacks)
 
-    bool connectStream();
-    static void onProcess(void *userData);
-
-    std::unique_ptr<PipeWire> m_pw;
+    std::unique_ptr<Impl> m_impl;
     PullFn m_pull;
     int m_sampleRate = 48000;
     int m_channels = 2;

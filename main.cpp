@@ -5,7 +5,6 @@
 #include "wrapper/library/librarycontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/lyrics/lyricscontroller.h"
-#include "wrapper/mpris/mprisadaptor.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/notifications/notificationcontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
@@ -13,6 +12,7 @@
 #include "wrapper/session/sessioncontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 #include "wrapper/sleeptimer/sleeptimercontroller.h"
+#include "wrapper/systemmedia/systemmedia.h"
 #include "wrapper/smartplaylists/smartplaylistscontroller.h"
 #include "wrapper/visualizer/visualizercontroller.h"
 #include "wrapper/singleinstance/singleinstance.h"
@@ -146,11 +146,11 @@ int main(int argc, char *argv[])
     };
     QObject::connect(&instance, &SingleInstance::activationRequested, &app, raiseWindow);
 
-    // Desktop media controls / media keys / playerctl.
-    MprisAdaptor mpris(&player, &playlist, nullptr);
-    QObject::connect(&mpris, &MprisAdaptor::raiseRequested, &app, raiseWindow);
+    // The system's media controls / media keys (Linux: also playerctl).
+    SystemMedia systemMedia(&player, &playlist, nullptr);
+    QObject::connect(&systemMedia, &SystemMedia::raiseRequested, &app, raiseWindow);
     // Quit for real: with background playing on, closing the window would only hide it.
-    QObject::connect(&mpris, &MprisAdaptor::quitRequested, &app, [&engine] {
+    QObject::connect(&systemMedia, &SystemMedia::quitRequested, &app, [&engine] {
         if (!engine.rootObjects().isEmpty())
             QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp");
         else
