@@ -50,6 +50,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool ytAutoplay READ ytAutoplay WRITE setYtAutoplay NOTIFY ytAutoplayChanged)
     // When the Queue ends on a YouTube song: continue with its Mix.
     Q_PROPERTY(bool ytQueueMix READ ytQueueMix WRITE setYtQueueMix NOTIFY ytQueueMixChanged)
+    // YouTube Music searches you used, newest first (kept on this computer only).
+    Q_PROPERTY(QStringList ytSearchHistory READ ytSearchHistory NOTIFY ytSearchHistoryChanged)
     // Browser whose YouTube session yt-dlp reads ("" = not signed in)
     Q_PROPERTY(QString ytCookiesBrowser READ ytCookiesBrowser WRITE setYtCookiesBrowser NOTIFY ytCookiesBrowserChanged)
     // Album art for songs without one: look it up online for the playing song;
@@ -127,6 +129,10 @@ public:
     void setYtAutoplay(bool enabled);
     bool ytQueueMix() const;
     void setYtQueueMix(bool enabled);
+    QStringList ytSearchHistory() const;
+    Q_INVOKABLE void rememberYtSearch(const QString &query); // to the top (once)
+    Q_INVOKABLE void forgetYtSearch(const QString &query);
+    Q_INVOKABLE void clearYtSearchHistory();
     bool coversOnline() const;
     void setCoversOnline(bool online);
     QVariantList coverSources() const;
@@ -174,6 +180,7 @@ signals:
     void ytBackgroundLookupChanged();
     void ytAutoplayChanged();
     void ytQueueMixChanged();
+    void ytSearchHistoryChanged();
     void ytCookiesBrowserChanged();
     void coverTintStrengthChanged();
     void coversOnlineChanged();

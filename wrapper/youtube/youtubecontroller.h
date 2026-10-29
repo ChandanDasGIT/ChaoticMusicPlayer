@@ -33,8 +33,6 @@ class YouTubeController : public QObject
     Q_PROPERTY(bool signedIn READ signedIn NOTIFY signedInChanged)
 
     Q_PROPERTY(QVariantList searchResults READ searchResults NOTIFY searchChanged)
-    // Suggested searches for the text being typed (see suggest()).
-    Q_PROPERTY(QStringList suggestions READ suggestions NOTIFY suggestionsChanged)
     Q_PROPERTY(bool searching READ searching NOTIFY searchChanged)
     Q_PROPERTY(QString searchError READ searchError NOTIFY searchChanged)
 
@@ -70,7 +68,6 @@ public:
     bool signedIn() const;
 
     QVariantList searchResults() const { return m_searchResults; }
-    QStringList suggestions() const { return m_suggestions; }
     bool searching() const { return m_searching; }
     QString searchError() const { return m_searchError; }
     QVariantList homeShelves() const { return m_homeShelves; }
@@ -88,8 +85,6 @@ public:
     bool addingLink() const { return m_addingLink; }
 
     Q_INVOKABLE void search(const QString &query);
-    // Asks for suggested searches; an answer to an older call is dropped. "" clears them.
-    Q_INVOKABLE void suggest(const QString &input);
     Q_INVOKABLE void loadHome();
     Q_INVOKABLE void openCollection(const QString &browseId, const QString &title);
     Q_INVOKABLE void closeCollection();
@@ -111,7 +106,6 @@ signals:
     void availabilityChanged();
     void signedInChanged();
     void searchChanged();
-    void suggestionsChanged();
     void homeChanged();
     void collectionChanged();
     void collectionFetched(const QString &browseId, const QVariantList &songs);
@@ -138,8 +132,6 @@ private:
     bool m_searching = false;
     QString m_searchError;
     int m_searchGeneration = 0;
-    QStringList m_suggestions;
-    int m_suggestGeneration = 0;
 
     QVariantList m_homeShelves;
     bool m_homeLoading = false;

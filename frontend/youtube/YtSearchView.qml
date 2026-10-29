@@ -4,38 +4,39 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Search tab: search YouTube Music for songs (no account needed). While you
-// type, suggested searches appear under the field (arrows + Enter, or a
-// click, pick one) and the results below follow once you pause typing.
+// Search tab: search YouTube Music for songs (no account needed). The results
+// follow once you pause typing; "×" clears the field. With the field empty,
+// your recent searches show (each can be removed, or all at once). A search
+// is remembered when you press Enter or use one of its results.
 Item {
     id: root
 
-    property int highlighted: -1     // the suggestion picked with the arrow keys
-    property bool suggestionsDismissed: false // until the text is edited again
+    readonly property string query: field.text.trim()
+    readonly property bool showHistory: query === "" && SettingsController.ytSearchHistory.length > 0
 
     function focusField() {
         field.forceActiveFocus()
         field.selectAll()
     }
-    // Search now (Enter or a picked suggestion); the dropdown closes until the next edit.
-    function commit(query) {
-        suggestTimer.stop()
+    // Search now (Enter, or a recent search picked) and remember it.
+    function commit(text) {
         liveTimer.stop()
-        suggestionsDismissed = true
-        highlighted = -1
-        YouTubeController.search(query)
+        field.text = text
+        YouTubeController.search(text)
+        SettingsController.rememberYtSearch(text)
+    }
+    function clear() {
+        liveTimer.stop()
+        field.clear()
+        YouTubeController.search("")
+        field.forceActiveFocus()
     }
 
     // Spaced out so typing doesn't send a request per key (YouTube throttles busy clients).
     Timer {
-        id: suggestTimer
-        interval: 180
-        onTriggered: YouTubeController.suggest(field.text)
-    }
-    Timer {
         id: liveTimer
         interval: 600
-        onTriggered: if (field.text.trim().length >= 2) YouTubeController.search(field.text)
+        onTriggered: if (root.query.length >= 2) YouTubeController.search(field.text)
     }
 
     ColumnLayout {
@@ -50,39 +51,20 @@ Item {
             Layout.topMargin: Theme.spacing
             implicitHeight: 44
             leftPadding: 42
-            rightPadding: 16
+            rightPadding: clearButton.visible ? 44 : 16
             placeholderText: qsTr("Search songs on YouTube Music")
             placeholderTextColor: Theme.textMuted
             color: Theme.text
             font.pixelSize: Theme.fontSize
             selectByMouse: true
-            onAccepted: {
-                if (root.highlighted >= 0)
-                    text = YouTubeController.suggestions[root.highlighted]
-                root.commit(text)
-            }
+            onAccepted: if (root.query !== "") root.commit(root.query)
             onTextEdited: {
-                root.suggestionsDismissed = false
-                root.highlighted = -1
-                suggestTimer.restart()
-                liveTimer.restart()
-            }
-
-            Keys.onDownPressed: (event) => {
-                event.accepted = suggestions.shown
-                if (suggestions.shown)
-                    root.highlighted = Math.min(root.highlighted + 1, Math.min(YouTubeController.suggestions.length, 5) - 1)
-            }
-            Keys.onUpPressed: (event) => {
-                event.accepted = suggestions.shown
-                if (suggestions.shown)
-                    root.highlighted = Math.max(root.highlighted - 1, -1)
-            }
-            // Esc closes the dropdown first (otherwise it reaches the panel, which closes).
-            Keys.onEscapePressed: (event) => {
-                event.accepted = suggestions.shown
-                root.suggestionsDismissed = true
-                root.highlighted = -1
+                if (root.query === "") {
+                    liveTimer.stop()
+                    YouTubeController.search("")
+                } else {
+                    liveTimer.restart()
+                }
             }
 
             background: Rectangle {
@@ -102,92 +84,127 @@ Item {
                 size: 13
                 color: field.activeFocus ? Theme.accent : Theme.textMuted
             }
+
+            // Clears the field (and the results) at once
+            ControlButton {
+                id: clearButton
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                visible: field.text !== ""
+                iconName: "close"
+                iconSize: 11
+                iconColor: Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Clear")
+                onClicked: root.clear()
+            }
         }
 
-
-        // Suggested searches, inline so the results stay visible below them.
-        Rectangle {
-            id: suggestions
-
-            readonly property bool shown: field.activeFocus && !root.suggestionsDismissed && field.text.trim() !== ""
-                                          && YouTubeController.suggestions.length > 0
-
+        // ---- Recent searches (the field is empty)
+        ColumnLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: Theme.padding
-            Layout.rightMargin: Theme.padding
-            Layout.preferredHeight: shown ? suggestionColumn.implicitHeight + 12 : 0
-            visible: Layout.preferredHeight > 0
-            opacity: shown ? 1 : 0
-            clip: true
-            radius: Theme.radiusLarge
-            color: Theme.surfaceAlt
-            border.color: Theme.border
+            Layout.fillHeight: true
+            visible: root.showHistory
+            spacing: 4
 
-            Behavior on Layout.preferredHeight { NumberAnimation { duration: Theme.anim; easing.type: Theme.easing } }
-            Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: Theme.padding + 4
+                Layout.rightMargin: Theme.padding
 
-            Column {
-                id: suggestionColumn
-                x: 6
-                y: 6
-                width: parent.width - 12
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Recent searches")
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.weight: Font.DemiBold
+                }
 
-                Repeater {
-                    model: YouTubeController.suggestions.slice(0, 5)
+                PillButton {
+                    text: qsTr("Clear all")
+                    iconName: "trash"
+                    iconSize: 10
+                    implicitHeight: 28
+                    transparentIdle: true
+                    onClicked: SettingsController.clearYtSearchHistory()
+                }
+            }
 
-                    delegate: Rectangle {
-                        id: suggestion
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: Theme.spacing
+                Layout.rightMargin: Theme.spacing
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                spacing: 2
+                model: SettingsController.ytSearchHistory
+                ScrollBar.vertical: ScrollBar {}
 
-                        required property string modelData
-                        required property int index
+                delegate: Rectangle {
+                    id: recent
 
-                        width: suggestionColumn.width
-                        height: 34
-                        radius: Theme.radius
-                        color: root.highlighted === index || suggestionHover.hovered ? Theme.hover : "transparent"
+                    required property string modelData
 
-                        HoverHandler {
-                            id: suggestionHover
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                        TapHandler {
-                            onTapped: {
-                                field.text = suggestion.modelData
-                                root.commit(suggestion.modelData)
-                            }
-                        }
+                    width: ListView.view.width
+                    height: 40
+                    radius: Theme.radius
+                    color: recentHover.hovered ? Theme.hover : "transparent"
+
+                    Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+                    HoverHandler {
+                        id: recentHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                    TapHandler {
+                        onTapped: root.commit(recent.modelData)
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 4
+                        spacing: 12
 
                         Icon {
-                            id: suggestionIcon
-                            anchors.left: parent.left
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
                             name: "search"
                             size: 11
                             color: Theme.textMuted
                         }
 
                         Label {
-                            anchors.left: suggestionIcon.right
-                            anchors.leftMargin: 12
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: suggestion.modelData
+                            Layout.fillWidth: true
+                            text: recent.modelData
                             color: Theme.text
                             font.pixelSize: Theme.fontSize
                             elide: Text.ElideRight
+                        }
+
+                        PillButton {
+                            iconName: "close"
+                            iconSize: 10
+                            implicitWidth: 30
+                            implicitHeight: 30
+                            transparentIdle: true
+                            opacity: recentHover.hovered ? 1 : 0.5
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Remove from recent searches")
+                            onClicked: SettingsController.forgetYtSearch(recent.modelData)
                         }
                     }
                 }
             }
         }
 
+        // ---- Results
         ListView {
             id: list
             populate: ListPopulate {}
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: !root.showHistory
             clip: true
             model: YouTubeController.searchResults
             boundsBehavior: Flickable.StopAtBounds
@@ -195,6 +212,11 @@ Item {
             ScrollBar.vertical: ScrollBar {}
 
             Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+
+            // Using a result (play, its menu, dragging it...) remembers the search.
+            PointHandler {
+                onActiveChanged: if (active && root.query !== "" && list.count > 0) SettingsController.rememberYtSearch(root.query)
+            }
 
             delegate: YtTrackRow {
                 required property var modelData
@@ -209,8 +231,8 @@ Item {
                 loading: YouTubeController.searching && list.count === 0
                 loadingText: qsTr("Searching…")
                 errorText: YouTubeController.searchError
-                emptyText: !YouTubeController.searching && list.count === 0 && field.text.trim() === ""
-                           ? qsTr("Search YouTube Music. No account needed: play results, add them to your playlist, or save them.")
+                emptyText: !YouTubeController.searching && list.count === 0 && root.query === ""
+                           ? qsTr("Search YouTube Music. No account needed: play results, add them to the Queue, or save them.")
                            : ""
                 onRetry: YouTubeController.search(field.text)
             }

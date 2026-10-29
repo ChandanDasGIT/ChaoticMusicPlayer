@@ -61,8 +61,7 @@ Item {
     AppShortcut { sequence: "Ctrl+3"; enabled: !root.dialogOpen; onActivated: root.toggleLibrary() }
     AppShortcut { sequence: "Ctrl+,"; enabled: !root.dialogOpen; onActivated: root.openSettings() }
     // Only when nothing else wants Esc: open drawers and dialogs close on it
-    // themselves, and a text field being typed in gets it first (e.g. to hide
-    // the search suggestions).
+    // themselves, and a text field being typed in gets it first.
     AppShortcut { sequence: "Escape"; enabled: root.escapeEnabled && !root.typing; onActivated: root.escapePressed() }
     AppShortcut { sequence: "Ctrl+Q"; onActivated: root.quit() }
 

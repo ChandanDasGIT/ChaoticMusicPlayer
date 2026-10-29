@@ -242,26 +242,6 @@ std::optional<std::vector<YtSong>> YtMusicClient::searchSongs(const std::string 
     return songs;
 }
 
-std::optional<std::vector<std::string>> YtMusicClient::searchSuggestions(const std::string &input)
-{
-    const auto response = call("music/get_search_suggestions", {{"input", input}});
-    if (!response)
-        return std::nullopt;
-
-    // Only the suggested searches; the quick song / artist matches listed after them are skipped.
-    std::vector<const json *> items;
-    collect(*response, "searchSuggestionRenderer", items);
-    std::vector<std::string> suggestions;
-    for (const json *item : items) {
-        std::string query = text(at(*item, {"navigationEndpoint", "searchEndpoint", "query"}));
-        if (query.empty())
-            query = runsText(at(*item, {"suggestion", "runs"}));
-        if (!query.empty() && std::find(suggestions.begin(), suggestions.end(), query) == suggestions.end())
-            suggestions.push_back(std::move(query));
-    }
-    return suggestions;
-}
-
 std::optional<std::string> YtMusicClient::albumYear(const std::string &albumId)
 {
     if (albumId.empty())

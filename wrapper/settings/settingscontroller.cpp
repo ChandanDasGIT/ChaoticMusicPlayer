@@ -45,6 +45,8 @@ constexpr const char *LyricsLatinKey = "lyrics.latinScript";
 constexpr const char *YtLookupKey = "youtube.backgroundLookup";
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
+constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
+constexpr int MaxYtSearchHistory = 50;
 constexpr const char *YtCookiesKey = "youtube.cookiesBrowser";
 constexpr const char *TintStrengthKey = "appearance.tintStrength";
 constexpr const char *CoversOnlineKey = "covers.online";
@@ -510,6 +512,44 @@ void SettingsController::setYtQueueMix(bool enabled)
     m_settings->setBool(YtQueueMixKey, enabled);
     scheduleSave();
     emit ytQueueMixChanged();
+}
+
+QStringList SettingsController::ytSearchHistory() const
+{
+    return pathList(YtSearchHistoryKey);
+}
+
+void SettingsController::rememberYtSearch(const QString &query)
+{
+    const QString q = query.simplified();
+    if (q.isEmpty())
+        return;
+    QStringList history = ytSearchHistory();
+    if (!history.isEmpty() && history.first() == q)
+        return;
+    history.removeIf([&](const QString &old) { return old.compare(q, Qt::CaseInsensitive) == 0; });
+    history.prepend(q);
+    while (history.size() > MaxYtSearchHistory)
+        history.removeLast();
+    setPathList(YtSearchHistoryKey, history);
+    emit ytSearchHistoryChanged();
+}
+
+void SettingsController::forgetYtSearch(const QString &query)
+{
+    QStringList history = ytSearchHistory();
+    if (history.removeAll(query) == 0)
+        return;
+    setPathList(YtSearchHistoryKey, history);
+    emit ytSearchHistoryChanged();
+}
+
+void SettingsController::clearYtSearchHistory()
+{
+    if (ytSearchHistory().isEmpty())
+        return;
+    setPathList(YtSearchHistoryKey, {});
+    emit ytSearchHistoryChanged();
 }
 
 QString SettingsController::ytCookiesBrowser() const

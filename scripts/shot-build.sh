@@ -339,6 +339,19 @@ hook = '''    // ---- screenshot harness
                     if (qEnvironmentVariableIsSet("SHOT_HOLD_SHOT")) // the screen while still dragging
                         w->grabWindow().save(QStringLiteral("build/shot/hold.png"));
                     QTest::mouseRelease(w, Qt::LeftButton, {}, from + by);
+                } else if (step.startsWith(QLatin1String("type:"))) { // type that text where the focus is
+                    const QString text = step.mid(5).replace(QLatin1Char('_'), QLatin1Char(' '));
+                    for (const QChar c : text) {
+                        const int key = c.isLetter() ? Qt::Key_A + (c.toUpper().unicode() - 'A') : c.unicode();
+                        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, QString(c));
+                        QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, QString(c));
+                        QCoreApplication::sendEvent(qobject_cast<QQuickWindow *>(root), &press);
+                        QCoreApplication::sendEvent(qobject_cast<QQuickWindow *>(root), &release);
+                    }
+                } else if (step.startsWith(QLatin1String("key:"))) { // press a key, e.g. key:Return
+                    QTest::keySequence(qobject_cast<QQuickWindow *>(root), QKeySequence(step.mid(4)));
+                } else if (step == QLatin1String("printhist")) {
+                    std::printf("history: %s\\n", qPrintable(settings.ytSearchHistory().join(QStringLiteral(" | "))));
                 } else if (step == QLatin1String("next")) {
                     playlist.next();
                 } else if (step == QLatin1String("printctx")) { // what is playing, and from where
