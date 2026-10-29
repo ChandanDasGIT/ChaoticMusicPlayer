@@ -58,6 +58,11 @@ void Player::setEqualizer(const Equalizer::Gains &gainsDb, bool enabled)
     m_equalizer.setGains(gainsDb, enabled);
 }
 
+void Player::setReplayGainMode(int mode)
+{
+    m_replayGainMode.store(std::clamp(mode, 0, 2), std::memory_order_relaxed);
+}
+
 void Player::setFadeLevel(float level)
 {
     m_fadeLevel.store(std::clamp(level, 0.0f, 1.0f), std::memory_order_relaxed);
@@ -260,8 +265,11 @@ bool Player::openNext()
 
 bool Player::openPath(Decoder &decoder, const std::string &path)
 {
-    if (&decoder == m_decoder.get())
+    if (&decoder == m_decoder.get()) {
         m_decodedFrames = 0;
+        // YouTube evens out loudness itself and has no tags to read.
+        m_decodingGain = StreamResolver::isYouTube(path) ? ReplayGain{} : Metadata::readReplayGain(path);
+    }
     std::optional<std::string> source = path;
     if (m_resolver && StreamResolver::isYouTube(path)) {
         source = m_resolver->resolve(path);
@@ -327,6 +335,7 @@ void Player::fillBuffer()
         m_pendingOffset = 0;
         const bool more = m_decoder->decode(m_pending);
         m_decodedFrames += m_pending.size() / Channels;
+        applyReplayGain(m_pending);
         applyRampIn(m_pending);
         applyFadeOut(m_pending);
 
@@ -364,6 +373,24 @@ void Player::applyFadeOut(std::vector<float> &chunk)
         for (size_t c = 0; c < Channels; ++c)
             chunk[f * Channels + c] *= gain;
     }
+}
+
+// Turned up or down by the file's ReplayGain (never past its peak: no clipping).
+void Player::applyReplayGain(std::vector<float> &chunk)
+{
+    const int mode = m_replayGainMode.load(std::memory_order_relaxed);
+    const ReplayGain &g = m_decodingGain;
+    const bool album = mode == 2 && g.hasAlbum;
+    if (mode == 0 || (!album && !g.hasTrack))
+        return;
+    const double peak = album ? g.albumPeak : g.trackPeak;
+    double factor = std::pow(10.0, (album ? g.albumGainDb : g.trackGainDb) / 20.0);
+    if (peak > 0)
+        factor = std::min(factor, 1.0 / peak);
+    if (factor == 1.0)
+        return;
+    for (float &sample : chunk)
+        sample *= float(factor);
 }
 
 void Player::applyRampIn(std::vector<float> &chunk)

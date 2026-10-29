@@ -97,6 +97,11 @@ int main(int argc, char *argv[])
     if (const QNetworkInformation *network = QNetworkInformation::instance())
         QObject::connect(network, &QNetworkInformation::isMeteredChanged, &player, applyYtQuality);
 
+    // ReplayGain (from the next bit of audio decoded)
+    player.setReplayGainMode(settings.replayGain());
+    QObject::connect(&settings, &SettingsController::replayGainChanged, &player,
+                     [&] { player.setReplayGainMode(settings.replayGain()); });
+
     // The equalizer (changes are heard at once, also while a slider is dragged).
     const auto applyEqualizer = [&] { player.setEqualizer(settings.eqGains(), settings.eqEnabled()); };
     applyEqualizer();

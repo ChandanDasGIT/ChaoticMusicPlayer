@@ -37,6 +37,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool backgroundPlayback READ backgroundPlayback WRITE setBackgroundPlayback NOTIFY backgroundPlaybackChanged)
     // The private listening history (kept on this computer only)
     Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyChanged)
+    // ReplayGain: 0 off, 1 track, 2 album
+    Q_PROPERTY(int replayGain READ replayGain WRITE setReplayGain NOTIFY replayGainChanged)
     Q_PROPERTY(bool historyYouTube READ historyYouTube WRITE setHistoryYouTube NOTIFY historyChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     Q_PROPERTY(bool resumeSession READ resumeSession WRITE setResumeSession NOTIFY resumeSessionChanged)
@@ -109,6 +111,8 @@ public:
     bool restorePlaylist() const;    // load the last playlist on startup
     void setRestorePlaylist(bool restore);
     bool backgroundPlayback() const; // closing the window keeps the music playing
+    int replayGain() const;
+    void setReplayGain(int mode);
     bool historyEnabled() const;
     void setHistoryEnabled(bool enabled);
     bool historyYouTube() const; // YouTube Music songs are recorded too
@@ -201,6 +205,7 @@ signals:
     void restorePlaylistChanged();
     void backgroundPlaybackChanged();
     void historyChanged();
+    void replayGainChanged();
     void themeModeChanged();
     void resumeSessionChanged();
     void showRemainingTimeChanged();

@@ -68,6 +68,8 @@ hook = '''    // ---- screenshot harness
                     std::printf("lvl t=%5d %-8s pos=%6lld level=%.2f %s\\n", t, qPrintable(QFileInfo(player.source()).baseName()),
                                 qint64(player.position()), loudest, QString(int(loudest * 40), QLatin1Char('#')).toLatin1().constData());
                 });
+        if (qEnvironmentVariableIsSet("SHOT_RG")) // ReplayGain mode from the start
+            settings.setReplayGain(qEnvironmentVariableIntValue("SHOT_RG"));
         if (qEnvironmentVariableIsSet("SHOT_LIB_DIR")) // a Library folder
             localLibrary.addFolder(qEnvironmentVariable("SHOT_LIB_DIR"));
         if (qEnvironmentVariableIsSet("SHOT_ADD_DIR")) // like dropping a folder
@@ -388,6 +390,8 @@ hook = '''    // ---- screenshot harness
                         sleepTimer.startEndOfSong();
                     else
                         sleepTimer.start(step.mid(6).toInt());
+                } else if (step.startsWith(QLatin1String("rg:"))) { // ReplayGain mode 0 / 1 / 2
+                    settings.setReplayGain(step.mid(3).toInt());
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {

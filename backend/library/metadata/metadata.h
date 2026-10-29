@@ -21,6 +21,15 @@ struct TrackDetails
     std::vector<Field> rawTags; // every tag in the file, as stored
 };
 
+// A file's ReplayGain values (how much to turn it up or down to sound as loud
+// as other music), from REPLAYGAIN_* tags or Opus' R128_* tags.
+struct ReplayGain
+{
+    bool hasTrack = false, hasAlbum = false;
+    double trackGainDb = 0, albumGainDb = 0;
+    double trackPeak = 0, albumPeak = 0; // 0 = unknown (1.0 = full scale)
+};
+
 // Reads tags and audio properties with TagLib.
 class Metadata
 {
@@ -36,4 +45,6 @@ public:
     // embedded picture, else cover/folder/front.(jpg|png) next to the file.
     // Empty when there is none.
     static std::vector<unsigned char> readCover(const std::filesystem::path &path);
+
+    static ReplayGain readReplayGain(const std::filesystem::path &path);
 };

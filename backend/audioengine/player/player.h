@@ -5,6 +5,7 @@
 #include "backend/audioengine/equalizer/equalizer.h"
 #include "backend/audioengine/ringbuffer/ringbuffer.h"
 #include "backend/audioengine/spectrum/spectrum.h"
+#include "backend/library/metadata/metadata.h"
 
 class StreamResolver;
 
@@ -76,6 +77,8 @@ public:
     void seek(int64_t positionMs);
     void setVolume(float volume); // 0..1, perceptual
     void setFadeLevel(float level); // 0..1 on top of the volume (the sleep timer fading out)
+    // ReplayGain: 0 off, 1 track, 2 album (album songs without album values use their track values).
+    void setReplayGainMode(int mode);
     void setEqualizer(const Equalizer::Gains &gainsDb, bool enabled); // takes effect at once
 
     // What is being played, for the visualizer (before volume is applied).
@@ -121,6 +124,7 @@ private:
     // Fades
     void applyFadeOut(std::vector<float> &chunk); // the end of a track, when the next one fades in
     void applyRampIn(std::vector<float> &chunk);  // fade-in after a skip / at the start of a track
+    void applyReplayGain(std::vector<float> &chunk); // the decoding file's ReplayGain
     void dipOut();                                // skip: fade what is playing out, then mute
     void reportError(const std::string &message);
 
@@ -151,6 +155,8 @@ private:
     // Fades (worker thread)
     int m_nextFadeMs = 0;                     // for m_nextPath
     uint64_t m_rampFrames = 0, m_rampPos = 0; // fade-in still to apply
+    ReplayGain m_decodingGain;                // of the file being decoded
+    std::atomic<int> m_replayGainMode{0};
 
     // Shared with the realtime thread
     RingBuffer m_ring;

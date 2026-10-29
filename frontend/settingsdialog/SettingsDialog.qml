@@ -391,6 +391,35 @@ Popup {
                                 onIncreased: SettingsController.fadeSeconds += 1
                             }
                         }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("ReplayGain")
+                            description: SettingsController.replayGain === 0
+                                ? qsTr("Off: songs play as loud as they were made.")
+                                : SettingsController.replayGain === 1
+                                  ? qsTr("Track: every song about equally loud, using the loudness stored in your files (songs without it play as they are).")
+                                  : qsTr("Album: albums keep their own ups and downs, while albums are about equally loud.")
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Repeater {
+                                model: [qsTr("Off"), qsTr("Track"), qsTr("Album")]
+
+                                delegate: PillButton {
+                                    required property string modelData
+                                    required property int index
+
+                                    text: modelData
+                                    implicitHeight: 32
+                                    active: SettingsController.replayGain === index
+                                    onClicked: SettingsController.replayGain = index
+                                }
+                            }
+                        }
                     }
 
                     SettingsCard {

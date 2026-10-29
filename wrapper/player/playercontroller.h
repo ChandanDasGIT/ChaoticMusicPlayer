@@ -92,6 +92,7 @@ public:
     void setYtLowestQuality(bool lowest); // smallest YouTube streams (else the best ones)
     void setEqualizer(const QList<qreal> &gainsDb, bool enabled); // 10 bands, 31 Hz first
     void setFadeLevel(qreal level); // 0..1 on top of the volume (not saved, not shown)
+    void setReplayGainMode(int mode); // 0 off, 1 track, 2 album
 
     // Analysis of what is being played (for VisualizerController).
     SpectrumAnalyzer &spectrum();

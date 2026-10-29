@@ -323,3 +323,43 @@ std::vector<unsigned char> Metadata::readCover(const std::filesystem::path &path
     std::vector<unsigned char> cover = readEmbeddedCover(path);
     return cover.empty() ? readFolderCover(path) : cover;
 }
+
+namespace {
+
+// "-6.54 dB" / "0.98765" -> the number (false if there is none)
+bool leadingNumber(const std::string &text, double &value)
+{
+    try {
+        size_t used = 0;
+        value = std::stod(text, &used);
+        return used > 0;
+    } catch (...) {
+        return false;
+    }
+}
+
+} // namespace
+
+ReplayGain Metadata::readReplayGain(const std::filesystem::path &path)
+{
+    ReplayGain gain;
+    TagLib::FileRef file(path.c_str(), false);
+    if (file.isNull())
+        return gain;
+    const TagLib::PropertyMap props = file.properties();
+    gain.hasTrack = leadingNumber(firstValue(props, "REPLAYGAIN_TRACK_GAIN"), gain.trackGainDb);
+    gain.hasAlbum = leadingNumber(firstValue(props, "REPLAYGAIN_ALBUM_GAIN"), gain.albumGainDb);
+    leadingNumber(firstValue(props, "REPLAYGAIN_TRACK_PEAK"), gain.trackPeak);
+    leadingNumber(firstValue(props, "REPLAYGAIN_ALBUM_PEAK"), gain.albumPeak);
+    // Opus: R128 gains in 1/256 dB, against -23 LUFS (ReplayGain's reference is 5 dB louder)
+    double r128 = 0;
+    if (!gain.hasTrack && leadingNumber(firstValue(props, "R128_TRACK_GAIN"), r128)) {
+        gain.hasTrack = true;
+        gain.trackGainDb = r128 / 256.0 + 5.0;
+    }
+    if (!gain.hasAlbum && leadingNumber(firstValue(props, "R128_ALBUM_GAIN"), r128)) {
+        gain.hasAlbum = true;
+        gain.albumGainDb = r128 / 256.0 + 5.0;
+    }
+    return gain;
+}

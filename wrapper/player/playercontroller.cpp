@@ -192,6 +192,11 @@ void PlayerController::setYtCookiesBrowser(const QString &browser)
     m_resolver->setCookiesBrowser(browser.toStdString());
 }
 
+void PlayerController::setReplayGainMode(int mode)
+{
+    m_player->setReplayGainMode(mode);
+}
+
 void PlayerController::setFadeLevel(qreal level)
 {
     m_player->setFadeLevel(float(level));
