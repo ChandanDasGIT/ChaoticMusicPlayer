@@ -401,6 +401,7 @@ ApplicationWindow {
                 onPinToggled: window.togglePin("library")
                 onCloseRequested: window.closePanel("library")
                 onDetailsRequested: (path) => detailsDialog.show(path)
+                onEditTagsRequested: (path) => detailsDialog.show(path, true)
                 onSettingsRequested: settingsDialog.open()
                 onFoldersSettingsRequested: settingsDialog.openPage(settingsDialog.libraryPage)
 
@@ -627,6 +628,7 @@ ApplicationWindow {
                 showPinButton: false
                 onCloseRequested: libraryDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
+                onEditTagsRequested: (path) => detailsDialog.show(path, true)
                 onSettingsRequested: {
                     libraryDrawer.close()
                     settingsDialog.open()

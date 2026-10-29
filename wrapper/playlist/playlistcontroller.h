@@ -126,6 +126,8 @@ public:
     bool resumeFromList(std::vector<::Track> tracks, const QString &path, qint64 positionMs);
     bool resumeAlone(const ::Track &track, qint64 positionMs); // in neither (e.g. the Queue was cleared)
     bool resumeTitled(const QString &path, qint64 positionMs, const QString &title, bool endless);
+    // A song's tags were edited: the Queue and the list playing show the new ones.
+    void updateTrackInfo(const ::Track &track);
     // The playing playlist changed (songs added / removed): keep playing the same song.
     void updateListTracks(std::vector<::Track> tracks);
     void save() const;

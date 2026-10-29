@@ -280,6 +280,17 @@ bool PlaylistController::hasNext() const
     return m_active->nextIndex() >= 0 || (m_active == &m_playlist && !m_followUp.empty());
 }
 
+void PlaylistController::updateTrackInfo(const ::Track &track)
+{
+    const int row = m_playlist.updateTrack(track);
+    m_model->refreshRow(row);
+    const int inList = m_context.updateTrack(track);
+    if (row >= 0)
+        save();
+    if (row >= 0 || inList >= 0)
+        emit currentChanged(); // the playing song's title may have changed
+}
+
 void PlaylistController::updateListTracks(std::vector<::Track> tracks)
 {
     const ::Track *current = m_context.currentIndex() >= 0 ? &m_context.at(size_t(m_context.currentIndex())) : nullptr;

@@ -37,6 +37,8 @@ public:
     int insertTracks(const std::string &id, const std::vector<Track> &tracks, size_t index);
     void removeTrack(const std::string &id, size_t index);
     void moveTrack(const std::string &id, size_t from, size_t to);
+    // New tags for that song in every playlist that has it; true if any had it.
+    bool updateTrack(const Track &track);
 
 private:
     Entry *findMutable(const std::string &id);

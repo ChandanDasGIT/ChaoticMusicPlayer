@@ -4,9 +4,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Read-only details of a music file: tags, audio properties, file info, what
-// YouTube Music knows about it, and (collapsed) every raw tag. Values can be
-// selected and copied.
+// Details of a music file: tags, audio properties, file info, what YouTube
+// Music knows about it, and (collapsed) every raw tag. Values can be selected
+// and copied. For local files, "Edit tags" turns the tags into a form; the file
+// changes only when Save is pressed.
 Popup {
     id: root
 
@@ -15,12 +16,47 @@ Popup {
     property string path
     property var ytInfo: ({})
 
-    function show(filePath) {
+    // editTags: open with the tags ready to edit
+    function show(filePath, editTags) {
         path = filePath
         sections = LibraryController.trackDetails(filePath)
         YtMetadataController.prioritize(filePath)
         ytInfo = YtMetadataController.infoFor(filePath)
+        editing = false
+        saving = false
+        if (editTags && canEdit)
+            startEditing()
         open()
+    }
+
+    // ---- Editing the tags
+    readonly property bool canEdit: path !== "" && !path.startsWith("ytmusic:")
+    property bool editing: false
+    property bool saving: false
+    readonly property var tagFields: [
+        { key: "title", label: qsTr("Title") }, { key: "artist", label: qsTr("Artist") },
+        { key: "album", label: qsTr("Album") }, { key: "albumArtist", label: qsTr("Album artist") },
+        { key: "track", label: qsTr("Track") }, { key: "disc", label: qsTr("Disc") },
+        { key: "year", label: qsTr("Year") }, { key: "genre", label: qsTr("Genre") }
+    ]
+    property var tags: ({})
+
+    function startEditing() {
+        tags = LocalLibraryController.tagsOf(path)
+        editing = Object.keys(tags).length > 0
+    }
+
+    Connections {
+        target: LocalLibraryController
+        function onTagsSaved(savedPath, ok) {
+            if (savedPath !== root.path)
+                return
+            root.saving = false
+            if (ok) {
+                root.editing = false
+                root.sections = LibraryController.trackDetails(root.path)
+            }
+        }
     }
 
     Connections {
@@ -81,6 +117,16 @@ Popup {
                 font.pixelSize: Theme.fontSizeLarge
             }
 
+            PillButton {
+                visible: root.canEdit && !root.editing
+                iconName: "sliders"
+                iconSize: 11
+                text: qsTr("Edit tags")
+                implicitHeight: 30
+                transparentIdle: true
+                onClicked: root.startEditing()
+            }
+
             ControlButton {
                 iconName: "close"
                 iconSize: 13
@@ -94,10 +140,107 @@ Popup {
             color: Theme.border
         }
 
+        // The tags as a form (Edit tags)
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.margins: Theme.padding
+            visible: root.editing
+            spacing: Theme.spacing
+
+            ColumnLayout {
+                id: tagForm
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: root.tagFields
+
+                    delegate: Item {
+                        id: tagRow
+
+                        required property var modelData
+                        required property int index
+
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+
+                        Label {
+                            id: tagLabel
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 96
+                            text: tagRow.modelData.label
+                            color: Theme.textMuted
+                            font.pixelSize: Theme.fontSize
+                        }
+
+                        TextField {
+                            id: tagField
+                            anchors.left: tagLabel.right
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            implicitHeight: 32
+                            leftPadding: 12
+                            rightPadding: 12
+                            enabled: !root.saving
+                            text: root.tags[tagRow.modelData.key] || ""
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSize
+                            selectByMouse: true
+                            inputMethodHints: ["track", "disc", "year"].includes(tagRow.modelData.key) ? Qt.ImhDigitsOnly : Qt.ImhNone
+                            onTextEdited: root.tags[tagRow.modelData.key] = text
+
+                            background: Rectangle {
+                                radius: height / 2
+                                color: Theme.fillStrong
+                                border.width: tagField.activeFocus ? 1 : 0
+                                border.color: Theme.accent
+                            }
+                        }
+                    }
+                }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Saving changes the file itself (a safety copy is kept until it is done). Other tags, the cover and the audio stay as they are.")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WordWrap
+            }
+
+            Item { Layout.fillHeight: true }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: Theme.spacing
+
+                PillButton {
+                    text: qsTr("Cancel")
+                    implicitHeight: 36
+                    enabled: !root.saving
+                    onClicked: root.editing = false
+                }
+
+                PillButton {
+                    filled: true
+                    text: root.saving ? qsTr("Saving…") : qsTr("Save")
+                    implicitHeight: 36
+                    enabled: !root.saving
+                    onClicked: {
+                        root.saving = true
+                        LocalLibraryController.saveTags(root.path, root.tags)
+                    }
+                }
+            }
+        }
+
         ScrollView {
             id: scroll
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: !root.editing
             contentWidth: availableWidth
             clip: true
 

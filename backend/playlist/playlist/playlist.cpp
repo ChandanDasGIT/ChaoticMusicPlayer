@@ -49,6 +49,18 @@ int Playlist::indexOf(const std::string &path) const
     return it != m_tracks.end() ? int(it - m_tracks.begin()) : -1;
 }
 
+int Playlist::updateTrack(const Track &track)
+{
+    const int index = indexOf(track.path);
+    if (index < 0)
+        return -1;
+    Track &old = m_tracks[size_t(index)];
+    const int64_t addedAt = old.addedAt;
+    old = track;
+    old.addedAt = addedAt;
+    return index;
+}
+
 void Playlist::setTracks(std::vector<Track> tracks)
 {
     m_tracks.clear();

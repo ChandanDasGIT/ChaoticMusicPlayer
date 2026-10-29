@@ -26,6 +26,8 @@ add_library(backend STATIC
     backend/audioengine/audiooutput/audiooutput.h
     backend/audioengine/decoder/decoder.cpp
     backend/audioengine/decoder/decoder.h
+    backend/library/tageditor/tageditor.cpp
+    backend/library/tageditor/tageditor.h
     backend/playlist/smartplaylist/smartplaylist.cpp
     backend/playlist/smartplaylist/smartplaylist.h
     backend/history/listeninghistory/listeninghistory.cpp

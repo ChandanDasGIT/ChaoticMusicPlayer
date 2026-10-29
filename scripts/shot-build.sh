@@ -377,6 +377,12 @@ hook = '''    // ---- screenshot harness
                         std::printf("smart: %s | %d songs | %d rules\\n", qPrintable(m.value(QStringLiteral("name")).toString()),
                                     m.value(QStringLiteral("count")).toInt(), int(m.value(QStringLiteral("rules")).toList().size()));
                     }
+                } else if (step == QLatin1String("edittags")) { // Track details of the song playing, ready to edit
+                    if (QObject *dialog = root->findChild<QObject *>("detailsDialog"))
+                        QMetaObject::invokeMethod(dialog, "show", Q_ARG(QVariant, QVariant(player.source())), Q_ARG(QVariant, QVariant(true)));
+                } else if (step == QLatin1String("printsong")) { // what the Queue / library think the playing song is
+                    std::printf("song: queue title=\\"%s\\" library title=\\"%s\\"\\n", qPrintable(playlist.currentTitle()),
+                                localLibrary.trackForPath(player.source()) ? localLibrary.trackForPath(player.source())->title.c_str() : "-");
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {

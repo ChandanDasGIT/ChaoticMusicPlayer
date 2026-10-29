@@ -161,6 +161,25 @@ void PlaylistLibrary::moveTrack(const std::string &id, size_t from, size_t to)
     savePlaylist(*entry);
 }
 
+bool PlaylistLibrary::updateTrack(const Track &track)
+{
+    bool any = false;
+    for (Entry &entry : m_entries) {
+        bool changed = false;
+        for (Track &t : entry.tracks) {
+            if (t.path == track.path) {
+                t = track;
+                changed = true;
+            }
+        }
+        if (changed) {
+            savePlaylist(entry);
+            any = true;
+        }
+    }
+    return any;
+}
+
 bool PlaylistLibrary::saveIndex() const
 {
     std::error_code ec;

@@ -23,6 +23,7 @@ Rectangle {
     signal closeRequested()
     signal settingsRequested()
     signal detailsRequested(string path)
+    signal editTagsRequested(string path)
     signal foldersSettingsRequested() // the music folders are chosen in Settings
 
     onTabChanged: LocalLibraryController.closeDetail()
@@ -661,6 +662,7 @@ Rectangle {
                         width: ListView.view.width
                         list: LocalLibraryController.FolderList
                         onDetailsRequested: (path) => root.detailsRequested(path)
+                        onEditTagsRequested: (path) => root.editTagsRequested(path)
                     }
 
                     Label {
@@ -767,6 +769,7 @@ Rectangle {
             list: songList.list
             showAlbum: songList.showAlbum
             onDetailsRequested: (path) => root.detailsRequested(path)
+            onEditTagsRequested: (path) => root.editTagsRequested(path)
         }
     }
 

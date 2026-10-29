@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 
-// "⋮" menu of a library song: play, queue, playlists, details.
+// "⋮" menu of a library song: play, queue, playlists, details, editing its tags.
 ThemedMenu {
     id: root
 
@@ -10,6 +10,7 @@ ThemedMenu {
     property string path
 
     signal detailsRequested(string path)
+    signal editTagsRequested(string path)
 
     Action {
         text: qsTr("Play")
@@ -44,5 +45,11 @@ ThemedMenu {
         text: qsTr("Track details")
         icon.name: "info"
         onTriggered: root.detailsRequested(root.path)
+    }
+
+    Action {
+        text: qsTr("Edit tags…")
+        icon.name: "sliders"
+        onTriggered: root.editTagsRequested(root.path)
     }
 }

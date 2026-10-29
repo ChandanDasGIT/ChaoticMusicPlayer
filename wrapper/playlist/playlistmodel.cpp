@@ -122,6 +122,12 @@ void PlaylistModel::sort(Playlist::SortColumn column, bool descending)
     endResetModel();
 }
 
+void PlaylistModel::refreshRow(int row)
+{
+    if (row >= 0 && row < rowCount())
+        emit dataChanged(index(row), index(row));
+}
+
 void PlaylistModel::refreshCurrent(int previous)
 {
     const int current = m_playlist.currentIndex();

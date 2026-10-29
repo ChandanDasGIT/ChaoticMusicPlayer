@@ -117,6 +117,12 @@ public:
     Q_INVOKABLE QVariantList albumItems(const QString &key) const;  // [{ path }] in disc / track order
     Q_INVOKABLE void playAlbumOf(const QString &path);              // that song's album, from its first track
     Q_INVOKABLE void playAlbum(const QString &key);
+
+    // Tag editing (local files): { title, artist, album, albumArtist, track, disc, year,
+    // genre }, empty if the file can't be read. Saving runs in the background, then the
+    // library, the Queue and the playlists show the new tags; tagsSaved / notice tell how it went.
+    Q_INVOKABLE QVariantMap tagsOf(const QString &path) const;
+    Q_INVOKABLE void saveTags(const QString &path, const QVariantMap &tags);
     Q_INVOKABLE QVariantList folderItems(const QString &path) const; // [{ path }], subfolders too, in file order
 
     // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]
@@ -129,6 +135,7 @@ signals:
     void detailChanged();
     void folderChanged();
     void notice(const QString &text);
+    void tagsSaved(const QString &path, bool ok);
 
 private:
     void startRefresh(bool loadIndexFirst);

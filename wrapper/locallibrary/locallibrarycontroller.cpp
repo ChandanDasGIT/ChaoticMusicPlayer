@@ -1,6 +1,8 @@
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 
+#include "backend/library/metadata/metadata.h"
 #include "backend/library/musiclibrary/musiclibrary.h"
+#include "backend/library/tageditor/tageditor.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/playlists/playlistscontroller.h"
 #include "wrapper/youtube/ytmetadatacontroller.h"
@@ -603,6 +605,53 @@ QVariantList LocalLibraryController::folderItems(const QString &path) const
     for (const Track &t : folderTracks(cleanFolder(path), true))
         out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
     return out;
+}
+
+QVariantMap LocalLibraryController::tagsOf(const QString &path) const
+{
+    TagEditor::Tags t;
+    if (!TagEditor::read(path.toStdString(), t))
+        return {};
+    return {{QStringLiteral("title"), QString::fromStdString(t.title)},
+            {QStringLiteral("artist"), QString::fromStdString(t.artist)},
+            {QStringLiteral("album"), QString::fromStdString(t.album)},
+            {QStringLiteral("albumArtist"), QString::fromStdString(t.albumArtist)},
+            {QStringLiteral("track"), QString::fromStdString(t.track)},
+            {QStringLiteral("disc"), QString::fromStdString(t.disc)},
+            {QStringLiteral("year"), QString::fromStdString(t.year)},
+            {QStringLiteral("genre"), QString::fromStdString(t.genre)}};
+}
+
+void LocalLibraryController::saveTags(const QString &path, const QVariantMap &tags)
+{
+    TagEditor::Tags t;
+    t.title = tags.value(QStringLiteral("title")).toString().toStdString();
+    t.artist = tags.value(QStringLiteral("artist")).toString().toStdString();
+    t.album = tags.value(QStringLiteral("album")).toString().toStdString();
+    t.albumArtist = tags.value(QStringLiteral("albumArtist")).toString().toStdString();
+    t.track = tags.value(QStringLiteral("track")).toString().toStdString();
+    t.disc = tags.value(QStringLiteral("disc")).toString().toStdString();
+    t.year = tags.value(QStringLiteral("year")).toString().toStdString();
+    t.genre = tags.value(QStringLiteral("genre")).toString().toStdString();
+    const std::string backups = (QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
+                                 + QStringLiteral("/tag-backups")).toStdString();
+
+    QThreadPool::globalInstance()->start([this, path, t, backups] {
+        std::string error;
+        const bool ok = TagEditor::write(path.toStdString(), t, backups, error);
+        const Track track = ok ? Metadata::read(path.toStdString()) : Track{};
+        QMetaObject::invokeMethod(this, [this, path, ok, error, track] {
+            if (ok) {
+                m_queue->updateTrackInfo(track);
+                m_playlists->updateTrackInfo(track);
+                refresh(); // the library reads the changed file again
+                emit notice(tr("Saved the tags"));
+            } else {
+                emit notice(tr("Couldn't save the tags: %1").arg(QString::fromStdString(error)));
+            }
+            emit tagsSaved(path, ok);
+        }, Qt::QueuedConnection);
+    });
 }
 
 void LocalLibraryController::playAlbum(const QString &key)

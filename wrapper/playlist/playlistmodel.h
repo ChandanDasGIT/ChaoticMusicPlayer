@@ -49,6 +49,7 @@ public:
     void sort(Playlist::SortColumn column, bool descending);
     // Call after the playlist's current track changed (was `previousRow`).
     void refreshCurrent(int previousRow);
+    void refreshRow(int row); // its song's tags changed
 
     static QString artistAlbum(const Track &track);
     static QString trackLabel(const Track &track);

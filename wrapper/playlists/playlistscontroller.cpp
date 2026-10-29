@@ -96,6 +96,14 @@ void PlaylistsController::view(const QString &id)
     refreshView();
 }
 
+void PlaylistsController::updateTrackInfo(const ::Track &track)
+{
+    if (!m_library->updateTrack(track))
+        return;
+    refreshView();
+    emit playlistsChanged();
+}
+
 void PlaylistsController::refreshView()
 {
     // The playing playlist changed too: playback follows (same song keeps playing).

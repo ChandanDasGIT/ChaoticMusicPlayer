@@ -43,6 +43,8 @@ public:
     void move(size_t from, size_t to);
     // Removing the current track leaves no current track.
     void remove(size_t index);
+    // New tags for the song with `track.path` (it stays where it is); its index, or -1.
+    int updateTrack(const Track &track);
     void clear();
 
     // Re-sorts; the current track (and the shuffle order) are unaffected.

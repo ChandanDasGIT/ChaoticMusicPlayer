@@ -28,6 +28,7 @@ Rectangle {
     readonly property bool showButtons: hover.hovered || menuOpen
 
     signal detailsRequested(string path)
+    signal editTagsRequested(string path)
 
     function playOrToggle() {
         if (root.isCurrent)
@@ -45,6 +46,7 @@ Rectangle {
             index: root.index
             path: root.path
             onDetailsRequested: (path) => root.detailsRequested(path)
+            onEditTagsRequested: (path) => root.editTagsRequested(path)
         }
     }
 
