@@ -16,6 +16,7 @@ class PlaylistController;
 class QJSEngine;
 class QQmlEngine;
 class SettingsController;
+class YtDlpManager;
 
 // Everything the YouTube Music panel shows and does (`YouTubeController`
 // singleton). Songs are passed to QML as maps:
@@ -30,6 +31,12 @@ class YouTubeController : public QObject
 
     Q_PROPERTY(bool available READ available NOTIFY availabilityChanged) // yt-dlp installed
     Q_PROPERTY(QString ytDlpVersion READ ytDlpVersion NOTIFY availabilityChanged)
+    // Which copy runs ("app", "bundled", "system"), the last update check in words,
+    // a check / download going on, and whether this build may update yt-dlp
+    Q_PROPERTY(QString ytDlpSource READ ytDlpSource NOTIFY availabilityChanged)
+    Q_PROPERTY(QString ytDlpStatus READ ytDlpStatus NOTIFY availabilityChanged)
+    Q_PROPERTY(bool ytDlpBusy READ ytDlpBusy NOTIFY availabilityChanged)
+    Q_PROPERTY(bool ytDlpCanUpdate READ ytDlpCanUpdate CONSTANT)
     Q_PROPERTY(bool signedIn READ signedIn NOTIFY signedInChanged)
 
     Q_PROPERTY(QVariantList searchResults READ searchResults NOTIFY searchChanged)
@@ -75,8 +82,13 @@ public:
     // A song map (see above) as a playlist track ("ytmusic:<id>").
     static ::Track trackFromSong(const QVariantMap &song);
 
-    bool available() const { return m_available; }
-    QString ytDlpVersion() const { return m_ytDlpVersion; }
+    bool available() const;
+    QString ytDlpVersion() const;
+    QString ytDlpSource() const;
+    QString ytDlpStatus() const;
+    bool ytDlpBusy() const;
+    bool ytDlpCanUpdate() const;
+    Q_INVOKABLE void updateYtDlp();
     bool signedIn() const;
 
     QVariantList searchResults() const { return m_searchResults; }
@@ -150,8 +162,7 @@ private:
     SettingsController *m_settings;
     std::unique_ptr<LinkLibrary> m_links;
 
-    bool m_available = false;
-    QString m_ytDlpVersion;
+    YtDlpManager *m_ytDlp;
 
     QVariantList m_searchResults;
     bool m_searching = false;

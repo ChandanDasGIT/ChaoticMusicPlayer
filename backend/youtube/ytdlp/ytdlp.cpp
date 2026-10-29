@@ -5,6 +5,8 @@
 #include <nlohmann/json.hpp>
 
 #include <cmath>
+#include <mutex>
+#include <sstream>
 
 using nlohmann::json;
 
@@ -12,6 +14,9 @@ namespace {
 
 thread_local std::string t_lastError;
 thread_local bool t_rateLimited = false;
+
+std::mutex g_programMutex;
+std::string g_program = "yt-dlp";
 
 bool contains(const std::string &text, const char *part)
 {
@@ -48,7 +53,7 @@ std::string friendlyError(const std::string &line)
 
 std::vector<std::string> baseArgs(const std::string &cookiesBrowser)
 {
-    std::vector<std::string> args = {"yt-dlp", "--no-warnings", "--ignore-config"};
+    std::vector<std::string> args = {YtDlp::executable(), "--no-warnings", "--ignore-config"};
     if (!cookiesBrowser.empty()) {
         args.push_back("--cookies-from-browser");
         args.push_back(cookiesBrowser);
@@ -118,15 +123,53 @@ YtSong songFromInfo(const json &item)
 
 } // namespace
 
+void YtDlp::setExecutable(const std::string &program)
+{
+    std::lock_guard lock(g_programMutex);
+    g_program = program.empty() ? "yt-dlp" : program;
+}
+
+std::string YtDlp::executable()
+{
+    std::lock_guard lock(g_programMutex);
+    return g_program;
+}
+
 std::optional<std::string> YtDlp::version()
 {
-    ProcessResult result = run({"yt-dlp", "--version"}, 10000);
+    return versionOf(executable());
+}
+
+std::optional<std::string> YtDlp::versionOf(const std::string &program)
+{
+    // (A standalone build unpacks itself on its first start: give it time.)
+    ProcessResult result = run({program, "--version"}, 30000);
     if (!result.ok())
         return std::nullopt;
     std::string v = result.out;
-    while (!v.empty() && (v.back() == '\n' || v.back() == '\r'))
+    while (!v.empty() && (v.back() == '\n' || v.back() == '\r' || v.back() == ' '))
         v.pop_back();
+    if (v.empty())
+        return std::nullopt;
     return v;
+}
+
+bool YtDlp::olderThan(const std::string &a, const std::string &b)
+{
+    const auto parts = [](const std::string &v) {
+        std::vector<long> out;
+        std::stringstream in(v);
+        std::string part;
+        while (std::getline(in, part, '.')) {
+            try {
+                out.push_back(std::stol(part));
+            } catch (...) {
+                out.push_back(0);
+            }
+        }
+        return out;
+    };
+    return parts(a) < parts(b); // missing parts count as older: 2025.10.22 < 2025.10.22.1
 }
 
 std::optional<std::string> YtDlp::streamUrl(const std::string &videoId, const std::string &cookiesBrowser,
@@ -134,8 +177,12 @@ std::optional<std::string> YtDlp::streamUrl(const std::string &videoId, const st
 {
     std::vector<std::string> args = baseArgs(cookiesBrowser);
     // Audio only, the stream with the highest (or lowest) bitrate.
+    // Not from YouTube's TV clients: a yt-dlp that can solve YouTube's JavaScript
+    // challenges (e.g. the standalone build, with Deno installed) prefers their
+    // streams, but those only play inside yt-dlp's own download, not in our player.
     // "--": what follows is always a link, never an option (links can come from the user).
     args.insert(args.end(), {"-f", "bestaudio", "-S", quality == AudioQuality::Lowest ? "+abr" : "abr",
+                             "--extractor-args", "youtube:player_client=default,-tv,-tv_simply,-tv_samsung",
                              "--get-url", "--no-playlist", "--", YtMusicClient::watchUrl(videoId)});
     ProcessResult result = run(args, 30000);
     if (!result.ok())

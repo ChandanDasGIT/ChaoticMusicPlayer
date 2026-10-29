@@ -228,6 +228,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/visualizer/visualizercontroller.h
         wrapper/youtube/youtubecontroller.cpp
         wrapper/youtube/youtubecontroller.h
+        wrapper/youtube/ytdlpmanager.cpp
+        wrapper/youtube/ytdlpmanager.h
         wrapper/youtube/ytmetadatacontroller.cpp
         wrapper/youtube/ytmetadatacontroller.h
     QML_FILES
@@ -318,6 +320,11 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
 )
 
 target_compile_options(ChaoticMusicPlayer PRIVATE ${CMP_WARNINGS})
+
+# yt-dlp updates itself (wrapper/youtube/ytdlpmanager.h). Off for builds whose
+# store updates yt-dlp and forbids downloads at runtime (Flathub).
+option(CMP_YTDLP_SELF_UPDATE "Let the app download yt-dlp updates" ON)
+target_compile_definitions(ChaoticMusicPlayer PRIVATE CMP_YTDLP_SELF_UPDATE=$<BOOL:${CMP_YTDLP_SELF_UPDATE}>)
 
 # Shown in Settings > About (QCoreApplication::applicationVersion).
 target_compile_definitions(ChaoticMusicPlayer PRIVATE APP_VERSION="${PROJECT_VERSION}")

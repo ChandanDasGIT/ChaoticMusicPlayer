@@ -22,6 +22,17 @@ On Windows the app's manifest sets the UTF-8 code page, so `std::string`
 paths are read as UTF-8 by `std::filesystem`, file streams and TagLib. Shown
 to the user, a path may use the platform's own separators.
 
+### yt-dlp
+
+YouTube songs play through yt-dlp. At every start the app picks the newest
+copy that works (its own, in its data folder; one shipped next to it; the
+system's), then checks GitHub for a newer release and, if there is one,
+downloads yt-dlp's standalone build for the platform, checks it against
+yt-dlp's SHA-256 sums and uses it (`wrapper/youtube/ytdlpmanager.h`).
+Settings > YouTube Music shows the version and has an "Update yt-dlp" button.
+Build with `-DCMP_YTDLP_SELF_UPDATE=OFF` where the store updates yt-dlp and
+forbids downloads at runtime (Flathub).
+
 ## Packages (filled in step by step)
 
 | Platform | Packages |

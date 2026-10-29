@@ -6,15 +6,23 @@
 #include <string>
 #include <vector>
 
-// Uses the installed yt-dlp program for what the web API cannot do without an
-// account: direct audio stream addresses, and reading the user's own library
-// with their browser's YouTube session ("--cookies-from-browser"; the app
-// never sees a password). Blocking: call from worker threads.
+// Uses the yt-dlp program for what the web API cannot do without an account:
+// direct audio stream addresses, and reading the user's own library with
+// their browser's YouTube session ("--cookies-from-browser"; the app never
+// sees a password). Blocking: call from worker threads.
 class YtDlp
 {
 public:
-    // yt-dlp's version, or nullopt if it is not installed.
+    // The program to run: a file's path, or "yt-dlp" (looked up in PATH; the
+    // default). The app picks the newest copy it has (wrapper: YtDlpManager).
+    static void setExecutable(const std::string &program);
+    static std::string executable();
+
+    // yt-dlp's version ("2025.10.22"), or nullopt if it can't run.
     static std::optional<std::string> version();
+    static std::optional<std::string> versionOf(const std::string &program);
+    // Versions are dates, sometimes with a fourth part: "2025.10.22.1".
+    static bool olderThan(const std::string &a, const std::string &b);
 
     enum class AudioQuality { Best, Lowest }; // highest / lowest bitrate stream
 

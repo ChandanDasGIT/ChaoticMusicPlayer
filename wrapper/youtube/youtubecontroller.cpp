@@ -7,6 +7,7 @@
 #include "backend/youtube/ytmusicclient/ytmusicclient.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/settings/settingscontroller.h"
+#include "wrapper/youtube/ytdlpmanager.h"
 
 #include <QJSEngine>
 #include <QStandardPaths>
@@ -99,6 +100,7 @@ YouTubeController::YouTubeController(PlaylistController *playlist, SettingsContr
     : QObject(parent)
     , m_playlist(playlist)
     , m_settings(settings)
+    , m_ytDlp(new YtDlpManager(this))
 {
     Q_ASSERT(!s_instance);
     s_instance = this;
@@ -117,12 +119,21 @@ YouTubeController::YouTubeController(PlaylistController *playlist, SettingsContr
         emit signedInChanged();
     });
 
-    runAsync([] { return YtDlp::version(); },
-             [this](const std::optional<std::string> &version) {
-                 m_available = version.has_value();
-                 m_ytDlpVersion = version ? QString::fromStdString(*version) : QString();
-                 emit availabilityChanged();
-             });
+    // The newest yt-dlp there is, kept up to date
+    connect(m_ytDlp, &YtDlpManager::changed, this, &YouTubeController::availabilityChanged);
+    m_ytDlp->start();
+}
+
+bool YouTubeController::available() const { return m_ytDlp->available(); }
+QString YouTubeController::ytDlpVersion() const { return m_ytDlp->version(); }
+QString YouTubeController::ytDlpSource() const { return m_ytDlp->source(); }
+QString YouTubeController::ytDlpStatus() const { return m_ytDlp->status(); }
+bool YouTubeController::ytDlpBusy() const { return m_ytDlp->busy(); }
+bool YouTubeController::ytDlpCanUpdate() const { return YtDlpManager::canUpdate(); }
+
+void YouTubeController::updateYtDlp()
+{
+    m_ytDlp->checkForUpdate();
 }
 
 ::Track YouTubeController::trackFromSong(const QVariantMap &song)

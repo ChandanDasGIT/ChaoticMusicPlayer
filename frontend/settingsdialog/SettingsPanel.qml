@@ -1217,12 +1217,33 @@ Rectangle {
                                 }
                             }
 
+                            // yt-dlp plays YouTube songs; the app keeps it up to date (YtDlpManager)
                             SettingsRow {
                                 Layout.fillWidth: true
                                 title: qsTr("yt-dlp")
-                                description: YouTubeController.available
-                                             ? qsTr("Installed (version %1). It plays YouTube songs; keep it up to date.").arg(YouTubeController.ytDlpVersion)
-                                             : qsTr("Not found. Install yt-dlp (e.g. sudo dnf install yt-dlp) to play YouTube songs.")
+                                description: {
+                                    const where = YouTubeController.ytDlpSource === "app" ? qsTr("the app's own copy")
+                                                : YouTubeController.ytDlpSource === "bundled" ? qsTr("the copy that came with the app")
+                                                : qsTr("installed on this computer")
+                                    const what = YouTubeController.available
+                                                 ? qsTr("Version %1, %2. It plays YouTube songs.").arg(YouTubeController.ytDlpVersion).arg(where)
+                                                 : YouTubeController.ytDlpCanUpdate
+                                                   ? qsTr("Not found yet. It plays YouTube songs; the app gets it when online.")
+                                                   : qsTr("Not found. Install yt-dlp to play YouTube songs.")
+                                    const checked = YouTubeController.ytDlpCanUpdate
+                                                    ? " " + qsTr("Checked for updates at every start.") : ""
+                                    return what + checked + (YouTubeController.ytDlpStatus !== "" ? "\n" + YouTubeController.ytDlpStatus : "")
+                                }
+
+                                PillButton {
+                                    visible: YouTubeController.ytDlpCanUpdate
+                                    enabled: !YouTubeController.ytDlpBusy
+                                    iconName: "refresh"
+                                    iconSize: 11
+                                    text: YouTubeController.ytDlpBusy ? qsTr("Checking…") : qsTr("Update yt-dlp")
+                                    implicitHeight: 32
+                                    onClicked: YouTubeController.updateYtDlp()
+                                }
                             }
                         }
                     }
