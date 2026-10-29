@@ -35,10 +35,13 @@ jobs:
       - uses: actions/checkout@v5
       - name: Microsoft's compiler
         uses: ilammy/msvc-dev-cmd@v1
+      # Qt 6.10: the installer behind this action (aqtinstall 3.3) can't read Qt
+      # 6.11's download layout yet. The app needs Qt 6.8+; move to 6.11 here
+      # once aqtinstall supports it.
       - name: Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.2'
+          version: '6.10.3'
           arch: win64_msvc2022_64
           cache: true
       - name: vcpkg (at the baseline in release/vcpkg.json)
