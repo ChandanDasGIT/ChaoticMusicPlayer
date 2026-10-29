@@ -47,6 +47,11 @@ constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
 constexpr const char *YtQualityKey = "youtube.quality";
+constexpr const char *EqEnabledKey = "eq.enabled";
+constexpr const char *EqGainsKey = "eq.gains"; // "0,0,3,..." dB, 31 Hz first
+constexpr const char *EqPresetKey = "eq.preset";
+constexpr int EqBands = 10;
+constexpr qreal EqMaxDb = 12;
 constexpr int MaxYtSearchHistory = 50;
 constexpr const char *YtCookiesKey = "youtube.cookiesBrowser";
 constexpr const char *TintStrengthKey = "appearance.tintStrength";
@@ -513,6 +518,58 @@ void SettingsController::setYtQueueMix(bool enabled)
     m_settings->setBool(YtQueueMixKey, enabled);
     scheduleSave();
     emit ytQueueMixChanged();
+}
+
+bool SettingsController::eqEnabled() const
+{
+    return m_settings->boolValue(EqEnabledKey, false);
+}
+
+void SettingsController::setEqEnabled(bool enabled)
+{
+    if (enabled == eqEnabled())
+        return;
+    m_settings->setBool(EqEnabledKey, enabled);
+    scheduleSave();
+    emit eqChanged();
+}
+
+QList<qreal> SettingsController::eqGains() const
+{
+    QList<qreal> gains(EqBands, 0);
+    const QStringList saved = QString::fromStdString(m_settings->value(EqGainsKey)).split(QLatin1Char(','));
+    for (int i = 0; i < EqBands && i < saved.size(); ++i)
+        gains[i] = qBound(-EqMaxDb, saved[i].toDouble(), EqMaxDb);
+    return gains;
+}
+
+QString SettingsController::eqPreset() const
+{
+    const QString preset = QString::fromStdString(m_settings->value(EqPresetKey));
+    return preset.isEmpty() ? QStringLiteral("flat") : preset;
+}
+
+void SettingsController::setEqGain(int band, qreal db)
+{
+    if (band < 0 || band >= EqBands)
+        return;
+    QList<qreal> gains = eqGains();
+    gains[band] = qBound(-EqMaxDb, db, EqMaxDb);
+    setEqPreset(QStringLiteral("custom"), gains);
+}
+
+void SettingsController::setEqPreset(const QString &preset, const QList<qreal> &gains)
+{
+    QStringList values;
+    for (int i = 0; i < EqBands; ++i)
+        values << QString::number(i < gains.size() ? qBound(-EqMaxDb, gains[i], EqMaxDb) : 0.0);
+    const std::string joined = values.join(QLatin1Char(',')).toStdString();
+    if (joined == m_settings->value(EqGainsKey) && preset == eqPreset())
+        return;
+    m_settings->setValue(EqGainsKey, joined);
+    m_settings->setValue(EqPresetKey, preset.toStdString());
+    scheduleSave();
+    emit eqChanged();
 }
 
 SettingsController::YtQuality SettingsController::ytQuality() const

@@ -192,6 +192,14 @@ void PlayerController::setYtCookiesBrowser(const QString &browser)
     m_resolver->setCookiesBrowser(browser.toStdString());
 }
 
+void PlayerController::setEqualizer(const QList<qreal> &gainsDb, bool enabled)
+{
+    Equalizer::Gains gains{};
+    for (int i = 0; i < Equalizer::Bands && i < gainsDb.size(); ++i)
+        gains[size_t(i)] = gainsDb[i];
+    m_player->setEqualizer(gains, enabled);
+}
+
 void PlayerController::setYtLowestQuality(bool lowest)
 {
     m_resolver->setQuality(lowest ? YtDlp::AudioQuality::Lowest : YtDlp::AudioQuality::Best);

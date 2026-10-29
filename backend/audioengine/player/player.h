@@ -2,6 +2,7 @@
 
 #include "backend/audioengine/audiooutput/audiooutput.h"
 #include "backend/audioengine/decoder/decoder.h"
+#include "backend/audioengine/equalizer/equalizer.h"
 #include "backend/audioengine/ringbuffer/ringbuffer.h"
 #include "backend/audioengine/spectrum/spectrum.h"
 
@@ -74,6 +75,7 @@ public:
     void stop();
     void seek(int64_t positionMs);
     void setVolume(float volume); // 0..1, perceptual
+    void setEqualizer(const Equalizer::Gains &gainsDb, bool enabled); // takes effect at once
 
     // What is being played, for the visualizer (before volume is applied).
     SpectrumAnalyzer &spectrum() { return m_spectrum; }
@@ -155,6 +157,7 @@ private:
     std::atomic<bool> m_skipFade{false};
     std::atomic<int> m_dipRemaining{0}; // frames of fade-out left (skip)
     std::atomic<bool> m_dipMuted{false};  // fade-out done: silence until the new track
+    Equalizer m_equalizer{Decoder::OutputRate, Decoder::OutputChannels};
     SpectrumAnalyzer m_spectrum{Decoder::OutputRate};
 
     // Command queue

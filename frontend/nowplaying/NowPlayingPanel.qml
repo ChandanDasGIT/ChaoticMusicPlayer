@@ -18,6 +18,7 @@ Rectangle {
     signal playlistRequested()
     signal detailsRequested()
     signal settingsRequested()
+    signal equalizerRequested()
     signal youtubeRequested()
     signal libraryRequested()
     signal quitRequested()
@@ -187,7 +188,8 @@ Rectangle {
         VolumeSlider {
             id: volume
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, 220)
+            width: Math.min(parent.width, 250)
+            onEqualizerRequested: root.equalizerRequested()
         }
 
         Visualizer {

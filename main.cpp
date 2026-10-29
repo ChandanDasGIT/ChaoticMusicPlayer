@@ -91,6 +91,11 @@ int main(int argc, char *argv[])
     if (const QNetworkInformation *network = QNetworkInformation::instance())
         QObject::connect(network, &QNetworkInformation::isMeteredChanged, &player, applyYtQuality);
 
+    // The equalizer (changes are heard at once, also while a slider is dragged).
+    const auto applyEqualizer = [&] { player.setEqualizer(settings.eqGains(), settings.eqEnabled()); };
+    applyEqualizer();
+    QObject::connect(&settings, &SettingsController::eqChanged, &player, applyEqualizer);
+
     // Remember the volume and the output device between sessions.
     player.setOutputDevice(settings.outputDevice());
     QObject::connect(&player, &PlayerController::outputDeviceChanged,

@@ -16,6 +16,7 @@ Popup {
     readonly property var pages: [
         { name: qsTr("General"), icon: "sliders" },
         { name: qsTr("Playback"), icon: "play" },
+        { name: qsTr("Equalizer"), icon: "equalizer" },
         { name: qsTr("Appearance"), icon: "palette" },
         { name: qsTr("Library"), icon: "compactDisc" },
         { name: qsTr("Album art"), icon: "image" },
@@ -25,7 +26,8 @@ Popup {
         { name: qsTr("About"), icon: "info" }
     ]
 
-    readonly property int libraryPage: 3
+    readonly property int equalizerPage: 2
+    readonly property int libraryPage: 4
 
     // Opens on that page (e.g. the Library's music folders).
     function openPage(index) {
@@ -366,6 +368,117 @@ Popup {
                             SettingsSwitch {
                                 checked: SettingsController.showRemainingTime
                                 onToggled: SettingsController.showRemainingTime = checked
+                            }
+                        }
+                    }
+                }
+
+                // ------------------------------------------------------------ Equalizer
+                SettingsPage {
+                    id: eqPage
+                    title: qsTr("Equalizer")
+
+                    // dB for the bands 31 Hz ... 16 kHz
+                    readonly property var presets: [
+                        { id: "flat", name: qsTr("Flat"), gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+                        { id: "bass", name: qsTr("Bass boost"), gains: [6, 5, 4, 2, 0, 0, 0, 0, 0, 0] },
+                        { id: "treble", name: qsTr("Treble boost"), gains: [0, 0, 0, 0, 0, 1, 2, 4, 5, 6] },
+                        { id: "vocal", name: qsTr("Vocal"), gains: [-2, -2, -1, 1, 3, 4, 3, 1, 0, -1] },
+                        { id: "rock", name: qsTr("Rock"), gains: [4, 3, 2, 0, -1, -1, 1, 2, 3, 4] },
+                        { id: "pop", name: qsTr("Pop"), gains: [-1, 0, 2, 3, 4, 3, 1, 0, -1, -1] },
+                        { id: "electronic", name: qsTr("Electronic"), gains: [5, 4, 1, 0, -2, 1, 0, 1, 4, 5] },
+                        { id: "hiphop", name: qsTr("Hip-hop"), gains: [5, 4, 2, 3, -1, -1, 1, 0, 2, 3] },
+                        { id: "jazz", name: qsTr("Jazz"), gains: [3, 2, 1, 2, -1, -1, 0, 1, 2, 3] },
+                        { id: "classical", name: qsTr("Classical"), gains: [4, 3, 2, 1, -1, -1, 0, 2, 3, 4] },
+                        { id: "acoustic", name: qsTr("Acoustic"), gains: [4, 3, 2, 1, 1, 1, 2, 2, 3, 2] }
+                    ]
+                    readonly property var bandLabels: ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
+
+                    SettingsCard {
+                        title: qsTr("Equalizer")
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("Equalizer")
+                            description: qsTr("Shape the sound with 10 bands. Boosting doesn't lower the volume: only peaks that would distort are turned down for a moment. Changes are heard at once.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.eqEnabled
+                                onToggled: SettingsController.eqEnabled = checked
+                            }
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Repeater {
+                                model: eqPage.presets
+
+                                delegate: PillButton {
+                                    required property var modelData
+
+                                    text: modelData.name
+                                    implicitHeight: 32
+                                    active: SettingsController.eqPreset === modelData.id
+                                    onClicked: {
+                                        SettingsController.setEqPreset(modelData.id, modelData.gains)
+                                        SettingsController.eqEnabled = true
+                                    }
+                                }
+                            }
+
+                            PillButton {
+                                visible: SettingsController.eqPreset === "custom"
+                                text: qsTr("Custom")
+                                implicitHeight: 32
+                                active: true
+                            }
+                        }
+
+                        // The 10 bands. Double-click a slider to set it back to 0.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.topMargin: Theme.spacing
+                            spacing: 0
+                            opacity: SettingsController.eqEnabled ? 1 : 0.5
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+
+                            Repeater {
+                                model: 10
+
+                                delegate: EqBand {
+                                    required property int index
+
+                                    Layout.fillWidth: true
+                                    label: eqPage.bandLabels[index]
+                                    value: SettingsController.eqGains[index]
+                                    onMoved: (db) => {
+                                        SettingsController.setEqGain(index, db)
+                                        SettingsController.eqEnabled = true
+                                    }
+                                }
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: qsTr("Hz · ±12 dB. Double-click a slider to set it back to 0.")
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeSmall
+                                wrapMode: Text.WordWrap
+                            }
+
+                            PillButton {
+                                iconName: "refresh"
+                                iconSize: 11
+                                text: qsTr("Reset")
+                                implicitHeight: 32
+                                onClicked: SettingsController.setEqPreset("flat", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                             }
                         }
                     }
@@ -1041,6 +1154,107 @@ Popup {
     }
 
     // A rounded card with a small accent heading.
+    // One equalizer band: its value (dB), a vertical slider filled from 0 dB
+    // up or down, and its frequency. Double-click: back to 0.
+    component EqBand: ColumnLayout {
+        id: band
+
+        property string label
+        property real value: 0
+        signal moved(real db)
+
+        spacing: 6
+
+        // (Labels fill the column, so the bands can share the row's width.)
+        Label {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: (band.value > 0 ? "+" : "") + Math.round(band.value)
+            color: band.value !== 0 ? Theme.accent : Theme.textMuted
+            font.pixelSize: Theme.fontSizeSmall
+            font.weight: Font.DemiBold
+        }
+
+        Slider {
+            id: slider
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: 160
+            Layout.preferredWidth: 28
+            orientation: Qt.Vertical
+            from: -12
+            to: 12
+            stepSize: 1
+            snapMode: Slider.SnapAlways
+            value: band.value
+            hoverEnabled: true
+            focusPolicy: Qt.NoFocus
+            onMoved: band.moved(value)
+
+            TapHandler {
+                onDoubleTapped: band.moved(0)
+            }
+
+            background: Item {
+                x: slider.leftPadding + slider.availableWidth / 2 - 3
+                y: slider.topPadding
+                width: 6
+                height: slider.availableHeight
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 3
+                    color: Theme.border
+                }
+
+                // From the 0 dB mark to the handle
+                Rectangle {
+                    readonly property real zero: parent.height / 2
+                    readonly property real at: slider.visualPosition * parent.height
+                    width: parent.width
+                    y: Math.min(zero, at)
+                    height: Math.abs(at - zero)
+                    radius: 3
+                    color: slider.hovered || slider.pressed ? Theme.accent : Theme.text
+                    opacity: 0.85
+
+                    Behavior on color { ColorAnimation { duration: Theme.anim } }
+                }
+
+                // 0 dB mark
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: parent.height / 2 - 1
+                    width: 14
+                    height: 2
+                    radius: 1
+                    color: Theme.textDim
+                }
+            }
+
+            handle: Rectangle {
+                readonly property real size: slider.pressed ? 16 : slider.hovered ? 14 : 12
+
+                x: slider.leftPadding + slider.availableWidth / 2 - width / 2
+                y: slider.topPadding + slider.visualPosition * (slider.availableHeight - height)
+                implicitWidth: size
+                implicitHeight: size
+                radius: width / 2
+                color: Theme.text
+
+                Behavior on implicitWidth { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+                Behavior on implicitHeight { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+            }
+        }
+
+        Label {
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: band.label
+            color: Theme.textMuted
+            font.pixelSize: Theme.fontSizeSmall
+        }
+    }
+
     component SettingsCard: Rectangle {
         id: card
 

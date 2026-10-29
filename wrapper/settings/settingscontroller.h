@@ -53,6 +53,11 @@ class SettingsController : public QObject
     // YouTube Music searches you used, newest first (kept on this computer only).
     Q_PROPERTY(QStringList ytSearchHistory READ ytSearchHistory NOTIFY ytSearchHistoryChanged)
     Q_PROPERTY(YtQuality ytQuality READ ytQuality WRITE setYtQuality NOTIFY ytQualityChanged)
+    // 10-band equalizer: on / off, dB per band (31 Hz ... 16 kHz), and the preset
+    // they came from ("custom" once a slider is moved).
+    Q_PROPERTY(bool eqEnabled READ eqEnabled WRITE setEqEnabled NOTIFY eqChanged)
+    Q_PROPERTY(QList<qreal> eqGains READ eqGains NOTIFY eqChanged)
+    Q_PROPERTY(QString eqPreset READ eqPreset NOTIFY eqChanged)
     // Browser whose YouTube session yt-dlp reads ("" = not signed in)
     Q_PROPERTY(QString ytCookiesBrowser READ ytCookiesBrowser WRITE setYtCookiesBrowser NOTIFY ytCookiesBrowserChanged)
     // Album art for songs without one: look it up online for the playing song;
@@ -134,6 +139,12 @@ public:
     void setYtAutoplay(bool enabled);
     bool ytQueueMix() const;
     void setYtQueueMix(bool enabled);
+    bool eqEnabled() const;
+    void setEqEnabled(bool enabled);
+    QList<qreal> eqGains() const;
+    QString eqPreset() const;
+    Q_INVOKABLE void setEqGain(int band, qreal db);                          // the preset becomes "custom"
+    Q_INVOKABLE void setEqPreset(const QString &preset, const QList<qreal> &gains);
     YtQuality ytQuality() const;
     void setYtQuality(YtQuality quality);
     QStringList ytSearchHistory() const;
@@ -189,6 +200,7 @@ signals:
     void ytQueueMixChanged();
     void ytSearchHistoryChanged();
     void ytQualityChanged();
+    void eqChanged();
     void ytCookiesBrowserChanged();
     void coverTintStrengthChanged();
     void coversOnlineChanged();

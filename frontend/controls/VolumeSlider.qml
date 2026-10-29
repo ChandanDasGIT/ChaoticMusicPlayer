@@ -1,9 +1,14 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
-// Mute toggle + volume slider. The mouse wheel changes the volume by the
-// step set in Settings.
+// Mute toggle + volume slider + equalizer button. The mouse wheel changes the
+// volume by the step set in Settings.
 RowLayout {
+    id: root
+
+    signal equalizerRequested()
+
     spacing: Theme.spacing / 2
 
     WheelHandler {
@@ -30,5 +35,15 @@ RowLayout {
         value: PlayerController.volume
         opacity: PlayerController.muted ? 0.5 : 1
         onMoved: PlayerController.volume = value
+    }
+
+    // Opens the equalizer (accent while it is on)
+    ControlButton {
+        iconName: "equalizer"
+        iconSize: 13
+        active: SettingsController.eqEnabled
+        ToolTip.visible: hovered
+        ToolTip.text: SettingsController.eqEnabled ? qsTr("Equalizer (on)") : qsTr("Equalizer")
+        onClicked: root.equalizerRequested()
     }
 }

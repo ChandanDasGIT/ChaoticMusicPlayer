@@ -32,6 +32,7 @@ Text {
         case "settings": return "\uf013"
         case "power": return "\uf011"
         case "sliders": return "\uf1de"
+        case "equalizer": return "\ue473"
         case "palette": return "\uf53f"
         case "image": return "\uf03e"
         case "keyboard": return "\uf11c"

@@ -26,6 +26,8 @@ add_library(backend STATIC
     backend/audioengine/audiooutput/audiooutput.h
     backend/audioengine/decoder/decoder.cpp
     backend/audioengine/decoder/decoder.h
+    backend/audioengine/equalizer/equalizer.cpp
+    backend/audioengine/equalizer/equalizer.h
     backend/audioengine/player/player.cpp
     backend/audioengine/player/player.h
     backend/audioengine/ringbuffer/ringbuffer.h

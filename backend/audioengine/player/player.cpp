@@ -53,6 +53,11 @@ void Player::pause() { post({CommandType::Pause, {}, 0}); }
 void Player::stop() { post({CommandType::Stop, {}, 0}); }
 void Player::seek(int64_t positionMs) { post({CommandType::Seek, {}, positionMs}); }
 
+void Player::setEqualizer(const Equalizer::Gains &gainsDb, bool enabled)
+{
+    m_equalizer.setGains(gainsDb, enabled);
+}
+
 void Player::setVolume(float volume)
 {
     const float v = std::clamp(volume, 0.0f, 1.0f);
@@ -474,7 +479,8 @@ size_t Player::pull(float *dst, size_t frames)
             m_dipMuted.store(true, std::memory_order_relaxed);
         m_dipRemaining.store(remaining, std::memory_order_relaxed);
     }
-    m_spectrum.push(dst, got);
+    m_equalizer.process(dst, got);
+    m_spectrum.push(dst, got); // what is heard, equalizer included
     const float gain = m_gain.load(std::memory_order_relaxed);
     if (gain != 1.0f) {
         for (size_t i = 0; i < got * Channels; ++i)

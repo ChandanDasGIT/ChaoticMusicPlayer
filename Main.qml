@@ -309,6 +309,7 @@ ApplicationWindow {
                 onPlaylistRequested: window.toggleQueue()
                 onDetailsRequested: detailsDialog.show(PlayerController.source)
                 onSettingsRequested: settingsDialog.open()
+                onEqualizerRequested: settingsDialog.openPage(settingsDialog.equalizerPage)
                 onQuitRequested: window.quitApp()
                 youtubeOpen: window.youtubeDocked || youtubeDrawer.opened
                 libraryOpen: window.libraryDocked || libraryDrawer.opened
