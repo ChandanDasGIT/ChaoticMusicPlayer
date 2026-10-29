@@ -132,6 +132,7 @@ Rectangle {
         SeekBar {
             id: seekBar
             width: parent.width
+            onDetailsRequested: root.detailsRequested()
         }
 
         TransportControls {

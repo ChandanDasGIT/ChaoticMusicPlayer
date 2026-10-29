@@ -10,6 +10,8 @@ Item {
     id: root
 
     readonly property bool active: PlayerController.hasTrack && PlayerController.duration > 0
+    signal detailsRequested() // the quality chip was clicked
+
     readonly property bool dragging: mouse.pressed && active
     property real dragProgress: 0
     readonly property real progress: !active ? 0
@@ -160,6 +162,7 @@ Item {
 
         QualityChip {
             anchors.centerIn: parent
+            onClicked: root.detailsRequested()
         }
 
         Label {
