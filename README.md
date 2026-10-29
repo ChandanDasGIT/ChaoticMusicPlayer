@@ -6,27 +6,99 @@ local music and can also browse and play YouTube Music.
 
 ## Features
 
-- **Queue and playlists**: drop a folder to add its songs; sort by any column,
-  or press and hold a song to move it; swipe to delete. Named playlists can be
-  played without touching the Queue.
-- **Local library**: Songs, Albums, Artists and Folders, refreshed in the
+### Playing music
+
+- **Play from where you are**: clicking a song in the Library plays the list
+  it's in (all songs, an album, an artist, a folder) from that song, with
+  next / previous. Nothing is added to the Queue unless you add it.
+- **Queue**: your own list. Add songs with *Add to queue* or *Play next* in
+  the song menus, by dragging songs, albums, folders or YouTube playlists onto
+  it (dropped at the spot you choose), or by dropping files and folders on the
+  window. Sort by any column, press and hold a song to move it, swipe to
+  delete.
+- **Playlists**: named playlists that play without touching the Queue;
+  import and export them as M3U / M3U8 (or drop an `.m3u` file on the window).
+- **Between songs**: gapless playback, or a fade: each song fades out at its
+  very end and the next one fades in from its start, so nothing overlaps or
+  is cut. Songs that run into each other on an album always stay gapless.
+- **10-band equalizer** (31 Hz to 16 kHz, ±12 dB) with presets, heard as you
+  move the sliders; boosting keeps the volume (a limiter only catches peaks
+  that would distort). Open it from the button beside the volume bar.
+- **Resume where you left off**: the song, the position and the list it was
+  playing from come back, paused, when you start the app again.
+- Shuffle and repeat, output device choice, a quality chip (sample rate,
+  bitrate, format), and background playing (closing the window keeps the
+  music going, if you want).
+
+### Library
+
+- Songs, Albums, Artists and Folders, with live search, refreshed in the
   background (only new or changed files are read).
-- **Playback**: gapless playback, crossfade (songs that run into each other on
-  an album stay gapless), shuffle and repeat, output device choice, and
-  background playing (closing the window keeps the music going, if you want).
+- **Folders** is browsed like a file manager: a path bar, then the folder's
+  subfolders and songs; play or queue a whole folder, subfolders included.
+- The music folders (and the ones to leave out) are chosen in Settings.
+
+### YouTube Music
+
+- Home, search, your library (liked songs) and saved links; songs play
+  through [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+- **Mix (autoplay)**: a song plays followed by what YouTube Music plays next,
+  topped up as it goes; an album or playlist plays as it is, then its Mix.
+  When the Queue ends on a YouTube song, its Mix can follow. Both can be
+  turned off.
+- **Recent searches**: the searches you used, newest first; remove one or all.
+- **Audio quality**: Auto (best, but the smallest streams on a metered
+  connection), Best or Lowest.
+- Signing in uses the session of a browser you choose (the app never sees
+  your password). Local songs can be matched to YouTube Music in the
+  background for extra details.
+
+### Lyrics and covers
+
 - **Lyrics**: local `.lrc` files and tags, [LRCLIB](https://lrclib.net) and
-  YouTube Music; synced lyrics follow the song.
+  YouTube Music, in the order you choose; synced lyrics follow the song.
 - **Album art**: embedded covers and folder images; missing ones can be found
   online (iTunes, MusicBrainz / Cover Art Archive, YouTube Music).
-- **YouTube Music**: home, search, your library and saved links; songs play
-  through [yt-dlp](https://github.com/yt-dlp/yt-dlp). Signing in uses the
-  session of a browser you choose (the app never sees your password). Local
-  songs can be matched to YouTube Music in the background for extra details.
-- **Desktop integration**: MPRIS (media keys, desktop media controls,
-  `playerctl`) and one running copy at a time.
-- **Layout**: wide windows show the Queue, the player and a side panel next to
-  each other (panels can be pinned); narrow windows show the player with
-  slide-in panels.
+
+### Look and layout
+
+- The layout follows how much of the screen the window covers, on any
+  monitor:
+  - **full screen**: the Queue, the player and YouTube Music or the Library
+    side by side, sharing the width equally;
+  - **half screen**: two columns at most; an opened panel can push the player
+    aside, and a floating mini player stands in for it. Panels can be swiped
+    away, or swiped in from the window's edge;
+  - **phone size**: the player, with panels sliding over it.
+  Pinned panels stay open (also after a restart).
+- Theme: follow the system, dark or light. The background takes on the
+  colour of the playing song's cover. Optional visualizer.
+
+### Desktop integration
+
+- MPRIS (media keys, desktop media controls, `playerctl`) and one running copy
+  at a time.
+
+## Keyboard shortcuts
+
+| Action | Keys |
+| --- | --- |
+| Play / pause | Space |
+| Next / previous song | Ctrl+→ / Ctrl+← |
+| Seek 5 s forward / back | → / ← |
+| Seek 30 s forward / back | Shift+→ / Shift+← |
+| Volume up / down | Ctrl+↑ / Ctrl+↓ |
+| Mute | M |
+| Shuffle | Ctrl+S |
+| Repeat (cycles) | Ctrl+R |
+| Lyrics | Ctrl+L |
+| Search (Library if open, else YouTube Music) | Ctrl+F |
+| Queue / YouTube Music / Library | Ctrl+1 / 2 / 3 |
+| Settings | Ctrl+, |
+| Close lyrics, panel or dialog | Esc |
+| Quit | Ctrl+Q |
+
+The list is also in Settings → Keyboard shortcuts.
 
 ## Requirements
 
@@ -68,21 +140,22 @@ removes it again.
 
 | What | Where |
 | --- | --- |
-| Settings | `~/.config/ChaoticMusicPlayer/settings.conf` |
-| Queue, playlists, library index | `~/.local/share/ChaoticMusicPlayer/` |
+| Settings (equalizer and recent searches too) | `~/.config/ChaoticMusicPlayer/settings.conf` |
+| Queue, playlists, library index, what was playing | `~/.local/share/ChaoticMusicPlayer/` |
 | Found covers, lyrics and YouTube Music matches | `~/.cache/ChaoticMusicPlayer/` |
 
-Your music files are never changed.
+Everything stays on your computer. Your music files are never changed.
 
 ## Project layout
 
-- `backend/`: plain C++ (no Qt): decoding and audio output, tags, library,
-  playlists, lyrics, covers, YouTube Music. One folder per `.h` / `.cpp` pair.
+- `backend/`: plain C++ (no Qt): decoding, the equalizer and audio output,
+  tags, library, playlists, lyrics, covers, YouTube Music. One folder per
+  `.h` / `.cpp` pair.
 - `wrapper/`: Qt objects and models that expose the backend to QML.
 - `frontend/`: the QML interface.
 - `scripts/`: launcher install scripts, and `shot-build.sh` / `shot-run.sh`,
   a screenshot test harness that runs the app offscreen in an isolated
-  configuration.
+  configuration (it refuses to run while the app itself is open).
 
 ## Note on YouTube Music
 
