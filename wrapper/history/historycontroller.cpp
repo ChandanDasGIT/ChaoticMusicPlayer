@@ -71,6 +71,9 @@ HistoryController::HistoryController(PlayerController *player, PlaylistControlle
     s_instance = this;
     m_history->load();
     rebuild();
+    connect(this, &HistoryController::changed, this, &HistoryController::rebuildStats);
+    connect(m_library, &LocalLibraryController::contentsChanged, this, &HistoryController::rebuildStats);
+    rebuildStats();
 
     connect(m_player, &PlayerController::sourceChanged, this, &HistoryController::startSong);
     connect(m_player, &PlayerController::positionChanged, this, &HistoryController::onPosition);
@@ -250,6 +253,67 @@ void HistoryController::rebuild()
             m_favoriteYouTube = songOf(*latest[path]).value(QStringLiteral("item")).toMap();
         }
     }
+}
+
+namespace {
+
+// The `count` names played most: [{ name, plays }]
+QVariantList top(const std::unordered_map<std::string, int> &plays, int count)
+{
+    std::vector<std::pair<std::string, int>> ranked(plays.begin(), plays.end());
+    std::sort(ranked.begin(), ranked.end(),
+              [](const auto &a, const auto &b) { return a.second != b.second ? a.second > b.second : a.first < b.first; });
+    QVariantList out;
+    for (const auto &[name, n] : ranked) {
+        if (out.size() >= count)
+            break;
+        out.append(QVariantMap{{QStringLiteral("name"), qs(name)}, {QStringLiteral("plays"), n}});
+    }
+    return out;
+}
+
+} // namespace
+
+void HistoryController::rebuildStats()
+{
+    constexpr int TopCount = 5;
+    QVariantMap stats;
+    // The library
+    qint64 libraryMs = 0;
+    for (const ::Track &t : m_library->tracks())
+        libraryMs += t.durationMs;
+    stats.insert(QStringLiteral("songs"), int(m_library->tracks().size()));
+    stats.insert(QStringLiteral("albums"), int(m_library->albums().size()));
+    stats.insert(QStringLiteral("artists"), int(m_library->artists().size()));
+    stats.insert(QStringLiteral("libraryMs"), libraryMs);
+
+    // The listening
+    const QDate today = QDate::currentDate();
+    const qint64 monthStart = QDateTime(QDate(today.year(), today.month(), 1), QTime(0, 0)).toSecsSinceEpoch();
+    int thisMonth = 0, youTube = 0;
+    qint64 listenedMs = 0;
+    std::unordered_map<std::string, int> artists, albums, songs;
+    for (const ListeningHistory::Play &play : m_history->plays()) {
+        listenedMs += play.durationMs;
+        if (play.time >= monthStart)
+            ++thisMonth;
+        if (StreamResolver::isYouTube(play.path))
+            ++youTube;
+        if (!play.artist.empty())
+            ++artists[play.artist];
+        if (!play.album.empty())
+            ++albums[play.album];
+        ++songs[play.title.empty() ? play.path : play.title];
+    }
+    stats.insert(QStringLiteral("plays"), int(m_history->plays().size()));
+    stats.insert(QStringLiteral("playsThisMonth"), thisMonth);
+    stats.insert(QStringLiteral("youTubePlays"), youTube);
+    stats.insert(QStringLiteral("listenedMs"), listenedMs);
+    stats.insert(QStringLiteral("topArtists"), top(artists, TopCount));
+    stats.insert(QStringLiteral("topAlbums"), top(albums, TopCount));
+    stats.insert(QStringLiteral("topSongs"), top(songs, TopCount));
+    m_stats = stats;
+    emit statsChanged();
 }
 
 // A song from the lists to play: the library's details when it has them.

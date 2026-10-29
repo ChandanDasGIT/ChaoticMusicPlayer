@@ -42,6 +42,9 @@ class HistoryController : public QObject
     Q_PROPERTY(QVariantList recentAlbums READ recentAlbums NOTIFY changed) // [{ album, artist, path }]
     Q_PROPERTY(QVariantMap favoriteYouTube READ favoriteYouTube NOTIFY changed) // a YouTube song map, or empty
     Q_PROPERTY(QVariantList entries READ entries NOTIFY changed)          // every play, latest first, + day, clock
+    // Numbers about the library and the listening: { songs, albums, artists, libraryMs, plays,
+    // playsThisMonth, listenedMs, youTubePlays, topArtists, topAlbums, topSongs ([{ name, plays }]) }
+    Q_PROPERTY(QVariantMap stats READ stats NOTIFY statsChanged)
 
 public:
     HistoryController(PlayerController *player, PlaylistController *playlist, PlaylistsController *playlists,
@@ -58,6 +61,7 @@ public:
     QVariantList recentAlbums() const { return m_recentAlbums; }
     QVariantMap favoriteYouTube() const { return m_favoriteYouTube; }
     QVariantList entries() const { return m_entries; }
+    QVariantMap stats() const { return m_stats; }
 
     Q_INVOKABLE void clear();
     Q_INVOKABLE void removeEntry(int index); // one play from `entries`
@@ -68,12 +72,14 @@ public:
 
 signals:
     void changed();
+    void statsChanged();
 
 private:
     void startSong();
     void onPosition();
     void record();
     void rebuild(); // the lists above
+    void rebuildStats();
     ::Track trackOf(const QVariantMap &song) const;
 
     static inline HistoryController *s_instance = nullptr;
@@ -89,6 +95,7 @@ private:
     QVariantList m_recentAlbums;
     QVariantMap m_favoriteYouTube;
     QVariantList m_entries;
+    QVariantMap m_stats;
 
     // The song being listened to
     QString m_path;

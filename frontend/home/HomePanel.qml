@@ -7,16 +7,16 @@ import QtQuick.Layouts
 // Home: a greeting for the time of day, "Your Mix" (your most played songs,
 // shuffled), and what you've been listening to: recently played, most played
 // this month, albums to jump back into, albums recently added to the library,
-// a YouTube Mix recommended from the YouTube song you play most, and the whole
-// history ("See all", by day). Most of it comes from the private listening
-// history.
+// a YouTube Mix recommended from the YouTube song you play most, the whole
+// history ("See all", by day) and your stats. Most of it comes from the private
+// listening history.
 Rectangle {
     id: root
 
     property bool showPinButton: true
     property bool pinned: false
     property bool showCloseButton: false
-    property bool showingHistory: false // the whole history instead of the overview
+    property string page: "" // "": the overview; "history" / "stats": that page instead
 
     signal pinToggled()
     signal closeRequested()
@@ -82,7 +82,7 @@ Rectangle {
         clip: true
         contentHeight: sections.implicitHeight + 2 * Theme.padding
         boundsBehavior: Flickable.StopAtBounds
-        opacity: root.showingHistory ? 0 : 1
+        opacity: root.page === "" ? 1 : 0
         visible: opacity > 0
         ScrollBar.vertical: ScrollBar {}
 
@@ -358,7 +358,7 @@ Rectangle {
                     iconSize: 10
                     implicitHeight: 30
                     transparentIdle: true
-                    onClicked: root.showingHistory = true
+                    onClicked: root.page = "history"
                 }
             }
             Column {
@@ -383,6 +383,48 @@ Rectangle {
                 }
             }
 
+            // Your stats: three numbers, and the rest on their own page
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.spacing
+                visible: root.hasHistory || LocalLibraryController.songCount > 0
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Your stats")
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSizeLarge
+                    font.weight: Font.DemiBold
+                }
+
+                PillButton {
+                    text: qsTr("More")
+                    iconName: "chevronRight"
+                    iconSize: 10
+                    implicitHeight: 30
+                    transparentIdle: true
+                    onClicked: root.page = "stats"
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.hasHistory || LocalLibraryController.songCount > 0
+                spacing: Theme.spacing
+
+                StatTile {
+                    value: HistoryController.stats.plays ?? 0
+                    label: qsTr("plays")
+                }
+                StatTile {
+                    value: root.length(HistoryController.stats.listenedMs ?? 0)
+                    label: qsTr("of music played")
+                }
+                StatTile {
+                    value: HistoryController.stats.songs ?? 0
+                    label: qsTr("songs in your library")
+                }
+            }
+
             // Nothing listened to yet
             Label {
                 Layout.fillWidth: true
@@ -404,9 +446,9 @@ Rectangle {
         anchors.margins: 1
         anchors.bottomMargin: 6
         spacing: Theme.spacing
-        opacity: root.showingHistory ? 1 : 0
+        opacity: root.page === "history" ? 1 : 0
         visible: opacity > 0
-        transform: Translate { x: root.showingHistory ? 0 : 48; Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } } }
+        transform: PageShift { shown: root.page === "history" }
 
         Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
@@ -424,7 +466,7 @@ Rectangle {
                 implicitHeight: 36
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Back to Home")
-                onClicked: root.showingHistory = false
+                onClicked: root.page = ""
             }
 
             Label {
@@ -486,6 +528,195 @@ Rectangle {
                 text: qsTr("No songs listened to yet.")
                 color: Theme.textMuted
                 font.pixelSize: Theme.fontSize
+            }
+        }
+    }
+
+    // ---- Your stats
+    Flickable {
+        id: statsPage
+        anchors.fill: parent
+        anchors.margins: 1
+        anchors.bottomMargin: 6
+        clip: true
+        contentHeight: statsColumn.implicitHeight + 2 * Theme.padding
+        boundsBehavior: Flickable.StopAtBounds
+        opacity: root.page === "stats" ? 1 : 0
+        visible: opacity > 0
+        transform: PageShift { shown: root.page === "stats" }
+        ScrollBar.vertical: ScrollBar {}
+
+        Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+
+        ColumnLayout {
+            id: statsColumn
+            x: Theme.padding
+            y: Theme.spacing
+            width: statsPage.width - 2 * Theme.padding
+            spacing: Theme.spacing
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.rightMargin: 80 // clear of the pin / close buttons
+                spacing: Theme.padding
+
+                PillButton {
+                    iconName: "back"
+                    iconSize: 12
+                    implicitWidth: 36
+                    implicitHeight: 36
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Back to Home")
+                    onClicked: root.page = ""
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Your stats")
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSizeTitle
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+            }
+
+            SectionTitle { text: qsTr("Your library") }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spacing
+
+                StatTile { value: HistoryController.stats.songs ?? 0; label: qsTr("songs") }
+                StatTile { value: HistoryController.stats.albums ?? 0; label: qsTr("albums") }
+                StatTile { value: HistoryController.stats.artists ?? 0; label: qsTr("artists") }
+                StatTile { value: root.length(HistoryController.stats.libraryMs ?? 0); label: qsTr("of music") }
+            }
+
+            SectionTitle { text: qsTr("Your listening") }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spacing
+
+                StatTile { value: HistoryController.stats.plays ?? 0; label: qsTr("plays") }
+                StatTile { value: HistoryController.stats.playsThisMonth ?? 0; label: qsTr("this month") }
+                StatTile { value: root.length(HistoryController.stats.listenedMs ?? 0); label: qsTr("played") }
+                StatTile { value: HistoryController.stats.youTubePlays ?? 0; label: qsTr("from YouTube") }
+            }
+
+            TopList { title: qsTr("Top artists"); entries: HistoryController.stats.topArtists ?? [] }
+            TopList { title: qsTr("Top albums"); entries: HistoryController.stats.topAlbums ?? [] }
+            TopList { title: qsTr("Top songs"); entries: HistoryController.stats.topSongs ?? [] }
+
+            Label {
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.spacing
+                text: qsTr("All time, from your listening history (kept on this computer only).")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WordWrap
+            }
+        }
+    }
+
+    // A length for a stat tile: "25 min" under an hour, then "2.5 h", then "12 h".
+    function length(ms) {
+        const minutes = Math.round(ms / 60000)
+        if (minutes < 60)
+            return qsTr("%1 min").arg(minutes)
+        const h = ms / 3600000
+        return qsTr("%1 h").arg(h >= 10 ? Math.round(h) : Math.round(h * 10) / 10)
+    }
+
+    // A page slides in from the right over the overview.
+    component PageShift: Translate {
+        property bool shown
+        x: shown ? 0 : 48
+        Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
+    }
+
+    // A big number over what it counts.
+    component StatTile: Rectangle {
+        id: tile
+
+        property var value
+        property string label
+
+        Layout.fillWidth: true
+        Layout.preferredWidth: 1 // tiles share the row equally
+        implicitHeight: 76
+        radius: Theme.radiusLarge
+        color: Theme.fillSoft
+
+        Column {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 12
+            anchors.rightMargin: 8
+            spacing: 2
+
+            Label {
+                width: parent.width
+                text: String(tile.value)
+                color: Theme.accent
+                font.pixelSize: 24
+                font.weight: Font.Bold
+                elide: Text.ElideRight
+            }
+            Label {
+                width: parent.width
+                text: tile.label
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+            }
+        }
+    }
+
+    // "Top artists": a ranked list with play counts.
+    component TopList: ColumnLayout {
+        id: topList
+
+        property string title
+        property var entries: []
+
+        Layout.fillWidth: true
+        visible: entries.length > 0
+        spacing: 2
+
+        SectionTitle { text: topList.title }
+
+        Repeater {
+            model: topList.entries
+
+            delegate: RowLayout {
+                required property var modelData
+                required property int index
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 34
+                spacing: Theme.padding
+
+                Label {
+                    Layout.preferredWidth: 22
+                    text: index + 1
+                    color: Theme.textDim
+                    font.pixelSize: Theme.fontSize
+                    font.weight: Font.Bold
+                    horizontalAlignment: Text.AlignRight
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: modelData.name
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSize
+                    elide: Text.ElideRight
+                }
+                Label {
+                    text: modelData.plays === 1 ? qsTr("1 play") : qsTr("%1 plays").arg(modelData.plays)
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                }
             }
         }
     }
