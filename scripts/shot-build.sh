@@ -56,7 +56,7 @@ hook = '''    // ---- screenshot harness
             });
             std::vector<::Track> first = {pool.front()};
             pool.erase(pool.begin());
-            playlist.playTitled(first, 0, QStringLiteral("Mix – test"), true);
+            playlist.playTitled(first, 0, qEnvironmentVariableIsSet("SHOT_MIX_TITLE") ? qEnvironmentVariable("SHOT_MIX_TITLE") : QStringLiteral("Mix – test"), true);
         }
         if (qEnvironmentVariableIsSet("SHOT_LEVELS")) // "fromMs,toMs": every 0.2 s, the loudest band and where playback is
             for (int t = qEnvironmentVariable("SHOT_LEVELS").section(QLatin1Char(','), 0, 0).toInt();
@@ -449,6 +449,60 @@ hook = '''    // ---- screenshot harness
                     QWheelEvent wheel(at, w->mapToGlobal(at), QPoint(), QPoint(0, v.value(2).toInt()), Qt::NoButton, Qt::NoModifier,
                                       Qt::NoScrollPhase, false);
                     QCoreApplication::sendEvent(w, &wheel);
+                }
+                else if (step.startsWith(QLatin1String("settings:"))) // settings:N -> Settings on page N (-1: its list)
+                    QMetaObject::invokeMethod(root, "openSettings", Q_ARG(QVariant, QVariant(step.mid(9).toInt())));
+                else if (step.startsWith(QLatin1String("set:"))) { // set:objectName.property=value (a number, or text)
+                    const QString target = step.mid(4).section(QLatin1Char('='), 0, 0);
+                    const QString value = step.section(QLatin1Char('='), 1);
+                    bool isNumber = false;
+                    const int number = value.toInt(&isNumber);
+                    if (QObject *o = root->findChild<QObject *>(target.section(QLatin1Char('.'), 0, 0)))
+                        o->setProperty(qPrintable(target.section(QLatin1Char('.'), 1)), isNumber ? QVariant(number) : QVariant(value));
+                    else
+                        std::printf("set: no %s\\n", qPrintable(target));
+                }
+                else if (step == QLatin1String("overflow")) { // anything drawn past the edge of its panel
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QStringList panels = {QStringLiteral("PlaylistPanel"), QStringLiteral("NowPlayingPanel"),
+                                                QStringLiteral("YouTubePanel"), QStringLiteral("LibraryPanel"),
+                                                QStringLiteral("HomePanel"), QStringLiteral("SettingsPanel"),
+                                                QStringLiteral("NavBar"), QStringLiteral("MiniPlayer")};
+                    const auto typeOf = [](QObject *o) { return QString::fromLatin1(o->metaObject()->className()).section(QLatin1Char('_'), 0, 0); };
+                    int found = 0;
+                    // clip: what clipping ancestors (and the window) let through
+                    std::function<void(QQuickItem *, QRectF, QRectF, const QString &)> check =
+                        [&](QQuickItem *item, QRectF panel, QRectF clip, const QString &panelName) {
+                        if (!item->isVisible() || item->opacity() <= 0.01)
+                            return;
+                        const QRectF rect = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+                        QString name = panelName;
+                        if (panels.contains(typeOf(item)) && rect.width() > 1) {
+                            panel = rect;
+                            name = typeOf(item);
+                        }
+                        const QString type = typeOf(item);
+                        const bool leaf = type == QStringLiteral("QQuickLabel") || type == QStringLiteral("QQuickText")
+                                          || type.startsWith(QStringLiteral("PillButton")) || type.startsWith(QStringLiteral("ControlButton"))
+                                          || type == QStringLiteral("Icon");
+                        const QRectF drawn = rect.intersected(clip);
+                        if (leaf && !name.isEmpty() && !drawn.isEmpty() && rect.width() > 1
+                            && !panel.adjusted(-2, -2, 2, 2).contains(drawn)) {
+                            ++found;
+                            const QVariant text = item->property("text");
+                            std::printf("OVERFLOW in %s: %s \\"%s\\" at %.0f,%.0f %.0fx%.0f (panel %.0f,%.0f %.0fx%.0f)\\n",
+                                        qPrintable(name), qPrintable(type), qPrintable(text.toString().left(40)),
+                                        drawn.x(), drawn.y(), drawn.width(), drawn.height(),
+                                        panel.x(), panel.y(), panel.width(), panel.height());
+                        }
+                        if (item->clip())
+                            clip = clip.intersected(rect);
+                        for (QQuickItem *child : item->childItems())
+                            check(child, panel, clip, name);
+                    };
+                    check(w->contentItem(), QRectF(), QRectF(0, 0, w->width(), w->height()), QString());
+                    // popups (menus, drawers) live in the overlay
+                    std::printf("overflow: %d found\\n", found);
                 }
                 else if (step.startsWith(QLatin1String("later:"))) { // later:ms:name -> build/shot/name.png, ms after this step
                     const QStringList v = step.mid(6).split(QLatin1Char(':'));

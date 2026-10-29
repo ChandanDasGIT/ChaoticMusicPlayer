@@ -100,6 +100,8 @@ Rectangle {
             topLeftRadius: Theme.radiusCard - 1
             topRightRadius: Theme.radiusCard - 1
 
+            // Narrow panels: the icon buttons keep their room; the playlist name
+            // shrinks (cut with "…") and the summary chip goes first.
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: Theme.spacing
@@ -130,8 +132,14 @@ Rectangle {
                                                   : showsPlaying ? playingName
                                                   : qsTr("Playlists")
 
+                    // icon, gaps, chevron and padding around the name
+                    readonly property real chrome: 10 + 6 + 6 + 9 + 28
+
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: chrome + 24
+                    Layout.maximumWidth: implicitWidth
                     implicitHeight: 32
-                    implicitWidth: 10 + 6 + playlistsLabel.width + 6 + 9 + 28 // icon, label, chevron, padding
+                    implicitWidth: chrome + Math.min(playlistsLabel.implicitWidth, 240)
                     active: !root.viewingQueue
                     ToolTip.visible: hovered && showsPlaying
                     ToolTip.text: qsTr("Playing from “%1”").arg(playingName)
@@ -152,7 +160,7 @@ Rectangle {
                             Label {
                                 id: playlistsLabel
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: Math.min(implicitWidth, 140) // long names are cut with "…"
+                                width: Math.max(0, Math.min(implicitWidth, playlistsButton.width - playlistsButton.chrome)) // long names are cut with "…"
                                 text: playlistsButton.label
                                 color: playlistsButton.iconColor
                                 font.pixelSize: Theme.fontSize
@@ -182,7 +190,9 @@ Rectangle {
                     implicitHeight: summary.implicitHeight + 6
                     radius: height / 2
                     color: Theme.fill
+                    // Only with room to spare next to the name
                     visible: root.shownCount > 0 && !clearButton.confirming && root.width > 470
+                             && root.width > playlistsButton.implicitWidth + 360
 
                     Label {
                         id: summary

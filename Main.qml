@@ -658,6 +658,7 @@ ApplicationWindow {
             transformOrigin: Item.Right
 
             HomePanel {
+                objectName: "homePanel"
                 anchors.fill: parent
                 showPinButton: false
                 showCloseButton: true

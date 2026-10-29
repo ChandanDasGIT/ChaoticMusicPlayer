@@ -621,9 +621,11 @@ Rectangle {
             }
 
             SectionTitle { text: qsTr("Your library") }
-            RowLayout {
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: Theme.spacing
+                columns: width >= 4 * 96 ? 4 : 2 // two by two when narrow
+                rowSpacing: Theme.spacing
+                columnSpacing: Theme.spacing
 
                 StatTile { value: HistoryController.stats.songs ?? 0; label: qsTr("songs") }
                 StatTile { value: HistoryController.stats.albums ?? 0; label: qsTr("albums") }
@@ -632,9 +634,11 @@ Rectangle {
             }
 
             SectionTitle { text: qsTr("Your listening") }
-            RowLayout {
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: Theme.spacing
+                columns: width >= 4 * 96 ? 4 : 2 // two by two when narrow
+                rowSpacing: Theme.spacing
+                columnSpacing: Theme.spacing
 
                 StatTile { value: HistoryController.stats.plays ?? 0; label: qsTr("plays") }
                 StatTile { value: HistoryController.stats.playsThisMonth ?? 0; label: qsTr("this month") }
@@ -700,6 +704,9 @@ Rectangle {
                 color: Theme.accent
                 font.pixelSize: 24
                 font.weight: Font.Bold
+                // Shrinks to fit (e.g. "3 h 12 min") before it is cut
+                fontSizeMode: Text.HorizontalFit
+                minimumPixelSize: 14
                 elide: Text.ElideRight
             }
             Label {
