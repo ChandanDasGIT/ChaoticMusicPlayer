@@ -59,7 +59,7 @@ Rectangle {
 
         anchors.centerIn: area
         width: Math.min(area.width - 4 * Theme.padding, 520)
-        spacing: Theme.padding
+        spacing: Theme.spacing // tight: the cover gets the height
 
         // Square, shrinks to leave room for the controls.
         AlbumArt {
@@ -91,7 +91,7 @@ Rectangle {
             ]
         }
 
-        Item { id: spacer; width: 1; height: Theme.spacing }
+        Item { id: spacer; width: 1; height: 2 }
 
         FadeLabel {
             id: titleLabel
