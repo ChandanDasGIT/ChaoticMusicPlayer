@@ -1,7 +1,8 @@
 #include "wrapper/notifications/notificationcontroller.h"
 
-#include "backend/library/metadata/metadata.h"
+#include "backend/network/httpclient/httpclient.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
+#include "wrapper/albumart/covercontroller.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/settings/settingscontroller.h"
@@ -14,6 +15,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QStandardPaths>
+#include <QThreadPool>
 #include <QUrl>
 
 namespace {
@@ -55,12 +57,22 @@ void NotificationController::notify()
 {
     const QString title = !m_playlist->currentTitle().isEmpty() ? m_playlist->currentTitle() : m_player->title();
     const QString subtitle = m_playlist->currentSubtitle();
+    const QString path = m_player->source();
+    const QString thumbnail = m_playlist->currentThumbnail();
+    // The cover may need reading or downloading: off the main thread, then the notification.
+    QThreadPool::globalInstance()->start([this, title, subtitle, path, thumbnail] {
+        const QString cover = saveCover(path, thumbnail);
+        QMetaObject::invokeMethod(this, [this, title, subtitle, cover] { send(title, subtitle, cover); },
+                                  Qt::QueuedConnection);
+    });
+}
 
+void NotificationController::send(const QString &title, const QString &subtitle, const QString &cover)
+{
     QVariantMap hints{{QStringLiteral("desktop-entry"), QStringLiteral("ChaoticMusicPlayer")},
                       {QStringLiteral("category"), QStringLiteral("x-gnome.music")},
                       {QStringLiteral("urgency"), QVariant::fromValue(uchar(0))},
                       {QStringLiteral("transient"), true}};
-    const QString cover = coverFile(m_player->source());
     if (!cover.isEmpty())
         hints.insert(QStringLiteral("image-path"), QUrl::fromLocalFile(cover).toString());
 
@@ -79,11 +91,16 @@ void NotificationController::notify()
     });
 }
 
-QString NotificationController::coverFile(const QString &path) const
+QString NotificationController::saveCover(const QString &path, const QString &thumbnail)
 {
-    if (path.isEmpty() || StreamResolver::isYouTube(path.toStdString()))
-        return {};
-    const std::vector<unsigned char> bytes = Metadata::readCover(path.toStdString());
+    std::vector<unsigned char> bytes;
+    if (!thumbnail.isEmpty() && thumbnail.startsWith(QLatin1String("https://"))) {
+        const HttpResponse response = HttpClient::get(thumbnail.toStdString(), {}, 10000);
+        if (response.ok())
+            bytes.assign(response.body.begin(), response.body.end());
+    } else if (!path.isEmpty() && !StreamResolver::isYouTube(path.toStdString())) {
+        bytes = CoverController::coverBytes(path.toStdString()); // embedded, or found online
+    }
     if (bytes.empty())
         return {};
     const bool png = bytes.size() > 4 && bytes[0] == 0x89 && bytes[1] == 'P';
