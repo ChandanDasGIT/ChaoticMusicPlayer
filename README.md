@@ -6,6 +6,19 @@ local music and can also browse and play YouTube Music.
 
 ## Features
 
+### Home
+
+- A greeting, then **Your Mix** (the songs you play most, shuffled),
+  recently played, most played this month, albums to jump back into,
+  recently added albums, your smart playlists and a YouTube Mix recommended
+  from the YouTube song you play most.
+- **History**: everything you listened to, by day ("See all"), and **your
+  stats**. The history stays on your computer and can be turned off or
+  cleared in Settings.
+- **Smart playlists**: lists that fill themselves from rules (played more
+  than 10 times, added in the last 30 days, artist contains...), matching all
+  or any rule, in the order you pick, as long as you want.
+
 ### Playing music
 
 - **Play from where you are**: clicking a song in the Library plays the list
@@ -24,16 +37,26 @@ local music and can also browse and play YouTube Music.
 - **10-band equalizer** (31 Hz to 16 kHz, ±12 dB) with presets, heard as you
   move the sliders; boosting keeps the volume (a limiter only catches peaks
   that would distort). Open it from the button beside the volume bar.
+- **ReplayGain**: off, by track or by album, so songs play at an even volume.
+- **Sleep timer**: pause after a while, or at the end of the song (the moon
+  beside the volume bar).
 - **Resume where you left off**: the song, the position and the list it was
   playing from come back, paused, when you start the app again.
-- Shuffle and repeat, output device choice, a quality chip (sample rate,
-  bitrate, format), and background playing (closing the window keeps the
+- Shuffle, repeat and autoplay (YouTube Mix) side by side, output device
+  choice, a quality chip (sample rate, bitrate, format; click it for the
+  track's details), and background playing (closing the window keeps the
   music going, if you want).
+- **Song-change notifications** with the title, artist and cover, while the
+  window isn't in front.
 
 ### Library
 
 - Songs, Albums, Artists and Folders, with live search, refreshed in the
-  background (only new or changed files are read).
+  background (only new or changed files are read). Albums are grouped by
+  album artist, so compilations stay together; recently added albums show on
+  Home.
+- **Tag editor**: change a song's title, artist, album and other tags from
+  its details (a safety copy is kept while the file is saved).
 - **Folders** is browsed like a file manager: a path bar, then the folder's
   subfolders and songs; play or queue a whole folder, subfolders included.
 - The music folders (and the ones to leave out) are chosen in Settings.
@@ -42,6 +65,9 @@ local music and can also browse and play YouTube Music.
 
 - Home, search, your library (liked songs) and saved links; songs play
   through [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+- **Search** for songs, albums or artists. An artist's page has their top
+  songs, albums, singles and similar artists; albums and playlists open over
+  any tab.
 - **Mix (autoplay)**: a song plays followed by what YouTube Music plays next,
   topped up as it goes; an album or playlist plays as it is, then its Mix.
   When the Queue ends on a YouTube song, its Mix can follow. Both can be
@@ -57,15 +83,20 @@ local music and can also browse and play YouTube Music.
 
 - **Lyrics**: local `.lrc` files and tags, [LRCLIB](https://lrclib.net) and
   YouTube Music, in the order you choose; synced lyrics follow the song.
+  Credit lines and line-by-line translations are left out, and Japanese and
+  Korean lyrics use a matching font when one is installed.
 - **Album art**: embedded covers and folder images; missing ones can be found
-  online (iTunes, MusicBrainz / Cover Art Archive, YouTube Music).
+  online (iTunes, MusicBrainz / Cover Art Archive, YouTube Music). YouTube
+  songs use their thumbnails.
 
 ### Look and layout
 
+- A navigation bar at the bottom: Home, Queue, YouTube Music, Library and
+  Settings.
 - The layout follows how much of the screen the window covers, on any
   monitor:
-  - **full screen**: the Queue, the player and YouTube Music or the Library
-    side by side, sharing the width equally;
+  - **full screen**: the Queue, the player and Home, YouTube Music or the
+    Library side by side, sharing the width equally;
   - **half screen**: two columns at most; an opened panel can push the player
     aside, and a floating mini player stands in for it. Panels can be swiped
     away, or swiped in from the window's edge;
@@ -73,6 +104,10 @@ local music and can also browse and play YouTube Music.
   Pinned panels stay open (also after a restart).
 - Theme: follow the system, dark or light. The background takes on the
   colour of the playing song's cover. Optional visualizer.
+- **Interface size** from 90% to 150% (applied after a restart, which the app
+  can do for you).
+- **Settings** open like a phone's settings app, in the right-hand column: a
+  list of categories, and a search bar at the bottom that finds any setting.
 
 ### Desktop integration
 
@@ -95,7 +130,7 @@ local music and can also browse and play YouTube Music.
 | Search (Library if open, else YouTube Music) | Ctrl+F |
 | Queue / YouTube Music / Library | Ctrl+1 / 2 / 3 |
 | Settings | Ctrl+, |
-| Close lyrics, panel or dialog | Esc |
+| Close lyrics or a dialog; in Settings: back, then close | Esc |
 | Quit | Ctrl+Q |
 
 The list is also in Settings → Keyboard shortcuts.
@@ -141,10 +176,11 @@ removes it again.
 | What | Where |
 | --- | --- |
 | Settings (equalizer and recent searches too) | `~/.config/ChaoticMusicPlayer/settings.conf` |
-| Queue, playlists, library index, what was playing | `~/.local/share/ChaoticMusicPlayer/` |
+| Queue, playlists, smart playlists, listening history, library index, what was playing | `~/.local/share/ChaoticMusicPlayer/` |
 | Found covers, lyrics and YouTube Music matches | `~/.cache/ChaoticMusicPlayer/` |
 
-Everything stays on your computer. Your music files are never changed.
+Everything stays on your computer. Your music files are only changed when you
+save tags in the tag editor.
 
 ## Project layout
 
