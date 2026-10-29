@@ -6,25 +6,111 @@ import QtQuick.Controls
 ApplicationWindow {
     id: window
 
-    // Phone-like layout below the breakpoint.
-    readonly property bool compact: width < Theme.compactBreakpoint
-    // Pinned panels are columns next to the player on big windows; unpinned ones
-    // (and every panel on phone-size windows) slide in over it when opened.
-    readonly property bool playlistDocked: !compact && SettingsController.playlistPinned
-    readonly property bool youtubeDocked: !compact && SettingsController.youtubePanelPinned
-    readonly property bool libraryDocked: !compact && SettingsController.libraryPanelPinned
-    // The width a panel would have if it were pinned right now (the window split
-    // equally between the open columns), so a sliding panel matches its pinned
-    // size. The right-hand side holds one panel at a time (YouTube or Library).
-    function pinnedWidth(rightSide, minimumWidth) {
-        const otherSide = rightSide ? playlistDocked : (youtubeDocked || libraryDocked)
-        const columns = 2 + (otherSide ? 1 : 0)
-        return Math.max(minimumWidth, (split.width - (columns - 1) * Theme.cardGap) / columns)
+    // ---- Layout -------------------------------------------------------------------
+    // Picked by how much of the screen the window covers, so a full-screen
+    // window behaves the same on any monitor:
+    //  "wide" (most of the screen): columns Queue | Player | YouTube or Library;
+    //  "half": two columns at most, so an opened panel can push the player out
+    //          (a floating mini player then stands in for it);
+    //  "compact" (phone size): the player alone, panels slide over it as drawers.
+    // The columns share the width equally. YouTube and Library take turns in the
+    // right-hand one. A pinned panel stays open (also after a restart).
+    property real screenWidthOverride: 0 // tests: pretend the screen is this wide
+    readonly property real screenWidth: screenWidthOverride > 0 ? screenWidthOverride : Screen.width > 0 ? Screen.width : width
+    readonly property real minimumColumn: 300
+    readonly property string layout: {
+        const share = width / screenWidth
+        if (width < Theme.compactBreakpoint || share < 0.4 || width < 2 * minimumColumn + 3 * Theme.cardGap)
+            return "compact"
+        return share >= 0.7 && width >= 3 * minimumColumn + 4 * Theme.cardGap ? "wide" : "half"
     }
-    // Drawer width for a panel: its pinned width plus the gap around its card.
-    // Phone size: an opened panel covers the whole window, nothing peeks through.
-    function drawerWidth(rightSide, minimumWidth) {
-        return compact ? width : Math.min(width, pinnedWidth(rightSide, minimumWidth) + 2 * Theme.cardGap)
+    readonly property bool compact: layout === "compact"
+
+    // Opened without being pinned (wide / half layouts; compact uses the drawers).
+    property bool queueOpen: false
+    property string rightOpen: ""      // "youtube" / "library", shown over a pinned one
+    property bool playerRecalled: false // half: the player in place of two pinned panels
+    property string lastOpened: ""     // the panel opened last pushes the player away from its side
+    readonly property bool queuePinned: SettingsController.playlistPinned
+    readonly property string rightPinned: SettingsController.youtubePanelPinned ? "youtube"
+                                        : SettingsController.libraryPanelPinned ? "library" : ""
+    // What the columns show
+    readonly property bool playlistDocked: !compact && (queueOpen || queuePinned)
+    readonly property string rightShown: compact || playerRecalled ? "" : rightOpen !== "" ? rightOpen : rightPinned
+    readonly property bool youtubeDocked: rightShown === "youtube"
+    readonly property bool libraryDocked: rightShown === "library"
+    readonly property bool playerShown: layout !== "half" || !(playlistDocked && rightShown !== "")
+
+    function openPanel(name) {
+        playerRecalled = false
+        lastOpened = name
+        if (name === "queue") {
+            queueOpen = true
+            if (layout === "half")
+                rightOpen = "" // only one unpinned panel at a time
+        } else {
+            rightOpen = name === rightPinned ? "" : name
+            if (layout === "half" && !queuePinned)
+                queueOpen = false
+        }
+    }
+    // Closing a pinned panel unpins it.
+    function closePanel(name) {
+        if (name === "queue") {
+            queueOpen = false
+            SettingsController.playlistPinned = false
+        } else if (rightOpen === name) {
+            rightOpen = "" // a pinned panel under it comes back
+        } else if (name === "youtube") {
+            SettingsController.youtubePanelPinned = false
+        } else {
+            SettingsController.libraryPanelPinned = false
+        }
+    }
+    // A column's pin button: the panel stays open either way.
+    function togglePin(name) {
+        if (name === "queue") {
+            queueOpen = true
+            SettingsController.playlistPinned = !queuePinned
+        } else if (rightPinned === name) {
+            rightOpen = name
+            name === "youtube" ? (SettingsController.youtubePanelPinned = false)
+                               : (SettingsController.libraryPanelPinned = false)
+        } else {
+            rightOpen = ""
+            name === "youtube" ? (SettingsController.youtubePanelPinned = true)
+                               : (SettingsController.libraryPanelPinned = true)
+        }
+    }
+    // Half layout, the floating mini player tapped: make room for the player.
+    function showPlayer() {
+        if (rightOpen !== "")
+            rightOpen = ""
+        else if (queueOpen && !queuePinned)
+            queueOpen = false
+        else
+            playerRecalled = true
+    }
+
+    // Panels opened in one layout stay open in the next.
+    onLayoutChanged: {
+        playerRecalled = false
+        if (compact) {
+            queueOpen = false
+            rightOpen = ""
+            return
+        }
+        if (playlistDrawer.opened)
+            queueOpen = true
+        if (youtubeDrawer.opened)
+            rightOpen = rightPinned === "youtube" ? "" : "youtube"
+        else if (libraryDrawer.opened)
+            rightOpen = rightPinned === "library" ? "" : "library"
+        playlistDrawer.close()
+        youtubeDrawer.close()
+        libraryDrawer.close()
+        if (layout === "half" && queueOpen && !queuePinned && rightOpen !== "")
+            queueOpen = false
     }
 
     // Background tone from the playing track's cover (blended by the strength
@@ -69,12 +155,14 @@ ApplicationWindow {
 
     // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
     function toggleQueue() {
-        if (!playlistDocked)
+        if (compact)
             playlistDrawer.opened ? playlistDrawer.close() : playlistDrawer.open()
+        else
+            playlistDocked ? closePanel("queue") : openPanel("queue")
     }
     function toggleYoutube() {
-        if (youtubeDocked)
-            SettingsController.youtubePanelPinned = false
+        if (!compact)
+            youtubeDocked ? closePanel("youtube") : openPanel("youtube")
         else if (youtubeDrawer.opened)
             youtubeDrawer.close()
         else {
@@ -83,8 +171,8 @@ ApplicationWindow {
         }
     }
     function toggleLibrary() {
-        if (libraryDocked)
-            SettingsController.libraryPanelPinned = false
+        if (!compact)
+            libraryDocked ? closePanel("library") : openPanel("library")
         else if (libraryDrawer.opened)
             libraryDrawer.close()
         else {
@@ -103,6 +191,9 @@ ApplicationWindow {
             drawerLibrary.focusSearch()
             searchOnOpen = !libraryDrawer.opened
         } else if (youtubeDocked) {
+            dockedYoutube.focusSearch()
+        } else if (!compact) {
+            openPanel("youtube")
             dockedYoutube.focusSearch()
         } else {
             if (!youtubeDrawer.visible)
@@ -145,11 +236,17 @@ ApplicationWindow {
         id: split
 
         // Equal widths for every open column (fractional while one docks / undocks).
-        readonly property real openColumns: 1 + playlistSlot.openness + youtubeSlot.openness + librarySlot.openness
+        readonly property real openColumns: Math.max(1, playlistSlot.openness + playerSlot.openness
+                                                     + rightSlot.openness)
         readonly property real share: (width - (openColumns - 1) * Theme.cardGap) / openColumns
+        // A column opened or closed: back to equal widths, even after the dividers were dragged.
+        readonly property string columns: [window.playlistDocked, window.playerShown, window.rightShown].join()
+        onColumnsChanged: [playlistSlot, playerSlot, rightSlot].forEach((slot) => slot.equalize())
 
         anchors.fill: parent
         anchors.margins: Theme.cardGap
+        // Room for the floating mini player under the columns
+        anchors.bottomMargin: Theme.cardGap + (floatingMini.visible ? floatingMini.height + Theme.cardGap : 0)
         orientation: Qt.Horizontal
 
         // The gap between cards; a small bar appears while hovered or dragged.
@@ -174,74 +271,140 @@ ApplicationWindow {
             share: split.share
             minimumWidth: 240
             leftSide: true
+            SplitView.fillWidth: !window.playerShown && window.rightShown === ""
+            // Song rows keep their own swipe (delete): the header and empty space put the Queue away.
+            swipeEnabled: window.layout === "half"
+            swipeAnywhere: false
+            onSwipedAway: window.closePanel("queue")
 
             PlaylistPanel {
                 id: dockedPlaylist
                 anchors.fill: parent
                 showPinButton: true
-                pinned: true
-                onPinToggled: SettingsController.playlistPinned = false
+                pinned: window.queuePinned
+                showCloseButton: !pinned
+                onPinToggled: window.togglePin("queue")
+                onCloseRequested: window.closePanel("queue")
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onImportM3uRequested: window.importM3u()
                 onExportM3uRequested: (id, name) => window.exportM3u(id, name)
             }
         }
 
-        NowPlayingPanel {
-            id: nowPlaying
-            objectName: "nowPlaying"
-            SplitView.fillWidth: true
-            SplitView.minimumWidth: 280
-            showPlaylistButton: !window.playlistDocked
-            onPlaylistRequested: playlistDrawer.open()
-            onDetailsRequested: detailsDialog.show(PlayerController.source)
-            onSettingsRequested: settingsDialog.open()
-            onQuitRequested: window.quitApp()
-            youtubeOpen: window.youtubeDocked || youtubeDrawer.opened
-            libraryOpen: window.libraryDocked || libraryDrawer.opened
-            onLibraryRequested: window.toggleLibrary()
-            onYoutubeRequested: window.toggleYoutube()
+        // The player, pushed out by the panel opened last when there's no room (half layout)
+        DockSlot {
+            id: playerSlot
+            docked: window.playerShown
+            share: split.share
+            minimumWidth: 280
+            leftSide: window.lastOpened !== "queue"
+            SplitView.fillWidth: window.playerShown
+
+            NowPlayingPanel {
+                id: nowPlaying
+                objectName: "nowPlaying"
+                anchors.fill: parent
+                showPlaylistButton: !window.playlistDocked
+                onPlaylistRequested: window.toggleQueue()
+                onDetailsRequested: detailsDialog.show(PlayerController.source)
+                onSettingsRequested: settingsDialog.open()
+                onQuitRequested: window.quitApp()
+                youtubeOpen: window.youtubeDocked || youtubeDrawer.opened
+                libraryOpen: window.libraryDocked || libraryDrawer.opened
+                onLibraryRequested: window.toggleLibrary()
+                onYoutubeRequested: window.toggleYoutube()
+            }
         }
 
+        // YouTube or Library, one at a time: swapping them cross-fades in place.
         DockSlot {
-            id: youtubeSlot
-            docked: window.youtubeDocked
+            id: rightSlot
+            docked: window.rightShown !== ""
             share: split.share
             minimumWidth: 320
             leftSide: false
+            SplitView.fillWidth: !window.playerShown && docked
+            swipeEnabled: window.layout === "half" && !(rightPanel === "youtube" && dockedYoutube.swipeBlocked)
+            onSwipedAway: window.closePanel(rightPanel)
+
+            // What the column shows (kept while it closes)
+            property string rightPanel: "youtube"
+            readonly property string shown: window.rightShown
+            onShownChanged: if (shown !== "") rightPanel = shown
 
             YouTubePanel {
                 id: dockedYoutube
                 anchors.fill: parent
-                pinned: true
-                onPinToggled: SettingsController.youtubePanelPinned = false
+                pinned: window.rightPinned === "youtube"
+                showCloseButton: !pinned
+                onPinToggled: window.togglePin("youtube")
+                onCloseRequested: window.closePanel("youtube")
                 onSettingsRequested: settingsDialog.open()
-            }
-        }
 
-        // Shares the right-hand column with YouTube: only one of them is pinned.
-        DockSlot {
-            id: librarySlot
-            docked: window.libraryDocked
-            share: split.share
-            minimumWidth: 320
-            leftSide: false
+                // Swapping: the outgoing panel fades out while this one fades and slides in.
+                readonly property bool current: rightSlot.rightPanel === "youtube"
+                opacity: current ? 1 : 0
+                visible: current || opacity > 0
+                z: current ? 1 : 0
+                transform: Translate { x: (1 - dockedYoutube.opacity) * 24 }
+
+                Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+            }
 
             LibraryPanel {
                 id: dockedLibrary
                 anchors.fill: parent
-                pinned: true
-                showCloseButton: false
-                onPinToggled: SettingsController.libraryPanelPinned = false
+                pinned: window.rightPinned === "library"
+                showCloseButton: !pinned
+                onPinToggled: window.togglePin("library")
+                onCloseRequested: window.closePanel("library")
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onSettingsRequested: settingsDialog.open()
                 onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
                                                         (folder) => LocalLibraryController.addFolder(folder))
+
+                // Swapping: the outgoing panel fades out while this one fades and slides in.
+                readonly property bool current: rightSlot.rightPanel === "library"
+                opacity: current ? 1 : 0
+                visible: current || opacity > 0
+                z: current ? 1 : 0
+                transform: Translate { x: (1 - dockedLibrary.opacity) * 24 }
+
+                Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
             }
         }
     }
 
-    // Unpinned / phone size: the playlist card slides in from the left.
+    // Half layout: drag in from an empty window edge to bring that side's panel back.
+    EdgeSwipe {
+        anchors.left: parent.left
+        enabled: window.layout === "half" && !window.playlistDocked
+        inward: 1
+        onTriggered: window.openPanel("queue")
+    }
+    EdgeSwipe {
+        anchors.right: parent.right
+        enabled: window.layout === "half" && window.rightShown === ""
+        inward: -1
+        onTriggered: window.openPanel(rightSlot.rightPanel)
+    }
+
+    // Half layout with the player pushed out: a floating mini player under the
+    // columns stands in for it (tap the cover or title to bring the player back).
+    MiniPlayer {
+        id: floatingMini
+        objectName: "floatingMini"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: Theme.cardGap
+        height: implicitHeight
+        radius: Theme.radiusCard
+        active: window.layout === "half" && !window.playerShown
+        onOpenPlayerRequested: window.showPlayer()
+    }
+
+    // Phone size: the playlist card slides in from the left, over the player.
     Drawer {
         id: playlistDrawer
         objectName: "playlistDrawer"
@@ -252,10 +415,10 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(false, playlistSlot.minimumWidth)
+        width: window.width
         height: window.height
         padding: 0
-        interactive: !window.playlistDocked
+        interactive: window.compact
         background: Item {}
 
         DrawerCard {
@@ -264,11 +427,8 @@ ApplicationWindow {
 
             PlaylistPanel {
                 anchors.fill: parent
-                showPinButton: !window.compact
                 showCloseButton: true
                 showMiniPlayer: true
-                pinned: false
-                onPinToggled: SettingsController.playlistPinned = true
                 onCloseRequested: playlistDrawer.close()
                 onOpenPlayerRequested: playlistDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
@@ -289,10 +449,10 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(true, youtubeSlot.minimumWidth)
+        width: window.width
         height: window.height
         padding: 0
-        interactive: !window.youtubeDocked && !drawerYoutube.swipeBlocked
+        interactive: window.compact && !drawerYoutube.swipeBlocked
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
         onClosed: window.searchOnOpen = false
         background: Item {}
@@ -305,10 +465,9 @@ ApplicationWindow {
                 id: drawerYoutube
                 objectName: "youtubePanel"
                 anchors.fill: parent
-                showPinButton: !window.compact
+                showPinButton: false
                 showCloseButton: true
                 showMiniPlayer: true
-                onPinToggled: SettingsController.youtubePanelPinned = true
                 onCloseRequested: youtubeDrawer.close()
                 onOpenPlayerRequested: youtubeDrawer.close()
                 onSettingsRequested: {
@@ -330,10 +489,10 @@ ApplicationWindow {
         exit: Transition {
             NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
         }
-        width: window.drawerWidth(true, librarySlot.minimumWidth)
+        width: window.width
         height: window.height
         padding: 0
-        interactive: !window.libraryDocked
+        interactive: window.compact
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: window.searchOnOpen = false
         background: Item {}
@@ -347,8 +506,7 @@ ApplicationWindow {
                 objectName: "libraryPanel"
                 anchors.fill: parent
                 showMiniPlayer: true
-                showPinButton: !window.compact
-                onPinToggled: SettingsController.libraryPanelPinned = true
+                showPinButton: false
                 onCloseRequested: libraryDrawer.close()
                 onOpenPlayerRequested: libraryDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
@@ -358,6 +516,32 @@ ApplicationWindow {
                 }
                 onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
                                                         (folder) => LocalLibraryController.addFolder(folder))
+            }
+        }
+    }
+
+    // A strip along a window edge: dragging inward from it opens that side's panel.
+    component EdgeSwipe: Item {
+        property int inward: 1 // +1: drag right (left edge), -1: drag left (right edge)
+        signal triggered()
+
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: Theme.cardGap + 6
+        z: 2
+
+        DragHandler {
+            property bool done: false
+
+            target: null
+            xAxis.enabled: true
+            yAxis.enabled: false
+            onActiveChanged: done = false
+            onTranslationChanged: {
+                if (active && !done && translation.x * parent.inward > 40) {
+                    done = true
+                    parent.triggered()
+                }
             }
         }
     }
@@ -390,7 +574,10 @@ ApplicationWindow {
     }
 
     function showPlaylistPanel() {
-        if (!playlistDocked) {
+        if (!compact) {
+            if (!playlistDocked)
+                openPanel("queue")
+        } else {
             youtubeDrawer.close()
             libraryDrawer.close()
             playlistDrawer.open()

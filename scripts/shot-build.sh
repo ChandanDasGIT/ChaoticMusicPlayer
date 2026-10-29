@@ -191,6 +191,118 @@ hook = '''    // ---- screenshot harness
         QTimer::singleShot(2350, [send] { send(QEvent::MouseButtonRelease, clickPos, Qt::NoButton); });
         QTimer::singleShot(2600, [&] { std::printf("after click pinned=%d\\n", int(settings.playlistPinned())); });
     }
+    if (qEnvironmentVariableIsSet("SHOT_SCREEN_W")) // pretend the screen is this wide (picks the layout)
+        engine.rootObjects().constFirst()->setProperty("screenWidthOverride", qEnvironmentVariableIntValue("SHOT_SCREEN_W"));
+    if (qEnvironmentVariableIsSet("SHOT_OPEN")) { // steps in turn: queue / youtube / library (toggle), pin:<name>, player (mini tap)
+        const QStringList steps = qEnvironmentVariable("SHOT_OPEN").split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        const auto columns = [&, findItems](const QString &label) {
+            QObject *root = engine.rootObjects().constFirst();
+            std::printf("%-16s open=%s pinR=%s layout=%s queue=%d right=%s player=%d |", qPrintable(label), qPrintable(root->property("rightOpen").toString()), qPrintable(root->property("rightPinned").toString()),
+                        qPrintable(root->property("layout").toString()), root->property("playlistDocked").toInt(),
+                        qPrintable(root->property("rightShown").toString()), root->property("playerShown").toInt());
+            for (const char *type : {"PlaylistPanel", "NowPlayingPanel", "YouTubePanel", "LibraryPanel", "MiniPlayer"})
+                for (QQuickItem *item : findItems(type))
+                    if (item->isVisible() && item->width() > 0 && item->height() > 0)
+                        std::printf(" %s@%.0f+%.0f", type, item->mapToScene({0, 0}).x(), item->width());
+            std::printf("\\n");
+            std::fflush(stdout);
+        };
+        QTimer::singleShot(1800, [columns] { columns(QStringLiteral("start")); });
+        for (int i = 0; i < steps.size(); ++i)
+            QTimer::singleShot(2000 + i * 1300, [&, steps, i, columns, findItems] {
+                QObject *root = engine.rootObjects().constFirst();
+                const QString step = steps[i];
+                if (step.startsWith(QLatin1String("click:"))) { // click that panel's pin button like a user
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QString icon = step.section(QLatin1Char(':'), 2, 2).isEmpty() ? QStringLiteral("thumbtack") : step.section(QLatin1Char(':'), 2, 2);
+                    for (QQuickItem *panel : findItems(qPrintable(step.section(QLatin1Char(':'), 1, 1))))
+                        if (panel->isVisible())
+                            for (QQuickItem *button : panel->findChildren<QQuickItem *>())
+                                if (button->isVisible() && button->property("iconName").toString() == icon) {
+                                    const QPoint p = button->mapToScene({button->width() / 2, button->height() / 2}).toPoint();
+                                    std::printf("click pin at %d,%d\\n", p.x(), p.y());
+                                    std::function<void(QQuickItem *, int)> hits = [&](QQuickItem *item, int depth) {
+                                        if (!item->isVisible() || !item->contains(item->mapFromScene(p)))
+                                            return;
+                                        std::printf("  %*s%s %s z=%.0f\\n", depth, "", item->metaObject()->className(), qPrintable(item->objectName()), item->z());
+                                        for (QQuickItem *child : item->childItems())
+                                            hits(child, depth + 1);
+                                    };
+                                    if (qEnvironmentVariableIsSet("SHOT_HITS"))
+                                        hits(w->contentItem(), 0);
+                                    QTest::mouseMove(w, p);
+                                    QTest::qWait(400); // hover like a person (tooltips show up)
+                                    QTest::mousePress(w, Qt::LeftButton, {}, p);
+                                    if (QQuickItem *g = w->mouseGrabberItem())
+                                        std::printf("  grabber: %s %s\\n", g->metaObject()->className(), qPrintable(g->objectName()));
+                                    else
+                                        std::printf("  grabber: none\\n");
+                                    QTest::mouseRelease(w, Qt::LeftButton, {}, p);
+                                }
+                } else if (step.startsWith(QLatin1String("pin:")))
+                    QMetaObject::invokeMethod(root, "togglePin", Q_ARG(QVariant, step.mid(4)));
+                else if (step.startsWith(QLatin1String("at:"))) { // press / release at x,y; print who grabbed it
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QPoint p(step.mid(3).section(QLatin1Char(','), 0, 0).toInt(), step.mid(3).section(QLatin1Char(','), 1, 1).toInt());
+                    QTest::mouseMove(w, p);
+                    QTest::qWait(qEnvironmentVariableIsSet("SHOT_HOVER_MS") ? qEnvironmentVariableIntValue("SHOT_HOVER_MS") : 400); // hover like a person (tooltips show up)
+                    if (qEnvironmentVariableIsSet("SHOT_HOVER_MS"))
+                        w->grabWindow().save(QStringLiteral("build/shot/hover.png"));
+                    QTest::mousePress(w, Qt::LeftButton, {}, p);
+                    QQuickItem *g = w->mouseGrabberItem();
+                    std::printf("at %d,%d grabber: %s\\n", p.x(), p.y(), g ? g->metaObject()->className() : "none");
+                    if (qEnvironmentVariableIsSet("SHOT_CHAIN") && g)
+                        for (QQuickItem *it = g; it; it = it->parentItem())
+                            std::printf("  chain %s x=%.1f y=%.1f scale=%.2f transforms=%d sceneY=%.1f\\n", it->metaObject()->className(), it->x(), it->y(), it->scale(),
+                                        int(it->property("transform").isValid()), it->mapToScene({0, 0}).y());
+                    std::function<void(QQuickItem *, int)> dump = [&](QQuickItem *item, int depth) {
+                        if (depth > 2 || !item->isVisible())
+                            return;
+                        const QRectF r = item->mapRectToScene(item->boundingRect());
+                        std::printf("  %*s%s %s %.0f,%.0f %.0fx%.0f op=%.2f\\n", depth, "", item->metaObject()->className(), qPrintable(item->objectName()), r.x(), r.y(), r.width(), r.height(), item->opacity());
+                        for (QQuickItem *child : item->childItems())
+                            dump(child, depth + 1);
+                    };
+                    if (g && g->inherits("QQuickOverlay"))
+                        dump(g, 0);
+                    for (QQuickItem *overlayItem : w->contentItem()->childItems())
+                        if (overlayItem->inherits("QQuickOverlay"))
+                        for (QQuickItem *child : overlayItem->childItems())
+                            if (QObject *popup = child->parent(); popup && popup->inherits("QQuickToolTip")) {
+                                auto *pp = popup->property("parent").value<QQuickItem *>();
+                                std::printf("  tooltip item x=%.0f y=%.0f h=%.0f parentH=%.0f roomAbove=%d y=%.0f implicitHeight=%.0f margins=%.0f parent=%s sceneY=%.0f\\n", child->x(), child->y(), child->height(), popup->property("parent").value<QQuickItem *>() ? popup->property("parent").value<QQuickItem *>()->height() : -1.0, popup->property("roomAbove").toInt(), popup->property("y").toDouble(),
+                                            popup->property("implicitHeight").toDouble(), popup->property("margins").toDouble(), pp ? pp->metaObject()->className() : "-", pp ? pp->mapToScene({0, 0}).y() : -1.0);
+                            }
+                    for (QObject *o : root->findChildren<QObject *>())
+                        if (o->inherits("QQuickPopup") && o->property("visible").toBool())
+                            std::printf("  open popup: %s %s x=%.0f y=%.0f w=%.0f h=%.0f parent=%s\\n", o->metaObject()->className(), qPrintable(o->objectName()),
+                                        o->property("x").toDouble(), o->property("y").toDouble(), o->property("width").toDouble(), o->property("height").toDouble(),
+                                        o->parent() ? o->parent()->metaObject()->className() : "-");
+                    QTest::mouseRelease(w, Qt::LeftButton, {}, p);
+                }
+                else if (step.startsWith(QLatin1String("drag:"))) { // drag:x,y,dx — press, move sideways in steps, release
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QStringList v = step.mid(5).split(QLatin1Char(','));
+                    const QPoint from(v.value(0).toInt(), v.value(1).toInt());
+                    const int dx = v.value(2).toInt();
+                    QTest::mouseMove(w, from);
+                    QTest::mousePress(w, Qt::LeftButton, {}, from);
+                    for (int k = 1; k <= 12; ++k) {
+                        QTest::qWait(16);
+                        QTest::mouseMove(w, from + QPoint(dx * k / 12, 0));
+                    }
+                    QTest::qWait(150); // slow release: no fling
+                    QTest::mouseRelease(w, Qt::LeftButton, {}, from + QPoint(dx, 0));
+                }
+                else if (step == QLatin1String("wait"))
+                    ;
+                else if (step == QLatin1String("player"))
+                    QMetaObject::invokeMethod(root, "showPlayer");
+                else
+                    QMetaObject::invokeMethod(root, qPrintable(QLatin1String("toggle") + step.at(0).toUpper() + step.mid(1)));
+                QTimer::singleShot(700, [columns, step] { columns(step); });
+            });
+    }
     if (qEnvironmentVariableIsSet("SHOT_PANEL_SIZES")) // print the size of every visible panel card
         QTimer::singleShot(3000, [&, findItems] {
             for (const char *type : {"PlaylistPanel", "YouTubePanel", "LibraryPanel"})
@@ -445,13 +557,15 @@ hook = '''    // ---- screenshot harness
         if (qEnvironmentVariableIsSet("SHOT_DETAILS")) {
             if (QObject *dialog = root->findChild<QObject *>("detailsDialog"))
                 QMetaObject::invokeMethod(dialog, "show", Q_ARG(QVariant, QVariant(player.source())));
+        } else if (qEnvironmentVariableIsSet("SHOT_OPEN")) {
+            // layout tests: no dialog over the panels
         } else if (QObject *dialog = root->findChild<QObject *>("settingsDialog")) {
             if (qEnvironmentVariableIsSet("SHOT_SETTINGS_PAGE")) // which page settings.png shows
                 dialog->setProperty("page", qEnvironmentVariableIntValue("SHOT_SETTINGS_PAGE"));
             QMetaObject::invokeMethod(dialog, "open");
         }
     });
-    QTimer::singleShot(qEnvironmentVariableIsSet("SHOT_DETAILS") ? 9000 : 6500, [&] { grab("build/shot/settings.png"); QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp"); });
+    QTimer::singleShot(qEnvironmentVariableIsSet("SHOT_QUIT_MS") ? qEnvironmentVariableIntValue("SHOT_QUIT_MS") : qEnvironmentVariableIsSet("SHOT_DETAILS") ? 9000 : 6500, [&] { grab("build/shot/settings.png"); QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp"); });
     return app.exec();'''
 assert s.count("    return app.exec();") == 1
 pathlib.Path("build/shot/shotmain.cpp").write_text(s.replace("    return app.exec();", hook))

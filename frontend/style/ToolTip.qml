@@ -39,6 +39,8 @@ T.ToolTip {
         NumberAnimation { property: "opacity"; to: 0; duration: 100 }
     }
 
+    readonly property Item noInput: Item {} // no area: contains no point
+
     contentItem: Text {
         text: control.text
         font.pixelSize: 12
@@ -48,6 +50,10 @@ T.ToolTip {
     }
 
     background: Rectangle {
+        // Never take the pointer: near the window's top Qt squeezes the tooltip
+        // over its control, and a click there must still reach the control.
+        onParentChanged: if (parent) parent.containmentMask = control.noInput
+
         color: control.palette.toolTipBase
         radius: 9
         border.color: Qt.rgba(control.palette.toolTipText.r, control.palette.toolTipText.g,
