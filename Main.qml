@@ -302,9 +302,11 @@ ApplicationWindow {
 
         anchors.fill: parent
         anchors.margins: Theme.cardGap
-        // Room for the navigation bar and the floating mini player under the columns
+        // Room for the navigation bar and the floating mini player under the columns.
+        // The gap above the mini player grows with it, so the columns shrink and
+        // grow smoothly as it slides in and out.
         anchors.bottomMargin: window.height - navBar.y + Theme.cardGap
-                              + (floatingMini.visible ? floatingMini.height + Theme.cardGap : 0)
+                              + floatingMini.height * (1 + Theme.cardGap / floatingMini.fullHeight)
         orientation: Qt.Horizontal
 
         // The gap between cards; a small bar appears while hovered or dragged.
@@ -470,14 +472,20 @@ ApplicationWindow {
                 clip: true
                 visible: settingsCard.y < height
 
-                Item {
+                // Solid (not see-through like the other panels), in the window's tint
+                Rectangle {
                     id: settingsCard
                     readonly property bool up: window.rightShown === "settings"
+                    // 0: in place, 1: below the column. Animated as a fraction, so the
+                    // column changing size (opening, resizing) doesn't move it.
+                    property real down: up ? 0 : 1
                     width: parent.width
                     height: parent.height
-                    y: up ? 0 : height + Theme.cardGap
+                    y: down * (height + Theme.cardGap)
+                    radius: Theme.radiusCard
+                    color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
-                    Behavior on y { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+                    Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
                 }
             }
         }
@@ -710,14 +718,15 @@ ApplicationWindow {
         Rectangle {
             id: settingsSheet
             property bool shown: false
+            property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap
             width: parent.width - 2 * Theme.cardGap
             height: parent.height - 2 * Theme.cardGap
-            y: shown ? Theme.cardGap : parent.height
+            y: Theme.cardGap + down * (parent.height - Theme.cardGap)
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
-            Behavior on y { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+            Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
         }
     }
 

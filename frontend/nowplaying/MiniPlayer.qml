@@ -24,7 +24,8 @@ Rectangle {
     opacity: shown ? 1 : 0
     visible: implicitHeight > 0.5
 
-    Behavior on implicitHeight { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easing } }
+    // In step with the panels docking beside it (DockSlot), so they move together.
+    Behavior on implicitHeight { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
     Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
     // Progress along the top edge
