@@ -178,6 +178,7 @@ Rectangle {
                 Layout.preferredHeight: 172
                 visible: root.hasHistory
                 orientation: ListView.Horizontal
+                populate: ListPopulate { sideways: true }
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -230,6 +231,7 @@ Rectangle {
                 Layout.preferredHeight: 172
                 visible: HistoryController.recentAlbums.length > 0
                 orientation: ListView.Horizontal
+                populate: ListPopulate { sideways: true }
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -256,6 +258,7 @@ Rectangle {
                 Layout.preferredHeight: 172
                 visible: LocalLibraryController.recentlyAdded.length > 0
                 orientation: ListView.Horizontal
+                populate: ListPopulate { sideways: true }
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds

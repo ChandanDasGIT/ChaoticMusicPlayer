@@ -450,6 +450,14 @@ hook = '''    // ---- screenshot harness
                                       Qt::NoScrollPhase, false);
                     QCoreApplication::sendEvent(w, &wheel);
                 }
+                else if (step.startsWith(QLatin1String("later:"))) { // later:ms:name -> build/shot/name.png, ms after this step
+                    const QStringList v = step.mid(6).split(QLatin1Char(':'));
+                    if (auto *w = qobject_cast<QQuickWindow *>(root))
+                        QTimer::singleShot(v.value(0).toInt(), w, [w, name = v.value(1)] {
+                            std::printf("%s.png %s\\n", qPrintable(name),
+                                        w->grabWindow().save(QStringLiteral("build/shot/") + name + QStringLiteral(".png")) ? "saved" : "FAILED");
+                        });
+                }
                 else if (step.startsWith(QLatin1String("grab:"))) { // grab:name -> build/shot/name.png
                     if (auto *w = qobject_cast<QQuickWindow *>(root))
                         std::printf("%s.png %s\\n", qPrintable(step.mid(5)),
@@ -724,9 +732,9 @@ hook = '''    // ---- screenshot harness
         }
     });
     QTimer::singleShot(qEnvironmentVariableIsSet("SHOT_QUIT_MS") ? qEnvironmentVariableIntValue("SHOT_QUIT_MS") : qEnvironmentVariableIsSet("SHOT_DETAILS") ? 9000 : 6500, [&] { grab("build/shot/settings.png"); QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp"); });
-    return app.exec();'''
-assert s.count("    return app.exec();") == 1
-pathlib.Path("build/shot/shotmain.cpp").write_text(s.replace("    return app.exec();", hook))
+    const int result = app.exec();'''
+assert s.count("    const int result = app.exec();") == 1
+pathlib.Path("build/shot/shotmain.cpp").write_text(s.replace("    const int result = app.exec();", hook))
 PY
 OBJ=build/CMakeFiles/ChaoticMusicPlayer.dir
 objs=$(find $OBJ -name '*.o' ! -name 'main.cpp.o')

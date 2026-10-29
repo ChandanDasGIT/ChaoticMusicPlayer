@@ -29,6 +29,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: 196
         orientation: ListView.Horizontal
+        populate: ListPopulate { sideways: true }
         spacing: Theme.padding
         leftMargin: Theme.padding
         rightMargin: Theme.padding

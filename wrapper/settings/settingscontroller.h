@@ -78,6 +78,9 @@ class SettingsController : public QObject
     Q_PROPERTY(QStringList libraryExcluded READ libraryExcluded NOTIFY libraryExcludedChanged)
     // Appearance: 0 = plain dark theme, 1 = full cover color
     Q_PROPERTY(qreal coverTintStrength READ coverTintStrength WRITE setCoverTintStrength NOTIFY coverTintStrengthChanged)
+    // Interface size (1 = 100%), applied at the next start; activeInterfaceScale: this run's
+    Q_PROPERTY(qreal interfaceScale READ interfaceScale WRITE setInterfaceScale NOTIFY interfaceScaleChanged)
+    Q_PROPERTY(qreal activeInterfaceScale READ activeInterfaceScale CONSTANT)
     // Visualizer under the volume bar; style: 0 = bars, 1 = mirrored bars, 2 = wave
     Q_PROPERTY(bool visualizerEnabled READ visualizerEnabled WRITE setVisualizerEnabled NOTIFY visualizerEnabledChanged)
     Q_PROPERTY(int visualizerStyle READ visualizerStyle WRITE setVisualizerStyle NOTIFY visualizerStyleChanged)
@@ -184,6 +187,16 @@ public:
     Q_INVOKABLE void removeLibraryExcluded(const QString &folder);
     qreal coverTintStrength() const;
     void setCoverTintStrength(qreal strength);
+    qreal interfaceScale() const;
+    void setInterfaceScale(qreal scale);
+    qreal activeInterfaceScale() const { return m_activeInterfaceScale; }
+    void setActiveInterfaceScale(qreal scale) { m_activeInterfaceScale = scale; }
+    // The saved interface size, read before the app starts (Qt scales the whole UI by it).
+    static qreal storedInterfaceScale();
+    // Writes the settings file now (before a restart).
+    void flush();
+    // Quits and starts the app again (main does it: restartRequested).
+    Q_INVOKABLE void restartApp() { emit restartRequested(); }
     bool visualizerEnabled() const;
     void setVisualizerEnabled(bool enabled);
     int visualizerStyle() const;
@@ -226,6 +239,8 @@ signals:
     void eqChanged();
     void ytCookiesBrowserChanged();
     void coverTintStrengthChanged();
+    void interfaceScaleChanged();
+    void restartRequested();
     void coversOnlineChanged();
     void coverSourcesChanged();
     void libraryFoldersChanged();
@@ -250,5 +265,6 @@ private:
     static inline SettingsController *s_instance = nullptr;
 
     std::unique_ptr<Settings> m_settings;
+    qreal m_activeInterfaceScale = 1.0;
     QTimer m_saveTimer;
 };

@@ -23,6 +23,7 @@
 #include <QGuiApplication>
 #include <QIcon>
 #include <QNetworkInformation>
+#include <QProcess>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QWindow>
@@ -33,6 +34,14 @@ Q_IMPORT_QML_PLUGIN(ChaoticStylePlugin)
 
 int main(int argc, char *argv[])
 {
+    // Interface size (Settings > Appearance): Qt scales the whole UI by it. It
+    // must be set before the app starts, so a change applies after a restart.
+    // A QT_SCALE_FACTOR set by the user wins.
+    const bool scaleFromSettings = !qEnvironmentVariableIsSet("QT_SCALE_FACTOR");
+    const qreal interfaceScale = scaleFromSettings ? SettingsController::storedInterfaceScale() : 1.0;
+    if (scaleFromSettings && !qFuzzyCompare(interfaceScale, 1.0))
+        qputenv("QT_SCALE_FACTOR", QByteArray::number(interfaceScale));
+
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("ChaoticMusicPlayer");
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION)); // from CMake (project version)
@@ -56,6 +65,7 @@ int main(int argc, char *argv[])
 
     // Controllers must exist before QML asks for the singletons.
     SettingsController settings(nullptr);
+    settings.setActiveInterfaceScale(interfaceScale);
     PlayerController player(nullptr);
     PlaylistController playlist(&player, &settings, nullptr);
     LibraryController library(&playlist, nullptr);
@@ -147,5 +157,29 @@ int main(int argc, char *argv[])
             QCoreApplication::quit();
     });
 
-    return app.exec();
+    // Restart (Settings > Appearance > Interface size): quit as usual, then start again.
+    bool restart = false;
+    QObject::connect(&settings, &SettingsController::restartRequested, &app, [&] {
+        restart = true;
+        if (!engine.rootObjects().isEmpty())
+            QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp");
+        else
+            QCoreApplication::quit();
+    });
+
+    const int result = app.exec();
+    if (restart) {
+        settings.flush();
+        instance.stop(); // the new copy must not hand over to this one
+        QProcess process;
+        process.setProgram(QCoreApplication::applicationFilePath());
+        process.setArguments(QCoreApplication::arguments().mid(1));
+        if (scaleFromSettings) { // the new copy reads the new size itself
+            QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+            environment.remove(QStringLiteral("QT_SCALE_FACTOR"));
+            process.setProcessEnvironment(environment);
+        }
+        process.startDetached();
+    }
+    return result;
 }

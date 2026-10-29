@@ -90,9 +90,12 @@ Item {
         smooth: true
         mipmap: true
         opacity: root.shown === 0 ? 1 : 0
+        // The new cover settles in from slightly larger as it fades in.
+        scale: root.shown === 0 ? 1 : 1.04
         onStatusChanged: root.imageSettled(imageA, 0)
 
         Behavior on opacity { NumberAnimation { duration: Theme.animSlow } }
+        Behavior on scale { NumberAnimation { duration: Theme.animSlow * 1.4; easing.type: Theme.easing } }
     }
 
     Image {
@@ -108,8 +111,11 @@ Item {
         smooth: true
         mipmap: true
         opacity: root.shown === 1 ? 1 : 0
+        // The new cover settles in from slightly larger as it fades in.
+        scale: root.shown === 1 ? 1 : 1.04
         onStatusChanged: root.imageSettled(imageB, 1)
 
         Behavior on opacity { NumberAnimation { duration: Theme.animSlow } }
+        Behavior on scale { NumberAnimation { duration: Theme.animSlow * 1.4; easing.type: Theme.easing } }
     }
 }

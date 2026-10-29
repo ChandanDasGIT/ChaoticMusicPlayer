@@ -38,6 +38,12 @@ Rectangle {
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
 
+    // Shown: the category groups rise in, one after another.
+    function intro() {
+        introRun++
+    }
+    property int introRun: 0
+
     signal closeRequested()
     // Ask Main for the folder picker (it lives in the main window).
     signal addFolderRequested()
@@ -207,11 +213,28 @@ Rectangle {
                             id: group
 
                             required property var modelData
+                            required property int index
 
                             Layout.fillWidth: true
                             implicitHeight: groupRows.implicitHeight
                             radius: Theme.radiusLarge
                             color: Theme.fillSoft
+                            transform: Translate { id: rise }
+
+                            Connections {
+                                target: root
+                                function onIntroRunChanged() { groupIntro.restart() }
+                            }
+                            SequentialAnimation {
+                                id: groupIntro
+                                PropertyAction { target: group; property: "opacity"; value: 0 }
+                                PropertyAction { target: rise; property: "y"; value: 24 }
+                                PauseAnimation { duration: 60 + group.index * 45 }
+                                ParallelAnimation {
+                                    NumberAnimation { target: group; property: "opacity"; to: 1; duration: Theme.anim; easing.type: Theme.easing }
+                                    NumberAnimation { target: rise; property: "y"; to: 0; duration: Theme.animSlow; easing.type: Theme.easing }
+                                }
+                            }
 
                             ColumnLayout {
                                 id: groupRows
@@ -663,6 +686,56 @@ Rectangle {
                                         active: SettingsController.themeMode === modelData.id
                                         onClicked: SettingsController.themeMode = modelData.id
                                     }
+                                }
+                            }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Interface size")
+                                description: qsTr("Makes everything bigger or smaller: text, buttons, panels. Takes effect when the app starts again.")
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: [0.9, 1.0, 1.1, 1.25, 1.5]
+
+                                    delegate: PillButton {
+                                        required property real modelData
+
+                                        text: Math.round(modelData * 100) + "%"
+                                        implicitHeight: 32
+                                        active: Math.abs(SettingsController.interfaceScale - modelData) < 0.01
+                                        onClicked: SettingsController.interfaceScale = modelData
+                                    }
+                                }
+                            }
+
+                            // Shown once the chosen size differs from the one in use
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
+                                spacing: Theme.spacing
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: SettingsController.resumeSession
+                                          ? qsTr("Restart the app to use the new size. The song you're playing picks up where it was.")
+                                          : qsTr("Restart the app to use the new size.")
+                                    color: Theme.textMuted
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    wrapMode: Text.WordWrap
+                                }
+
+                                PillButton {
+                                    filled: true
+                                    iconName: "refresh"
+                                    iconSize: 11
+                                    text: qsTr("Restart now")
+                                    implicitHeight: 32
+                                    onClicked: SettingsController.restartApp()
                                 }
                             }
                         }

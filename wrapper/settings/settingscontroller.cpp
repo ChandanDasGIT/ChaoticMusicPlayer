@@ -60,6 +60,7 @@ constexpr qreal EqMaxDb = 12;
 constexpr int MaxYtSearchHistory = 50;
 constexpr const char *YtCookiesKey = "youtube.cookiesBrowser";
 constexpr const char *TintStrengthKey = "appearance.tintStrength";
+constexpr const char *InterfaceScaleKey = "appearance.interfaceScale";
 constexpr const char *CoversOnlineKey = "covers.online";
 constexpr const char *CoversDisabledKey = "covers.disabledSources"; // comma-separated ids
 const QList<QPair<QString, QString>> CoverSourceNames = {
@@ -89,6 +90,17 @@ const QList<QPair<QString, QString>> LyricsSourceNames = {
     {QStringLiteral("ytmusic"), QStringLiteral("YouTube Music")},
 };
 
+std::string settingsFile()
+{
+    return (QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+            + QStringLiteral("/ChaoticMusicPlayer/settings.conf")).toStdString();
+}
+
+qreal clampScale(qreal scale)
+{
+    return qBound(0.75, scale, 2.0);
+}
+
 } // namespace
 
 SettingsController::SettingsController(QObject *parent)
@@ -97,9 +109,7 @@ SettingsController::SettingsController(QObject *parent)
     Q_ASSERT(!s_instance);
     s_instance = this;
 
-    const QString file = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
-                         + QStringLiteral("/ChaoticMusicPlayer/settings.conf");
-    m_settings = std::make_unique<Settings>(file.toStdString());
+    m_settings = std::make_unique<Settings>(settingsFile());
     m_settings->load();
 
     m_saveTimer.setSingleShot(true);
@@ -735,6 +745,34 @@ void SettingsController::setCoverTintStrength(qreal strength)
     m_settings->setDouble(TintStrengthKey, strength);
     scheduleSave();
     emit coverTintStrengthChanged();
+}
+
+qreal SettingsController::interfaceScale() const
+{
+    return clampScale(m_settings->doubleValue(InterfaceScaleKey, 1.0));
+}
+
+void SettingsController::setInterfaceScale(qreal scale)
+{
+    scale = clampScale(scale);
+    if (qFuzzyCompare(scale, interfaceScale()))
+        return;
+    m_settings->setDouble(InterfaceScaleKey, scale);
+    scheduleSave();
+    emit interfaceScaleChanged();
+}
+
+qreal SettingsController::storedInterfaceScale()
+{
+    Settings settings(settingsFile());
+    settings.load();
+    return clampScale(settings.doubleValue(InterfaceScaleKey, 1.0));
+}
+
+void SettingsController::flush()
+{
+    m_saveTimer.stop();
+    m_settings->save();
 }
 
 bool SettingsController::coversOnline() const

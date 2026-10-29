@@ -43,6 +43,7 @@ ApplicationWindow {
     readonly property bool homeDocked: rightShown === "home"
     // Settings: in the right-hand column (never pinned), or a sheet at phone size
     readonly property bool settingsShown: rightShown === "settings" || settingsSheet.shown
+    onSettingsShownChanged: if (settingsShown && settingsPanel.page < 0) settingsPanel.intro()
     readonly property bool playerShown: layout !== "half" || !(playlistDocked && rightShown !== "")
 
     function openPanel(name) {

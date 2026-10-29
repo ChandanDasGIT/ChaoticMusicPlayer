@@ -21,6 +21,15 @@ SingleInstance::~SingleInstance()
         m_server->close(); // removes the socket file
 }
 
+void SingleInstance::stop()
+{
+    if (m_server) {
+        m_server->close();
+        delete m_server;
+        m_server = nullptr;
+    }
+}
+
 bool SingleInstance::start()
 {
     m_socketPath = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)

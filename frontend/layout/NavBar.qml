@@ -91,20 +91,36 @@ Rectangle {
                 id: pill
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 8
-                width: 56
+                // The active pill grows out from the icon; hovering shows a smaller one.
+                width: button.active ? 56 : button.hovered ? 44 : 28
                 height: 28
                 radius: height / 2
                 color: button.active ? Theme.accentSoft : button.hovered ? Theme.hover : "transparent"
                 scale: button.pressed ? 0.92 : 1
 
+                Behavior on width { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingBack } }
                 Behavior on color { ColorAnimation { duration: Theme.anim } }
                 Behavior on scale { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
 
                 Icon {
+                    id: navIcon
                     anchors.centerIn: parent
                     name: button.iconName
                     size: 14
                     color: button.active ? Theme.accent : Theme.text
+
+                    Behavior on color { ColorAnimation { duration: Theme.anim } }
+                }
+
+                // A small pop as it becomes active
+                SequentialAnimation {
+                    id: pop
+                    NumberAnimation { target: navIcon; property: "scale"; to: 1.25; duration: Theme.animFast; easing.type: Theme.easing }
+                    NumberAnimation { target: navIcon; property: "scale"; to: 1; duration: Theme.animSlow; easing.type: Theme.easingBack }
+                }
+                Connections {
+                    target: button
+                    function onActiveChanged() { if (button.active) pop.restart() }
                 }
             }
 

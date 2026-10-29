@@ -19,6 +19,8 @@ public:
     // Returns false when another copy is already running (it has been asked
     // to come to the front) and this process should exit.
     bool start();
+    // Stops answering (a restart: the new copy must not find this one).
+    void stop();
 
 signals:
     void activationRequested();
