@@ -1,0 +1,105 @@
+#include "wrapper/files/files.h"
+
+#include <QDir>
+#include <QFileInfo>
+#include <QStorageInfo>
+
+namespace {
+
+QVariantMap place(const QString &name, const QString &path)
+{
+    return {{QStringLiteral("name"), name}, {QStringLiteral("url"), QUrl::fromLocalFile(path)}};
+}
+
+} // namespace
+
+Files::Files(QObject *parent)
+    : QObject(parent)
+{
+}
+
+QString Files::toPath(const QUrl &url) const
+{
+    return url.isLocalFile() ? QDir::cleanPath(url.toLocalFile()) : QDir::cleanPath(url.toString());
+}
+
+QUrl Files::toUrl(const QString &path) const
+{
+    return path.isEmpty() ? QUrl() : QUrl::fromLocalFile(QDir::cleanPath(path));
+}
+
+QString Files::displayPath(const QUrl &url) const
+{
+    return QDir::toNativeSeparators(toPath(url));
+}
+
+QUrl Files::child(const QUrl &folder, const QString &name) const
+{
+    return QUrl::fromLocalFile(QDir(toPath(folder)).filePath(name));
+}
+
+bool Files::isRoot(const QUrl &folder) const
+{
+    return QDir(toPath(folder)).isRoot();
+}
+
+QUrl Files::parentOf(const QUrl &folder) const
+{
+    QDir dir(toPath(folder));
+    if (!dir.isRoot())
+        dir.cdUp();
+    return QUrl::fromLocalFile(dir.absolutePath());
+}
+
+QVariantList Files::crumbs(const QUrl &folder) const
+{
+    QVariantList out;
+    QDir dir(toPath(folder));
+    for (;;) {
+        const QString path = dir.absolutePath();
+        // A root shows as "/" or "C:"
+        const QString name = dir.isRoot() ? (path == QStringLiteral("/") ? path : path.chopped(path.endsWith(u'/') ? 1 : 0))
+                                          : dir.dirName();
+        out.prepend(place(name, path));
+        if (dir.isRoot() || !dir.cdUp())
+            break;
+    }
+    return out;
+}
+
+QVariantList Files::drives() const
+{
+    QVariantList out;
+#if defined(Q_OS_ANDROID)
+    out.append(place(tr("Phone storage"), QStringLiteral("/storage/emulated/0")));
+    for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
+        const QString root = volume.rootPath();
+        if (volume.isValid() && volume.isReady() && root.startsWith(QStringLiteral("/storage/"))
+            && !root.startsWith(QStringLiteral("/storage/emulated")) && root != QStringLiteral("/storage/self"))
+            out.append(place(tr("SD card (%1)").arg(root.section(u'/', -1)), root));
+    }
+#else
+    for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
+        const QString root = volume.rootPath();
+        if (!volume.isValid() || !volume.isReady())
+            continue;
+#if defined(Q_OS_WIN)
+        // Every drive: "Data (D:)"
+        const QString letter = root.left(2);
+        const QString label = volume.name();
+        out.append(place(label.isEmpty() ? letter : QStringLiteral("%1 (%2)").arg(label, letter), root));
+#else
+        // The system's own mounts are left out: other disks and USB sticks only
+        const bool removableOrExtra = root.startsWith(QStringLiteral("/mnt/")) || root.startsWith(QStringLiteral("/media/"))
+                                      || root.startsWith(QStringLiteral("/run/media/"));
+        if (!removableOrExtra)
+            continue;
+        QString name = volume.displayName();
+        if (name.isEmpty() || name == root)
+            name = root.section(u'/', -1);
+        out.append(place(name, root));
+#endif
+    }
+#endif
+    return out;
+}

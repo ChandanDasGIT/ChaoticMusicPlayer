@@ -30,7 +30,7 @@ Popup {
     // once the folder's listing has loaded; indexOf alone doesn't notice.)
     readonly property bool nameTaken: saveMode && nameField.text.trim() !== "" && folders.status === FolderListModel.Ready
                                       && folders.count >= 0
-                                      && folders.indexOf(Qt.resolvedUrl(folder + "/" + nameField.text.trim())) >= 0
+                                      && folders.indexOf(Files.child(folder, nameField.text.trim())) >= 0
 
     signal accepted(string folder) // local path
 
@@ -44,21 +44,14 @@ Popup {
         saveMode = !!(options && options.save)
         nameField.text = options && options.name ? options.name : ""
         folder = startFolder && startFolder !== "" ? startFolder : home
-        drives = LocalLibraryController.drives()
+        drives = Files.drives()
         open()
         list.forceActiveFocus()
     }
 
-    function pathOf(url) {
-        return decodeURIComponent(url.toString().replace(/^file:\/\//, ""))
-    }
-
     function goUp() {
-        const path = pathOf(folder)
-        if (path === "/" || path === "")
-            return
-        const parent = path.substring(0, path.lastIndexOf("/"))
-        folder = "file://" + (parent === "" ? "/" : parent)
+        if (!Files.isRoot(folder))
+            folder = Files.parentOf(folder)
     }
 
     function accept() {
@@ -66,7 +59,7 @@ Popup {
             return // a file is picked by clicking it
         if (saveMode && nameField.text.trim() === "")
             return
-        const path = saveMode ? pathOf(folder) + "/" + nameField.text.trim() : pathOf(folder)
+        const path = Files.toPath(saveMode ? Files.child(folder, nameField.text.trim()) : folder)
         root.accepted(path)
         if (onPicked)
             onPicked(path)
@@ -237,7 +230,7 @@ Popup {
                         iconSize: 11
                         implicitWidth: 34
                         implicitHeight: 32
-                        enabled: root.pathOf(root.folder) !== "/"
+                        enabled: !Files.isRoot(root.folder)
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Up one folder")
                         onClicked: root.goUp()
@@ -253,28 +246,27 @@ Popup {
                         ListView {
                             id: crumbs
 
-                            readonly property var parts: root.pathOf(root.folder).split("/").filter(p => p !== "")
-
                             anchors.fill: parent
                             anchors.leftMargin: 6
                             anchors.rightMargin: 6
                             orientation: ListView.Horizontal
                             boundsBehavior: Flickable.StopAtBounds
-                            model: ["/"].concat(parts)
+                            model: Files.crumbs(root.folder) // [{ name, url }], from the root
                             onCountChanged: positionViewAtEnd()
                             onWidthChanged: positionViewAtEnd()
 
                             delegate: Row {
                                 id: crumb
 
-                                required property string modelData
+                                required property var modelData
                                 required property int index
                                 readonly property bool last: index === crumbs.count - 1
 
                                 height: crumbs.height
 
                                 Label {
-                                    visible: crumb.index > 1
+                                    // "/ home" needs no "›" after the root; "C: › Music" does
+                                    visible: crumb.index > 1 || (crumb.index === 1 && crumbs.model[0].name !== "/")
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: " › "
                                     color: Theme.textDim
@@ -285,14 +277,14 @@ Popup {
                                     anchors.verticalCenter: parent.verticalCenter
                                     leftPadding: 6
                                     rightPadding: 6
-                                    text: crumb.index === 0 ? "/" : crumb.modelData
+                                    text: crumb.modelData.name
                                     color: crumb.last ? Theme.text : crumbHover.hovered ? Theme.accent : Theme.textMuted
                                     font.pixelSize: Theme.fontSize
                                     font.weight: crumb.last ? Font.DemiBold : Font.Normal
 
                                     HoverHandler { id: crumbHover; cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
-                                        onTapped: root.folder = "file:///" + crumbs.parts.slice(0, crumb.index).join("/")
+                                        onTapped: root.folder = crumb.modelData.url
                                     }
                                 }
                             }
@@ -361,9 +353,9 @@ Popup {
                                 } else if (root.saveMode) {
                                     nameField.text = row.fileName // save over it
                                 } else {
-                                    root.accepted(root.pathOf(row.fileUrl))
+                                    root.accepted(Files.toPath(row.fileUrl))
                                     if (root.onPicked)
-                                        root.onPicked(root.pathOf(row.fileUrl))
+                                        root.onPicked(Files.toPath(row.fileUrl))
                                     root.close()
                                 }
                             }
@@ -421,7 +413,7 @@ Popup {
             Label {
                 Layout.fillWidth: true
                 visible: !root.saveMode
-                text: root.openFileMode ? qsTr("Click a playlist file to open it") : root.pathOf(root.folder)
+                text: root.openFileMode ? qsTr("Click a playlist file to open it") : Files.displayPath(root.folder)
                 color: Theme.textMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideMiddle
@@ -476,7 +468,7 @@ Popup {
         property string iconName
         property string label
         property url target
-        readonly property bool current: root.pathOf(root.folder) === root.pathOf(target)
+        readonly property bool current: Files.toPath(root.folder) === Files.toPath(target)
 
         Layout.fillWidth: true
         implicitHeight: 36

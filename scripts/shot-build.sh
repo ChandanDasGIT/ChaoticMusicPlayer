@@ -756,7 +756,7 @@ hook = '''    // ---- screenshot harness
                 QMetaObject::invokeMethod(picker, "pick", Q_ARG(QVariant, QVariant(QStringLiteral("Add a music folder"))),
                                           Q_ARG(QVariant, QVariant(QStringLiteral("Add this folder"))),
                                           Q_ARG(QVariant, QVariant(QStringLiteral("file://") + qEnvironmentVariable("SHOT_FOLDER_PICKER"))),
-                                          Q_ARG(QVariant, QVariant()));
+                                          Q_ARG(QVariant, QVariant()), Q_ARG(QVariant, QVariant()));
             if (QObject *picker = engine.rootObjects().constFirst()->findChild<QObject *>("folderPicker"))
                 QTimer::singleShot(400, [picker] {
                     std::printf("picker opened=%d visible=%d w=%.0f h=%.0f parent=%s\\n", picker->property("opened").toBool(),

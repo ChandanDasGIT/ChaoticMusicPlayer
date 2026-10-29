@@ -940,7 +940,7 @@ Rectangle {
                                 text: qsTr("Exclude a folder…")
                                 implicitHeight: 32
                                 onClicked: root.excludeFolderRequested(SettingsController.libraryFolders.length > 0
-                                                                       ? "file://" + SettingsController.libraryFolders[0] : "")
+                                                                       ? Files.toUrl(SettingsController.libraryFolders[0]) : "")
                             }
                         }
                     }
@@ -1310,11 +1310,11 @@ Rectangle {
                                     id: dataRow
 
                                     required property var modelData
-                                    readonly property string folder: modelData.base + "/ChaoticMusicPlayer"
+                                    readonly property url folder: Files.child(modelData.base, "ChaoticMusicPlayer")
 
                                     Layout.fillWidth: true
                                     title: modelData.name
-                                    description: folder.replace("file://", "")
+                                    description: Files.displayPath(folder)
 
                                     PillButton {
                                         iconName: "folderOpen"

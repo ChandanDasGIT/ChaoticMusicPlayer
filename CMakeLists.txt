@@ -208,6 +208,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/lyrics/lyricscontroller.h
         wrapper/player/playercontroller.cpp
         wrapper/player/playercontroller.h
+        wrapper/files/files.cpp
+        wrapper/files/files.h
         wrapper/notifications/notificationcontroller.cpp
         wrapper/notifications/notificationcontroller.h
         wrapper/playlist/playlistcontroller.cpp
@@ -300,6 +302,7 @@ qt_add_qml_module(ChaoticMusicPlayer
 target_include_directories(ChaoticMusicPlayer PRIVATE
     ${CMAKE_SOURCE_DIR}
     wrapper/albumart
+    wrapper/files
     wrapper/history
     wrapper/library
     wrapper/locallibrary

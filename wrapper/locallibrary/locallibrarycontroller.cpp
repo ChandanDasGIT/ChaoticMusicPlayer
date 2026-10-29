@@ -13,7 +13,6 @@
 #include <QFileInfo>
 #include <QJSEngine>
 #include <QStandardPaths>
-#include <QStorageInfo>
 #include <QUrl>
 
 #include <algorithm>
@@ -693,22 +692,5 @@ QVariantList LocalLibraryController::albumItems(const QString &key) const
     QVariantList out;
     for (const Track &t : tracks)
         out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
-    return out;
-}
-
-QVariantList LocalLibraryController::drives() const
-{
-    QVariantList out;
-    for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
-        const QString root = volume.rootPath();
-        const bool removableOrExtra = root.startsWith(QStringLiteral("/mnt/")) || root.startsWith(QStringLiteral("/media/"))
-                                      || root.startsWith(QStringLiteral("/run/media/"));
-        if (!volume.isValid() || !volume.isReady() || !removableOrExtra)
-            continue;
-        QString name = volume.displayName();
-        if (name.isEmpty() || name == root)
-            name = root.section(QLatin1Char('/'), -1);
-        out.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("url"), QUrl::fromLocalFile(root)}});
-    }
     return out;
 }

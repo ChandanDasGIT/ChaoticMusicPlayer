@@ -125,9 +125,6 @@ public:
     Q_INVOKABLE void saveTags(const QString &path, const QVariantMap &tags);
     Q_INVOKABLE QVariantList folderItems(const QString &path) const; // [{ path }], subfolders too, in file order
 
-    // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]
-    Q_INVOKABLE QVariantList drives() const;
-
 signals:
     void searchChanged();
     void contentsChanged();
