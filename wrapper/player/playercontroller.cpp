@@ -192,6 +192,11 @@ void PlayerController::setYtCookiesBrowser(const QString &browser)
     m_resolver->setCookiesBrowser(browser.toStdString());
 }
 
+void PlayerController::setFadeLevel(qreal level)
+{
+    m_player->setFadeLevel(float(level));
+}
+
 void PlayerController::setEqualizer(const QList<qreal> &gainsDb, bool enabled)
 {
     Equalizer::Gains gains{};

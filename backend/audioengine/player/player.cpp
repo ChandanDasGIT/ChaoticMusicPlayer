@@ -58,6 +58,11 @@ void Player::setEqualizer(const Equalizer::Gains &gainsDb, bool enabled)
     m_equalizer.setGains(gainsDb, enabled);
 }
 
+void Player::setFadeLevel(float level)
+{
+    m_fadeLevel.store(std::clamp(level, 0.0f, 1.0f), std::memory_order_relaxed);
+}
+
 void Player::setVolume(float volume)
 {
     const float v = std::clamp(volume, 0.0f, 1.0f);
@@ -481,7 +486,7 @@ size_t Player::pull(float *dst, size_t frames)
     }
     m_equalizer.process(dst, got);
     m_spectrum.push(dst, got); // what is heard, equalizer included
-    const float gain = m_gain.load(std::memory_order_relaxed);
+    const float gain = m_gain.load(std::memory_order_relaxed) * m_fadeLevel.load(std::memory_order_relaxed);
     if (gain != 1.0f) {
         for (size_t i = 0; i < got * Channels; ++i)
             dst[i] *= gain;

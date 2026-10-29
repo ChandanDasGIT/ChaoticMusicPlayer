@@ -166,6 +166,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/playlist/playlistmodel.h
         wrapper/playlists/playlistscontroller.cpp
         wrapper/playlists/playlistscontroller.h
+        wrapper/sleeptimer/sleeptimercontroller.cpp
+        wrapper/sleeptimer/sleeptimercontroller.h
         wrapper/smartplaylists/smartplaylistscontroller.cpp
         wrapper/smartplaylists/smartplaylistscontroller.h
         wrapper/settings/settingscontroller.cpp
@@ -252,6 +254,7 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
     wrapper/playlist
     wrapper/playlists
     wrapper/settings
+    wrapper/sleeptimer
     wrapper/smartplaylists
     wrapper/visualizer
     wrapper/youtube

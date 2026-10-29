@@ -144,7 +144,7 @@ Rectangle {
         VolumeSlider {
             id: volume
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, 250)
+            width: Math.min(parent.width, 290)
             onEqualizerRequested: root.equalizerRequested()
         }
 

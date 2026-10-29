@@ -75,6 +75,7 @@ public:
     void stop();
     void seek(int64_t positionMs);
     void setVolume(float volume); // 0..1, perceptual
+    void setFadeLevel(float level); // 0..1 on top of the volume (the sleep timer fading out)
     void setEqualizer(const Equalizer::Gains &gainsDb, bool enabled); // takes effect at once
 
     // What is being played, for the visualizer (before volume is applied).
@@ -154,6 +155,7 @@ private:
     // Shared with the realtime thread
     RingBuffer m_ring;
     std::atomic<float> m_gain{1.0f};
+    std::atomic<float> m_fadeLevel{1.0f};
     std::atomic<bool> m_skipFade{false};
     std::atomic<int> m_dipRemaining{0}; // frames of fade-out left (skip)
     std::atomic<bool> m_dipMuted{false};  // fade-out done: silence until the new track

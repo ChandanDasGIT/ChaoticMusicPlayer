@@ -383,6 +383,11 @@ hook = '''    // ---- screenshot harness
                 } else if (step == QLatin1String("printsong")) { // what the Queue / library think the playing song is
                     std::printf("song: queue title=\\"%s\\" library title=\\"%s\\"\\n", qPrintable(playlist.currentTitle()),
                                 localLibrary.trackForPath(player.source()) ? localLibrary.trackForPath(player.source())->title.c_str() : "-");
+                } else if (step.startsWith(QLatin1String("sleep:"))) { // sleep:<minutes> or sleep:end
+                    if (step.mid(6) == QLatin1String("end"))
+                        sleepTimer.startEndOfSong();
+                    else
+                        sleepTimer.start(step.mid(6).toInt());
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {
@@ -396,7 +401,8 @@ hook = '''    // ---- screenshot harness
                 } else if (step == QLatin1String("next")) {
                     playlist.next();
                 } else if (step == QLatin1String("printctx")) { // what is playing, and from where
-                    std::printf("ctx: title=\\"%s\\" fromList=%d current=\\"%s\\" hasNext=%d upcomingMin=%.1f queue=%d\\n",
+                    std::printf("ctx: playing=%d pos=%llds title=\\"%s\\" fromList=%d current=\\"%s\\" hasNext=%d upcomingMin=%.1f queue=%d\\n",
+                                int(player.playing()), (long long)(player.position() / 1000),
                                 qPrintable(playlist.contextTitle()), int(playlist.playingFromList()),
                                 qPrintable(playlist.currentTitle()), int(playlist.hasNext()), playlist.upcomingMs() / 60000.0,
                                 playlist.count());
