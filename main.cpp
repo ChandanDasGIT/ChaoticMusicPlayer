@@ -1,6 +1,7 @@
 #include "wrapper/albumart/albumartprovider.h"
 #include "wrapper/albumart/covercontroller.h"
 #include "wrapper/albumart/coverpalette.h"
+#include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/lyrics/lyricscontroller.h"
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).
+    HistoryController history(&player, &playlist, &playlists, &settings, nullptr);
     SessionController session(&player, &playlist, &playlists, &settings, nullptr);
     session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);

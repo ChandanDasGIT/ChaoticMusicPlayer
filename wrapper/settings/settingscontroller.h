@@ -33,6 +33,9 @@ class SettingsController : public QObject
     // Playback
     Q_PROPERTY(bool restorePlaylist READ restorePlaylist WRITE setRestorePlaylist NOTIFY restorePlaylistChanged)
     Q_PROPERTY(bool backgroundPlayback READ backgroundPlayback WRITE setBackgroundPlayback NOTIFY backgroundPlaybackChanged)
+    // The private listening history (kept on this computer only)
+    Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyChanged)
+    Q_PROPERTY(bool historyYouTube READ historyYouTube WRITE setHistoryYouTube NOTIFY historyChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     Q_PROPERTY(bool resumeSession READ resumeSession WRITE setResumeSession NOTIFY resumeSessionChanged)
     Q_PROPERTY(int volumeStep READ volumeStep WRITE setVolumeStep NOTIFY volumeStepChanged)
@@ -102,6 +105,10 @@ public:
     bool restorePlaylist() const;    // load the last playlist on startup
     void setRestorePlaylist(bool restore);
     bool backgroundPlayback() const; // closing the window keeps the music playing
+    bool historyEnabled() const;
+    void setHistoryEnabled(bool enabled);
+    bool historyYouTube() const; // YouTube Music songs are recorded too
+    void setHistoryYouTube(bool enabled);
     void setBackgroundPlayback(bool enabled);
     QString themeMode() const; // "system" (follow the desktop), "dark" (default) or "light"
     void setThemeMode(const QString &mode);
@@ -188,6 +195,7 @@ signals:
     void volumeStepChanged();
     void restorePlaylistChanged();
     void backgroundPlaybackChanged();
+    void historyChanged();
     void themeModeChanged();
     void resumeSessionChanged();
     void showRemainingTimeChanged();

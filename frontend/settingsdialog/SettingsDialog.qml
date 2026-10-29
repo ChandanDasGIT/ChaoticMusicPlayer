@@ -37,6 +37,7 @@ Popup {
 
     // Ask Main for the folder picker (it lives in the main window).
     signal addFolderRequested()
+    signal clearHistoryRequested() // asks first (the confirmation lives in the main window)
     signal excludeFolderRequested(string startFolder)
 
     anchors.centerIn: Overlay.overlay
@@ -238,6 +239,55 @@ Popup {
                             SettingsSwitch {
                                 checked: SettingsController.backgroundPlayback
                                 onToggled: SettingsController.backgroundPlayback = checked
+                            }
+                        }
+                    }
+
+                    SettingsCard {
+                        title: qsTr("Listening history")
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("Keep a listening history")
+                            description: qsTr("Remember the songs you listen to (half a song, or 4 minutes, counts) for Home. It stays on this computer.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.historyEnabled
+                                onToggled: SettingsController.historyEnabled = checked
+                            }
+                        }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            enabled: SettingsController.historyEnabled
+                            opacity: enabled ? 1 : 0.5
+                            title: qsTr("Include YouTube Music songs")
+                            description: qsTr("Off: only songs from your library and your files are remembered.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.historyYouTube
+                                onToggled: SettingsController.historyYouTube = checked
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: HistoryController.count === 1 ? qsTr("1 song listened to so far.")
+                                                                    : qsTr("%1 songs listened to so far.").arg(HistoryController.count)
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeSmall
+                            }
+
+                            PillButton {
+                                iconName: "trash"
+                                iconSize: 11
+                                text: qsTr("Clear history…")
+                                implicitHeight: 32
+                                enabled: HistoryController.count > 0
+                                onClicked: root.clearHistoryRequested()
                             }
                         }
                     }

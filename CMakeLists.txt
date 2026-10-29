@@ -26,6 +26,8 @@ add_library(backend STATIC
     backend/audioengine/audiooutput/audiooutput.h
     backend/audioengine/decoder/decoder.cpp
     backend/audioengine/decoder/decoder.h
+    backend/history/listeninghistory/listeninghistory.cpp
+    backend/history/listeninghistory/listeninghistory.h
     backend/audioengine/equalizer/equalizer.cpp
     backend/audioengine/equalizer/equalizer.h
     backend/audioengine/player/player.cpp
@@ -142,6 +144,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/albumart/covercontroller.h
         wrapper/albumart/coverpalette.cpp
         wrapper/albumart/coverpalette.h
+        wrapper/history/historycontroller.cpp
+        wrapper/history/historycontroller.h
         wrapper/library/librarycontroller.cpp
         wrapper/library/librarycontroller.h
         wrapper/locallibrary/librarysongsmodel.cpp
@@ -231,6 +235,7 @@ qt_add_qml_module(ChaoticMusicPlayer
 target_include_directories(ChaoticMusicPlayer PRIVATE
     ${CMAKE_SOURCE_DIR}
     wrapper/albumart
+    wrapper/history
     wrapper/library
     wrapper/locallibrary
     wrapper/lyrics

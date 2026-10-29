@@ -708,9 +708,17 @@ ApplicationWindow {
         }
     }
 
+    ConfirmDialog {
+        id: clearHistoryDialog
+        confirmText: qsTr("Clear")
+        onConfirmed: HistoryController.clear()
+    }
+
     SettingsDialog {
         id: settingsDialog
         objectName: "settingsDialog"
+        onClearHistoryRequested: clearHistoryDialog.ask(qsTr("Clear your listening history?"),
+                                                        qsTr("Every song remembered so far is forgotten. Your music itself stays."))
         onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
                                                 (folder) => LocalLibraryController.addFolder(folder))
         onExcludeFolderRequested: (startFolder) => folderPicker.pick(

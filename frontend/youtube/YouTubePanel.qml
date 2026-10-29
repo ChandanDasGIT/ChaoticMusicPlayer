@@ -211,7 +211,7 @@ Rectangle {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: shown ? Theme.padding * 1.5 + (miniPlayer.shown ? miniPlayer.height + Theme.spacing : 0) : -height
+        anchors.bottomMargin: shown ? Theme.padding * 1.5 : -height
         width: Math.min(parent.width - 2 * Theme.padding, toastLabel.implicitWidth + 32)
         height: toastLabel.implicitHeight + 18
         radius: height / 2

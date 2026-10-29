@@ -28,6 +28,8 @@ constexpr const char *RepeatModeKey = "repeat";
 constexpr const char *VolumeStepKey = "volume.step";
 constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
+constexpr const char *HistoryEnabledKey = "history.enabled";
+constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
 constexpr const char *ResumeKey = "playback.resume";
 constexpr const char *SessionPathKey = "session.path";
@@ -248,6 +250,34 @@ void SettingsController::setBackgroundPlayback(bool enabled)
     m_settings->setBool(BackgroundPlaybackKey, enabled);
     scheduleSave();
     emit backgroundPlaybackChanged();
+}
+
+bool SettingsController::historyEnabled() const
+{
+    return m_settings->boolValue(HistoryEnabledKey, true);
+}
+
+void SettingsController::setHistoryEnabled(bool enabled)
+{
+    if (enabled == historyEnabled())
+        return;
+    m_settings->setBool(HistoryEnabledKey, enabled);
+    scheduleSave();
+    emit historyChanged();
+}
+
+bool SettingsController::historyYouTube() const
+{
+    return m_settings->boolValue(HistoryYouTubeKey, true);
+}
+
+void SettingsController::setHistoryYouTube(bool enabled)
+{
+    if (enabled == historyYouTube())
+        return;
+    m_settings->setBool(HistoryYouTubeKey, enabled);
+    scheduleSave();
+    emit historyChanged();
 }
 
 bool SettingsController::resumeSession() const

@@ -350,6 +350,13 @@ hook = '''    // ---- screenshot harness
                     }
                 } else if (step.startsWith(QLatin1String("key:"))) { // press a key, e.g. key:Return
                     QTest::keySequence(qobject_cast<QQuickWindow *>(root), QKeySequence(step.mid(4)));
+                } else if (step == QLatin1String("printplays")) { // the listening history
+                    std::printf("plays: %d\\n", history.count());
+                    for (const auto &play : history.plays())
+                        std::printf("  play: %s | %s | from %s | %llds\\n", play.title.c_str(), play.artist.c_str(),
+                                    play.from.c_str(), (long long)(play.durationMs / 1000));
+                } else if (step == QLatin1String("histoff")) {
+                    settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {
                     QStringList gains;
                     for (qreal g : settings.eqGains())
