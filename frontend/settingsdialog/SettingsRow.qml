@@ -6,6 +6,7 @@ import QtQuick.Layouts
 RowLayout {
     id: root
 
+    readonly property bool settingsRow: true // (Settings search)
     property string title
     property string description
     default property alias control: holder.data

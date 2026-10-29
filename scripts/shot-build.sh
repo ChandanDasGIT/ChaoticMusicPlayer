@@ -718,10 +718,9 @@ hook = '''    // ---- screenshot harness
                 QMetaObject::invokeMethod(dialog, "show", Q_ARG(QVariant, QVariant(player.source())));
         } else if (qEnvironmentVariableIsSet("SHOT_OPEN")) {
             // layout tests: no dialog over the panels
-        } else if (QObject *dialog = root->findChild<QObject *>("settingsDialog")) {
-            if (qEnvironmentVariableIsSet("SHOT_SETTINGS_PAGE")) // which page settings.png shows
-                dialog->setProperty("page", qEnvironmentVariableIntValue("SHOT_SETTINGS_PAGE"));
-            QMetaObject::invokeMethod(dialog, "open");
+        } else { // Settings, on SHOT_SETTINGS_PAGE (else its list)
+            QMetaObject::invokeMethod(root, "openSettings", Q_ARG(QVariant, QVariant(qEnvironmentVariableIsSet("SHOT_SETTINGS_PAGE")
+                                                                                    ? qEnvironmentVariableIntValue("SHOT_SETTINGS_PAGE") : -1)));
         }
     });
     QTimer::singleShot(qEnvironmentVariableIsSet("SHOT_QUIT_MS") ? qEnvironmentVariableIntValue("SHOT_QUIT_MS") : qEnvironmentVariableIsSet("SHOT_DETAILS") ? 9000 : 6500, [&] { grab("build/shot/settings.png"); QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "quitApp"); });

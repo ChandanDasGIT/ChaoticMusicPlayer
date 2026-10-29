@@ -222,7 +222,7 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/nowplaying/QualityChip.qml
         frontend/nowplaying/Visualizer.qml
         frontend/playlist/PlaylistContextMenu.qml
-        frontend/settingsdialog/SettingsDialog.qml
+        frontend/settingsdialog/SettingsPanel.qml
         frontend/settingsdialog/SettingsRow.qml
         frontend/settingsdialog/SettingsSwitch.qml
         frontend/youtube/YouTubePanel.qml

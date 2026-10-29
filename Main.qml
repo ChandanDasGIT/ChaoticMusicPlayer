@@ -28,7 +28,7 @@ ApplicationWindow {
 
     // Opened without being pinned (wide / half layouts; compact uses the drawers).
     property bool queueOpen: false
-    property string rightOpen: ""      // "youtube" / "library", shown over a pinned one
+    property string rightOpen: ""      // "home" / "youtube" / "library" / "settings", shown over a pinned one
     property bool playerRecalled: false // half: the player in place of two pinned panels
     property string lastOpened: ""     // the panel opened last pushes the player away from its side
     readonly property bool queuePinned: SettingsController.playlistPinned
@@ -41,6 +41,8 @@ ApplicationWindow {
     readonly property bool youtubeDocked: rightShown === "youtube"
     readonly property bool libraryDocked: rightShown === "library"
     readonly property bool homeDocked: rightShown === "home"
+    // Settings: in the right-hand column (never pinned), or a sheet at phone size
+    readonly property bool settingsShown: rightShown === "settings" || settingsSheet.shown
     readonly property bool playerShown: layout !== "half" || !(playlistDocked && rightShown !== "")
 
     function openPanel(name) {
@@ -103,9 +105,14 @@ ApplicationWindow {
     onLayoutChanged: {
         playerRecalled = false
         if (compact) {
+            settingsSheet.shown = rightOpen === "settings"
             queueOpen = false
             rightOpen = ""
             return
+        }
+        if (settingsSheet.shown) {
+            settingsSheet.shown = false
+            rightOpen = "settings"
         }
         if (playlistDrawer.opened)
             queueOpen = true
@@ -163,6 +170,7 @@ ApplicationWindow {
     // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
     // Phone size shows one panel at a time: opening one closes the others.
     function closeDrawers() {
+        settingsSheet.shown = false
         playlistDrawer.close()
         youtubeDrawer.close()
         libraryDrawer.close()
@@ -194,6 +202,25 @@ ApplicationWindow {
         else
             libraryDocked ? closePanel("library") : openPanel("library")
     }
+    // Settings, on a page (-1: the list; left out: where it was last).
+    function openSettings(page) {
+        if (page !== undefined)
+            settingsPanel.openPage(page)
+        if (compact) {
+            closeDrawers()
+            settingsSheet.shown = true
+        } else {
+            openPanel("settings")
+        }
+    }
+    function closeSettings() {
+        settingsSheet.shown = false
+        if (rightOpen === "settings")
+            rightOpen = ""
+    }
+    function toggleSettings() {
+        settingsShown ? closeSettings() : openSettings()
+    }
     function toggleHome() {
         if (compact)
             toggleDrawer(homeDrawer)
@@ -224,17 +251,25 @@ ApplicationWindow {
     }
 
     AppShortcuts {
-        dialogOpen: settingsDialog.visible || detailsDialog.visible || nameDialog.visible || confirmDialog.visible
+        dialogOpen: detailsDialog.visible || nameDialog.visible || confirmDialog.visible
                     || folderPicker.visible
-        escapeEnabled: nowPlaying.lyricsOpen && !dialogOpen && !playlistDrawer.opened && !youtubeDrawer.opened
-                       && !libraryDrawer.opened && !homeDrawer.opened
-        onEscapePressed: nowPlaying.lyricsOpen = false
+        escapeEnabled: !dialogOpen && (window.settingsShown || nowPlaying.lyricsOpen && !playlistDrawer.opened
+                       && !youtubeDrawer.opened && !libraryDrawer.opened && !homeDrawer.opened)
+        // Settings: back to its list, then closed; else the lyrics close
+        onEscapePressed: {
+            if (window.settingsShown) {
+                if (!settingsPanel.back())
+                    window.closeSettings()
+            } else {
+                nowPlaying.lyricsOpen = false
+            }
+        }
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
         onToggleQueue: window.toggleQueue()
         onToggleYoutube: window.toggleYoutube()
         onToggleLibrary: window.toggleLibrary()
-        onOpenSettings: settingsDialog.open()
+        onOpenSettings: window.toggleSettings()
         onQuit: window.quitApp()
     }
 
@@ -328,7 +363,7 @@ ApplicationWindow {
                 objectName: "nowPlaying"
                 anchors.fill: parent
                 onDetailsRequested: detailsDialog.show(PlayerController.source)
-                onEqualizerRequested: settingsDialog.openPage(settingsDialog.equalizerPage)
+                onEqualizerRequested: window.openSettings(settingsPanel.equalizerPage)
                 onQuitRequested: window.quitApp()
             }
 
@@ -348,13 +383,25 @@ ApplicationWindow {
             minimumWidth: 320
             leftSide: false
             SplitView.fillWidth: !window.playerShown && docked
-            swipeEnabled: window.layout === "half" && !(rightPanel === "youtube" && dockedYoutube.swipeBlocked)
-            onSwipedAway: window.closePanel(rightPanel)
+            swipeEnabled: window.layout === "half" && !(face === "youtube" && dockedYoutube.swipeBlocked)
+            onSwipedAway: window.closePanel(shown !== "" ? shown : rightPanel)
 
-            // What the column shows (kept while it closes)
+            // The panel opened last (the right edge swipe brings it back)
             property string rightPanel: "youtube"
+            // What the column shows under Settings (kept while it closes; "": nothing,
+            // Settings opened the column)
+            property string face: ""
             readonly property string shown: window.rightShown
-            onShownChanged: if (shown !== "") rightPanel = shown
+            property string previous: ""
+            onShownChanged: {
+                if (shown === "settings") {
+                    face = previous
+                } else if (shown !== "") {
+                    rightPanel = shown
+                    face = shown
+                }
+                previous = shown
+            }
 
             YouTubePanel {
                 id: dockedYoutube
@@ -363,10 +410,10 @@ ApplicationWindow {
                 showCloseButton: !pinned
                 onPinToggled: window.togglePin("youtube")
                 onCloseRequested: window.closePanel("youtube")
-                onSettingsRequested: settingsDialog.open()
+                onSettingsRequested: window.openSettings()
 
                 // Swapping: the outgoing panel fades out while this one fades and slides in.
-                readonly property bool current: rightSlot.rightPanel === "youtube"
+                readonly property bool current: rightSlot.face === "youtube"
                 opacity: current ? 1 : 0
                 visible: current || opacity > 0
                 z: current ? 1 : 0
@@ -384,7 +431,7 @@ ApplicationWindow {
                 onCloseRequested: window.closePanel("home")
 
                 // Swapping: the outgoing panel fades out while this one fades and slides in.
-                readonly property bool current: rightSlot.rightPanel === "home"
+                readonly property bool current: rightSlot.face === "home"
                 opacity: current ? 1 : 0
                 visible: current || opacity > 0
                 z: current ? 1 : 0
@@ -402,17 +449,35 @@ ApplicationWindow {
                 onCloseRequested: window.closePanel("library")
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onEditTagsRequested: (path) => detailsDialog.show(path, true)
-                onSettingsRequested: settingsDialog.open()
-                onFoldersSettingsRequested: settingsDialog.openPage(settingsDialog.libraryPage)
+                onSettingsRequested: window.openSettings()
+                onFoldersSettingsRequested: window.openSettings(settingsPanel.libraryPage)
 
                 // Swapping: the outgoing panel fades out while this one fades and slides in.
-                readonly property bool current: rightSlot.rightPanel === "library"
+                readonly property bool current: rightSlot.face === "library"
                 opacity: current ? 1 : 0
                 visible: current || opacity > 0
                 z: current ? 1 : 0
                 transform: Translate { x: (1 - dockedLibrary.opacity) * 24 }
 
                 Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+            }
+
+            // Settings slides up from the bottom over the column's panel, and back down.
+            Item {
+                anchors.fill: parent
+                z: 3
+                clip: true
+                visible: settingsCard.y < height
+
+                Item {
+                    id: settingsCard
+                    readonly property bool up: window.rightShown === "settings"
+                    width: parent.width
+                    height: parent.height
+                    y: up ? 0 : height + Theme.cardGap
+
+                    Behavior on y { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+                }
             }
         }
     }
@@ -435,7 +500,7 @@ ApplicationWindow {
     // covered by a panel at phone size), a floating mini player above the
     // navigation bar stands in for it; tap the cover or title to bring it back.
     readonly property bool anyDrawerOpen: playlistDrawer.visible || youtubeDrawer.visible || libraryDrawer.visible
-                                          || homeDrawer.visible
+                                          || homeDrawer.visible || settingsSheet.shown
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
@@ -473,12 +538,12 @@ ApplicationWindow {
         queueOpen: window.playlistDocked || playlistDrawer.visible
         youtubeOpen: window.youtubeDocked || youtubeDrawer.visible
         libraryOpen: window.libraryDocked || libraryDrawer.visible
-        settingsOpen: settingsDialog.visible
+        settingsOpen: window.settingsShown
         onHomeClicked: window.toggleHome()
         onQueueClicked: window.toggleQueue()
         onYoutubeClicked: window.toggleYoutube()
         onLibraryClicked: window.toggleLibrary()
-        onSettingsClicked: settingsDialog.open()
+        onSettingsClicked: window.toggleSettings()
     }
 
     // Phone size: the drawers end above the mini player and the navigation bar,
@@ -554,10 +619,7 @@ ApplicationWindow {
                 showPinButton: false
                 showCloseButton: true
                 onCloseRequested: youtubeDrawer.close()
-                onSettingsRequested: {
-                    youtubeDrawer.close()
-                    settingsDialog.open()
-                }
+                onSettingsRequested: window.openSettings()
             }
         }
     }
@@ -629,16 +691,49 @@ ApplicationWindow {
                 onCloseRequested: libraryDrawer.close()
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onEditTagsRequested: (path) => detailsDialog.show(path, true)
-                onSettingsRequested: {
-                    libraryDrawer.close()
-                    settingsDialog.open()
-                }
-                onFoldersSettingsRequested: {
-                    libraryDrawer.close()
-                    settingsDialog.openPage(settingsDialog.libraryPage)
-                }
+                onSettingsRequested: window.openSettings()
+                onFoldersSettingsRequested: window.openSettings(settingsPanel.libraryPage)
             }
         }
+    }
+
+    // Phone size: Settings as a sheet sliding up above the mini player and the
+    // navigation bar (the drawers' height).
+    Item {
+        width: window.width
+        height: window.drawerHeight
+        clip: true
+        z: 4
+        visible: settingsSheet.y < height
+
+        Rectangle {
+            id: settingsSheet
+            property bool shown: false
+            x: Theme.cardGap
+            width: parent.width - 2 * Theme.cardGap
+            height: parent.height - 2 * Theme.cardGap
+            y: shown ? Theme.cardGap : parent.height
+            radius: Theme.radiusCard
+            color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
+
+            Behavior on y { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+        }
+    }
+
+    // One Settings panel: in the right-hand column, or the sheet at phone size.
+    SettingsPanel {
+        id: settingsPanel
+        objectName: "settingsPanel"
+        parent: window.compact ? settingsSheet : settingsCard
+        anchors.fill: parent
+        onCloseRequested: window.closeSettings()
+        onClearHistoryRequested: clearHistoryDialog.ask(qsTr("Clear your listening history?"),
+                                                        qsTr("Every song remembered so far is forgotten. Your music itself stays."))
+        onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
+                                                (folder) => LocalLibraryController.addFolder(folder))
+        onExcludeFolderRequested: (startFolder) => folderPicker.pick(
+            qsTr("Leave a folder out of the library"), qsTr("Exclude this folder"), startFolder,
+            (folder) => SettingsController.addLibraryExcluded(folder))
     }
 
     // A strip along a window edge: dragging inward from it opens that side's panel.
@@ -777,17 +872,5 @@ ApplicationWindow {
         id: clearHistoryDialog
         confirmText: qsTr("Clear")
         onConfirmed: HistoryController.clear()
-    }
-
-    SettingsDialog {
-        id: settingsDialog
-        objectName: "settingsDialog"
-        onClearHistoryRequested: clearHistoryDialog.ask(qsTr("Clear your listening history?"),
-                                                        qsTr("Every song remembered so far is forgotten. Your music itself stays."))
-        onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
-                                                (folder) => LocalLibraryController.addFolder(folder))
-        onExcludeFolderRequested: (startFolder) => folderPicker.pick(
-            qsTr("Leave a folder out of the library"), qsTr("Exclude this folder"), startFolder,
-            (folder) => SettingsController.addLibraryExcluded(folder))
     }
 }
