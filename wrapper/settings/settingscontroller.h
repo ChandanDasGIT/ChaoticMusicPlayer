@@ -38,7 +38,7 @@ class SettingsController : public QObject
     Q_PROPERTY(int volumeStep READ volumeStep WRITE setVolumeStep NOTIFY volumeStepChanged)
     Q_PROPERTY(bool showRemainingTime READ showRemainingTime WRITE setShowRemainingTime NOTIFY showRemainingTimeChanged)
     // Seconds the end of a song overlaps the next one (0 = gapless)
-    Q_PROPERTY(int crossfadeSeconds READ crossfadeSeconds WRITE setCrossfadeSeconds NOTIFY crossfadeSecondsChanged)
+    Q_PROPERTY(int fadeSeconds READ fadeSeconds WRITE setFadeSeconds NOTIFY fadeSecondsChanged)
     // Lyrics: [{ id, name, enabled }] in the order they are tried
     Q_PROPERTY(QVariantList lyricsSources READ lyricsSources NOTIFY lyricsSourcesChanged)
     Q_PROPERTY(bool lyricsSyncedByDefault READ lyricsSyncedByDefault WRITE setLyricsSyncedByDefault NOTIFY lyricsSyncedByDefaultChanged)
@@ -108,8 +108,8 @@ public:
     int volumeStep() const;          // percent per mouse-wheel notch
     void setVolumeStep(int step);
     bool showRemainingTime() const;
-    int crossfadeSeconds() const;
-    void setCrossfadeSeconds(int seconds);
+    int fadeSeconds() const;
+    void setFadeSeconds(int seconds);
     void setShowRemainingTime(bool show);
     QVariantList lyricsSources() const;
     Q_INVOKABLE void moveLyricsSource(int index, int delta);
@@ -167,7 +167,7 @@ signals:
     void themeModeChanged();
     void resumeSessionChanged();
     void showRemainingTimeChanged();
-    void crossfadeSecondsChanged();
+    void fadeSecondsChanged();
     void lyricsSourcesChanged();
     void lyricsSyncedByDefaultChanged();
     void lyricsLatinScriptChanged();

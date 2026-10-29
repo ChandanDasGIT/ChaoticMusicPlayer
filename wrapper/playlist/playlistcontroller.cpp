@@ -62,7 +62,7 @@ PlaylistController::PlaylistController(PlayerController *player, SettingsControl
             emit currentChanged();
         }
     });
-    connect(m_settings, &SettingsController::crossfadeSecondsChanged, this, &PlaylistController::queueNext);
+    connect(m_settings, &SettingsController::fadeSecondsChanged, this, &PlaylistController::queueNext);
 }
 
 PlaylistController::~PlaylistController()
@@ -627,7 +627,7 @@ void PlaylistController::queueNext()
         m_player->setNext(QString());
         return;
     }
-    m_player->setNext(QString::fromStdString(to->path), continuesAlbum(from, *to) ? 0 : m_settings->crossfadeSeconds() * 1000);
+    m_player->setNext(QString::fromStdString(to->path), continuesAlbum(from, *to) ? 0 : m_settings->fadeSeconds() * 1000);
 }
 
 // Near the end of a Mix (or of the Queue, on a YouTube song): asks once for
@@ -662,7 +662,7 @@ void PlaylistController::checkRunningOut()
 }
 
 // The next track follows straight on in the same album (live or concept albums
-// run songs into each other): play those gaplessly, never crossfade them.
+// run songs into each other): play those gaplessly, never fade them.
 bool PlaylistController::continuesAlbum(const ::Track &from, const ::Track &to)
 {
     return !from.album.empty() && from.album == to.album && from.disc == to.disc && from.track > 0

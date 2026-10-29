@@ -58,6 +58,16 @@ hook = '''    // ---- screenshot harness
             pool.erase(pool.begin());
             playlist.playYouTube(first, 0, QStringLiteral("Mix – test"), true);
         }
+        if (qEnvironmentVariableIsSet("SHOT_LEVELS")) // "fromMs,toMs": every 0.2 s, the loudest band and where playback is
+            for (int t = qEnvironmentVariable("SHOT_LEVELS").section(QLatin1Char(','), 0, 0).toInt();
+                 t <= qEnvironmentVariable("SHOT_LEVELS").section(QLatin1Char(','), 1, 1).toInt(); t += 200)
+                QTimer::singleShot(t, [&, t] {
+                    qreal loudest = 0;
+                    for (qreal band : visualizer.bands())
+                        loudest = std::max(loudest, band);
+                    std::printf("lvl t=%5d %-8s pos=%6lld level=%.2f %s\\n", t, qPrintable(QFileInfo(player.source()).baseName()),
+                                qint64(player.position()), loudest, QString(int(loudest * 40), QLatin1Char('#')).toLatin1().constData());
+                });
         if (qEnvironmentVariableIsSet("SHOT_LIB_DIR")) // a Library folder
             localLibrary.addFolder(qEnvironmentVariable("SHOT_LIB_DIR"));
         if (qEnvironmentVariableIsSet("SHOT_ADD_DIR")) // like dropping a folder

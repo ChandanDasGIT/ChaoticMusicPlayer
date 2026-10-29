@@ -31,11 +31,11 @@ class StreamResolver;
 // track has started decoding (about a buffer's length before the end) it is
 // locked in and further setNext() calls are ignored until it plays.
 //
-// Crossfade: setNext() with a crossfade length opens the next track that long
-// before the current one ends, on a second decoder, and mixes the two
-// (equal-power curves); trackChanged() fires when the fade starts. With
-// setSkipFade(true), load() while playing fades the old track out briefly and
-// the new one in, instead of cutting.
+// Fade: setNext() with a fade length plays the current track to its end with
+// its volume going down over that long, and starts the next one (gaplessly,
+// from its start) with its volume coming up over that long. Nothing overlaps
+// or is cut. With setSkipFade(true), load() while playing fades the old track
+// out briefly and the new one in, instead of cutting.
 //
 // Paths are files, or YouTube tracks ("ytmusic:<id>") which the optional
 // StreamResolver turns into stream addresses; the path stays the track's
@@ -64,8 +64,8 @@ public:
     // Opens the file and starts playing (or stays paused) at `startMs`; clears the queued track.
     void load(const std::string &path, int64_t startMs = 0, bool paused = false);
     // Track to continue with when the current one ends; empty clears.
-    // crossfadeMs = 0: gapless; otherwise overlap and fade over that long.
-    void setNext(const std::string &path, int crossfadeMs = 0);
+    // fadeMs = 0: gapless; otherwise this track fades out and that one in, each over that long.
+    void setNext(const std::string &path, int fadeMs = 0);
     void setSkipFade(bool enabled); // short fade instead of a cut when switching tracks
     void unload(); // stop and close the current file
     void setOutputDevice(const std::string &deviceId); // "" = system default
@@ -115,12 +115,9 @@ private:
     bool openPath(Decoder &decoder, const std::string &path); // file or resolved stream
     bool openPath(const std::string &path) { return openPath(*m_decoder, path); }
 
-    // Crossfade
-    void maybeStartCrossfade();
-    void mixIncoming(std::vector<float> &chunk);   // fade the current chunk out, the next track in
-    void finishCrossfade();                       // current track ended: the next one carries on
-    void cancelCrossfade();                       // not heard yet: back to plain playback
-    void applyRampIn(std::vector<float> &chunk);  // fade-in after a skip / the end of a crossfade
+    // Fades
+    void applyFadeOut(std::vector<float> &chunk); // the end of a track, when the next one fades in
+    void applyRampIn(std::vector<float> &chunk);  // fade-in after a skip / at the start of a track
     void dipOut();                                // skip: fade what is playing out, then mute
     void reportError(const std::string &message);
 
@@ -148,13 +145,8 @@ private:
     std::chrono::steady_clock::time_point m_lastReport;
     uint64_t m_decodedFrames = 0; // of the current decoder's file
 
-    // Crossfade (worker thread)
-    int m_nextCrossfadeMs = 0;            // for m_nextPath
-    std::unique_ptr<Decoder> m_incoming;  // the next track while fading into it
-    std::vector<float> m_incomingBuffer;  // decoded, not mixed yet
-    bool m_incomingDone = false;
-    uint64_t m_incomingFrames = 0;        // decoded from the incoming file so far
-    uint64_t m_fadeFrames = 0, m_fadePos = 0;
+    // Fades (worker thread)
+    int m_nextFadeMs = 0;                     // for m_nextPath
     uint64_t m_rampFrames = 0, m_rampPos = 0; // fade-in still to apply
 
     // Shared with the realtime thread

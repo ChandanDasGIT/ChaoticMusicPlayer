@@ -318,16 +318,16 @@ Popup {
 
                         SettingsRow {
                             Layout.fillWidth: true
-                            title: qsTr("Crossfade")
-                            description: qsTr("Fade each song into the next (skips too). Songs that run into each other on an album stay gapless.")
+                            title: qsTr("Fade between songs")
+                            description: qsTr("Each song fades out at its end and the next fades in from its start: nothing overlaps or is cut. Skipping fades briefly too. Songs that run into each other on an album stay gapless.")
 
                             Stepper {
-                                text: SettingsController.crossfadeSeconds > 0
-                                      ? qsTr("%1 s").arg(SettingsController.crossfadeSeconds) : qsTr("Off")
-                                canDecrease: SettingsController.crossfadeSeconds > 0
-                                canIncrease: SettingsController.crossfadeSeconds < 12
-                                onDecreased: SettingsController.crossfadeSeconds -= 1
-                                onIncreased: SettingsController.crossfadeSeconds += 1
+                                text: SettingsController.fadeSeconds > 0
+                                      ? qsTr("%1 s").arg(SettingsController.fadeSeconds) : qsTr("Off")
+                                canDecrease: SettingsController.fadeSeconds > 0
+                                canIncrease: SettingsController.fadeSeconds < 12
+                                onDecreased: SettingsController.fadeSeconds -= 1
+                                onIncreased: SettingsController.fadeSeconds += 1
                             }
                         }
                     }

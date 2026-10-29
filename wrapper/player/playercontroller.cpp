@@ -168,9 +168,9 @@ void PlayerController::unload()
     m_player->unload();
 }
 
-void PlayerController::setNext(const QString &path, int crossfadeMs)
+void PlayerController::setNext(const QString &path, int fadeMs)
 {
-    m_player->setNext(path.toStdString(), crossfadeMs);
+    m_player->setNext(path.toStdString(), fadeMs);
 }
 
 void PlayerController::setSkipFade(bool enabled)

@@ -79,8 +79,8 @@ public:
     Q_INVOKABLE void unload();
 
     // Track to continue with when the current one ends (empty clears);
-    // crossfadeMs = 0: gapless.
-    void setNext(const QString &path, int crossfadeMs = 0);
+    // fadeMs = 0: gapless; otherwise this track fades out and that one in.
+    void setNext(const QString &path, int fadeMs = 0);
     // Short fade instead of a cut when switching tracks (Next, Previous, ...).
     void setSkipFade(bool enabled);
 

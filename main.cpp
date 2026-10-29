@@ -66,10 +66,10 @@ int main(int argc, char *argv[])
     SessionController session(&player, &playlist, &playlists, &settings, nullptr);
     session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);
-    // Crossfade on: switching tracks fades too, instead of cutting.
-    player.setSkipFade(settings.crossfadeSeconds() > 0);
-    QObject::connect(&settings, &SettingsController::crossfadeSecondsChanged, &player,
-                     [&] { player.setSkipFade(settings.crossfadeSeconds() > 0); });
+    // Fades on: switching tracks fades too, instead of cutting.
+    player.setSkipFade(settings.fadeSeconds() > 0);
+    QObject::connect(&settings, &SettingsController::fadeSecondsChanged, &player,
+                     [&] { player.setSkipFade(settings.fadeSeconds() > 0); });
 
     // YouTube sign-in: yt-dlp reads this browser's session.
     player.setYtCookiesBrowser(settings.ytCookiesBrowser());

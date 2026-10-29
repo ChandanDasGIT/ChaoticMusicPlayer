@@ -37,8 +37,8 @@ constexpr const char *SessionListKey = "session.list";
 constexpr const char *OldDarkModeKey = "appearance.dark"; // before "Follow system": a dark / light switch
 constexpr const char *OutputDeviceKey = "audio.outputDevice";
 constexpr const char *ShowRemainingKey = "seekbar.showRemaining";
-constexpr const char *CrossfadeKey = "playback.crossfadeSeconds";
-constexpr int MaxCrossfadeSeconds = 12;
+constexpr const char *FadeKey = "playback.crossfadeSeconds"; // (its name from before fades replaced crossfades)
+constexpr int MaxFadeSeconds = 12;
 constexpr const char *LyricsSourcesKey = "lyrics.sources";
 constexpr const char *LyricsSyncedKey = "lyrics.syncedByDefault";
 constexpr const char *LyricsLatinKey = "lyrics.latinScript";
@@ -441,19 +441,19 @@ void SettingsController::setLyricsSyncedByDefault(bool synced)
     emit lyricsSyncedByDefaultChanged();
 }
 
-int SettingsController::crossfadeSeconds() const
+int SettingsController::fadeSeconds() const
 {
-    return qBound(0, m_settings->intValue(CrossfadeKey, 4), MaxCrossfadeSeconds);
+    return qBound(0, m_settings->intValue(FadeKey, 4), MaxFadeSeconds);
 }
 
-void SettingsController::setCrossfadeSeconds(int seconds)
+void SettingsController::setFadeSeconds(int seconds)
 {
-    seconds = qBound(0, seconds, MaxCrossfadeSeconds);
-    if (seconds == crossfadeSeconds())
+    seconds = qBound(0, seconds, MaxFadeSeconds);
+    if (seconds == fadeSeconds())
         return;
-    m_settings->setInt(CrossfadeKey, seconds);
+    m_settings->setInt(FadeKey, seconds);
     scheduleSave();
-    emit crossfadeSecondsChanged();
+    emit fadeSecondsChanged();
 }
 
 bool SettingsController::lyricsLatinScript() const
