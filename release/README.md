@@ -13,6 +13,15 @@ Code that only works on one platform sits behind a small interface with one
 per-platform work. Every push is built for each platform by
 `.github/workflows/build.yml`, so a change that breaks one shows up at once.
 
+### Paths
+
+Inside the app a path is a UTF-8 string with `/` between folders, on every
+platform (Qt does the same). Where a `std::filesystem::path` becomes such a
+string, use `generic_string()`, not `string()` (which gives `\` on Windows).
+On Windows the app's manifest sets the UTF-8 code page, so `std::string`
+paths are read as UTF-8 by `std::filesystem`, file streams and TagLib. Shown
+to the user, a path may use the platform's own separators.
+
 ## Packages (filled in step by step)
 
 | Platform | Packages |

@@ -3,6 +3,7 @@
 #include "backend/library/metadata/metadata.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 
+#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <iterator>
@@ -164,10 +165,18 @@ M3u::Result M3u::read(const fs::path &file)
             location = percentDecode(location.substr(7));
             if (startsWith(location, "localhost/"))
                 location.erase(0, 9);
+            // "file:///C:/Music/..." -> "C:/Music/..."
+            if (location.size() > 3 && location[0] == '/' && std::isalpha(static_cast<unsigned char>(location[1]))
+                && location[2] == ':')
+                location.erase(0, 1);
         } else if (location.find("://") != std::string::npos) {
             ++result.skipped; // a radio stream or another website
             continue;
         }
+#ifndef _WIN32
+        // Playlists made on Windows: "\" separates folders there
+        std::replace(location.begin(), location.end(), '\\', '/');
+#endif
         fs::path path(location);
         if (path.is_relative())
             path = folder / path;

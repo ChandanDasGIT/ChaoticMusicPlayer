@@ -224,7 +224,7 @@ std::vector<unsigned char> readFolderCover(const std::filesystem::path &path)
 Track Metadata::read(const std::filesystem::path &path)
 {
     Track track;
-    track.path = path.string();
+    track.path = path.generic_string(); // the app's paths always use "/" (see release/README.md)
 
     TagLib::FileRef file(path.c_str(), true, TagLib::AudioProperties::Average);
     if (!file.isNull()) {

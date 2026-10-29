@@ -38,7 +38,7 @@ std::string albumKey(const Track &track)
 {
     if (!track.albumArtist.empty())
         return lower(track.album) + "\x1f\x1f" + lower(track.albumArtist);
-    return lower(track.album) + '\x1f' + std::filesystem::path(track.path).parent_path().string();
+    return lower(track.album) + '\x1f' + std::filesystem::path(track.path).parent_path().generic_string();
 }
 
 // "A, B & C feat. D" -> A, B, C, D

@@ -198,7 +198,7 @@ MusicLibrary::RefreshResult MusicLibrary::refresh(const std::vector<std::string>
             result.cancelled = true;
             return result; // keep the previous library as it was
         }
-        const std::string path = file.string();
+        const std::string path = file.generic_string(); // "/" on every platform
         // Both lists are sorted by path: walk them together.
         while (old != m_entries.end() && old->track.path < path)
             ++old;
