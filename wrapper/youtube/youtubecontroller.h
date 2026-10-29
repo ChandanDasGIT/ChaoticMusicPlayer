@@ -35,6 +35,9 @@ class YouTubeController : public QObject
     Q_PROPERTY(QVariantList searchResults READ searchResults NOTIFY searchChanged)
     Q_PROPERTY(bool searching READ searching NOTIFY searchChanged)
     Q_PROPERTY(QString searchError READ searchError NOTIFY searchChanged)
+    // "songs" (searchResults), "albums" or "artists" (searchCards: { browseId, title, subtitle, thumbnail })
+    Q_PROPERTY(QString searchKind READ searchKind NOTIFY searchChanged)
+    Q_PROPERTY(QVariantList searchCards READ searchCards NOTIFY searchChanged)
 
     // [{ title, items: [{ browseId, title, subtitle, thumbnail }] }]
     Q_PROPERTY(QVariantList homeShelves READ homeShelves NOTIFY homeChanged)
@@ -46,6 +49,15 @@ class YouTubeController : public QObject
     Q_PROPERTY(QVariantList collectionSongs READ collectionSongs NOTIFY collectionChanged)
     Q_PROPERTY(bool collectionLoading READ collectionLoading NOTIFY collectionChanged)
     Q_PROPERTY(QString collectionError READ collectionError NOTIFY collectionChanged)
+
+    // An artist's page: top songs and shelves of cards (albums, singles, similar artists)
+    Q_PROPERTY(bool artistOpen READ artistOpen NOTIFY artistChanged)
+    Q_PROPERTY(QString artistName READ artistName NOTIFY artistChanged)
+    Q_PROPERTY(QString artistThumbnail READ artistThumbnail NOTIFY artistChanged)
+    Q_PROPERTY(QVariantList artistSongs READ artistSongs NOTIFY artistChanged)
+    Q_PROPERTY(QVariantList artistShelves READ artistShelves NOTIFY artistChanged)
+    Q_PROPERTY(bool artistLoading READ artistLoading NOTIFY artistChanged)
+    Q_PROPERTY(QString artistError READ artistError NOTIFY artistChanged)
 
     Q_PROPERTY(QVariantList librarySongs READ librarySongs NOTIFY libraryChanged)
     Q_PROPERTY(bool libraryLoading READ libraryLoading NOTIFY libraryChanged)
@@ -70,6 +82,8 @@ public:
     QVariantList searchResults() const { return m_searchResults; }
     bool searching() const { return m_searching; }
     QString searchError() const { return m_searchError; }
+    QString searchKind() const { return m_searchKind; }
+    QVariantList searchCards() const { return m_searchCards; }
     QVariantList homeShelves() const { return m_homeShelves; }
     bool homeLoading() const { return m_homeLoading; }
     QString homeError() const { return m_homeError; }
@@ -78,19 +92,29 @@ public:
     QVariantList collectionSongs() const { return m_collectionSongs; }
     bool collectionLoading() const { return m_collectionLoading; }
     QString collectionError() const { return m_collectionError; }
+    bool artistOpen() const { return m_artistOpen; }
+    QString artistName() const { return m_artistName; }
+    QString artistThumbnail() const { return m_artistThumbnail; }
+    QVariantList artistSongs() const { return m_artistSongs; }
+    QVariantList artistShelves() const { return m_artistShelves; }
+    bool artistLoading() const { return m_artistLoading; }
+    QString artistError() const { return m_artistError; }
     QVariantList librarySongs() const { return m_librarySongs; }
     bool libraryLoading() const { return m_libraryLoading; }
     QString libraryError() const { return m_libraryError; }
     QVariantList savedSongs() const;
     bool addingLink() const { return m_addingLink; }
 
-    Q_INVOKABLE void search(const QString &query);
+    // kind: "songs", "albums" or "artists"
+    Q_INVOKABLE void search(const QString &query, const QString &kind = QStringLiteral("songs"));
     Q_INVOKABLE void loadHome();
     Q_INVOKABLE void openCollection(const QString &browseId, const QString &title);
     Q_INVOKABLE void closeCollection();
     // A playlist / album's songs without opening it (e.g. dropped on the
     // Queue): collectionFetched(browseId, songs) once they arrive.
     Q_INVOKABLE void fetchCollection(const QString &browseId, const QString &title);
+    Q_INVOKABLE void openArtist(const QString &browseId, const QString &name);
+    Q_INVOKABLE void closeArtist();
     Q_INVOKABLE void loadLibrary();
 
     // Playing never adds to the Queue: a song plays as a Mix (YouTube's "up
@@ -109,6 +133,7 @@ signals:
     void homeChanged();
     void collectionChanged();
     void collectionFetched(const QString &browseId, const QVariantList &songs);
+    void artistChanged();
     void libraryChanged();
     void savedChanged();
     void notice(const QString &text);
@@ -132,6 +157,8 @@ private:
     bool m_searching = false;
     QString m_searchError;
     int m_searchGeneration = 0;
+    QString m_searchKind = QStringLiteral("songs");
+    QVariantList m_searchCards;
 
     QVariantList m_homeShelves;
     bool m_homeLoading = false;
@@ -143,6 +170,15 @@ private:
     bool m_collectionLoading = false;
     QString m_collectionError;
     int m_collectionGeneration = 0;
+
+    bool m_artistOpen = false;
+    QString m_artistName;
+    QString m_artistThumbnail;
+    QVariantList m_artistSongs;
+    QVariantList m_artistShelves;
+    bool m_artistLoading = false;
+    QString m_artistError;
+    int m_artistGeneration = 0;
 
     QVariantList m_librarySongs;
     bool m_libraryLoading = false;

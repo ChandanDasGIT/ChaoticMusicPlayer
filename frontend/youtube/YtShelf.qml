@@ -1,0 +1,45 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+// A titled, sideways-scrolling row of cards (YtCard).
+ColumnLayout {
+    id: root
+
+    property string title
+    property var items: []
+    // Hovered or moving: a drawer holding it must not take a drag as a swipe.
+    readonly property bool busy: shelfHover.hovered || row.dragging || row.moving
+
+    spacing: Theme.spacing
+
+    Label {
+        Layout.leftMargin: Theme.padding
+        Layout.topMargin: Theme.spacing
+        text: root.title
+        color: Theme.text
+        font.pixelSize: Theme.fontSizeLarge
+        font.weight: Font.DemiBold
+    }
+
+    ListView {
+        id: row
+        Layout.fillWidth: true
+        Layout.preferredHeight: 196
+        orientation: ListView.Horizontal
+        spacing: Theme.padding
+        leftMargin: Theme.padding
+        rightMargin: Theme.padding
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        model: root.items
+
+        HoverHandler {
+            id: shelfHover
+        }
+
+        delegate: YtCard {}
+    }
+}

@@ -24,6 +24,18 @@ QtObject {
         return path && path !== "" ? "image://albumart/" + encodeURIComponent(path) + "?r=" + CoverController.revision : ""
     }
 
+    // YouTube cards: an artist ("UC..." channel) or a playlist / album.
+    function ytIsArtist(browseId) {
+        return (browseId || "").startsWith("UC")
+    }
+    // Opens a card: the artist's page, or the playlist / album's songs.
+    function ytOpen(card) {
+        if (ytIsArtist(card.browseId))
+            YouTubeController.openArtist(card.browseId, card.title)
+        else
+            YouTubeController.openCollection(card.browseId, card.title)
+    }
+
     // "1 song" / "9 songs"
     function songCount(n) {
         return n === 1 ? qsTr("1 song") : qsTr("%1 songs").arg(n)

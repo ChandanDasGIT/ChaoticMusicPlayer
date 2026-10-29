@@ -14,11 +14,19 @@ Rectangle {
     property bool showCloseButton: false
     property int tab: 0
     // A drag inside must not close the drawer holding this panel (see YtHomeView).
-    readonly property bool swipeBlocked: homeView.swipeBlocked
+    readonly property bool swipeBlocked: homeView.swipeBlocked || artistView.swipeBlocked
+    // An artist's page or an album / playlist is open over the tabs.
+    readonly property bool overlayOpen: YouTubeController.artistOpen || YouTubeController.collectionOpen
 
+    // A tab picked (or Ctrl+F): back from any open artist / album first.
+    function showTab(index) {
+        YouTubeController.closeCollection()
+        YouTubeController.closeArtist()
+        tab = index
+    }
     // Ctrl+F: the Search tab, ready to type.
     function focusSearch() {
-        tab = 1
+        showTab(1)
         searchView.focusField()
     }
 
@@ -143,8 +151,8 @@ Rectangle {
                     iconSize: 11
                     text: modelData.label
                     implicitHeight: 34
-                    active: root.tab === index
-                    onClicked: root.tab = index
+                    active: root.tab === index && !root.overlayOpen
+                    onClicked: root.showTab(index)
                 }
             }
         }
@@ -157,43 +165,68 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
 
-            YtHomeView {
-                id: homeView
+            // The tabs; they step back while an artist / album is open over them.
+            Item {
                 anchors.fill: parent
-                opacity: root.tab === 0 ? 1 : 0
+                opacity: root.overlayOpen ? 0 : 1
                 visible: opacity > 0
-                transform: PageShift { page: 0 }
+                scale: root.overlayOpen ? 0.97 : 1
+
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                Behavior on scale { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
+
+                YtHomeView {
+                    id: homeView
+                    anchors.fill: parent
+                    opacity: root.tab === 0 ? 1 : 0
+                    visible: opacity > 0
+                    transform: PageShift { page: 0 }
+                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                }
+
+                YtSearchView {
+                    id: searchView
+                    anchors.fill: parent
+                    opacity: root.tab === 1 ? 1 : 0
+                    visible: opacity > 0
+                    transform: PageShift { page: 1 }
+                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                }
+
+                YtLibraryView {
+                    anchors.fill: parent
+                    onSettingsRequested: root.settingsRequested()
+                    opacity: root.tab === 2 ? 1 : 0
+                    visible: opacity > 0
+                    transform: PageShift { page: 2 }
+                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                }
+
+                YtSavedLinksView {
+                    anchors.fill: parent
+                    opacity: root.tab === 3 ? 1 : 0
+                    visible: opacity > 0
+                    transform: PageShift { page: 3 }
+                    Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+                }
             }
 
-            YtSearchView {
-                id: searchView
-                anchors.fill: parent
-                opacity: root.tab === 1 ? 1 : 0
-                visible: opacity > 0
-                transform: PageShift { page: 1 }
-                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+            YtOverlay {
+                shown: YouTubeController.artistOpen && !YouTubeController.collectionOpen
+                YtArtistView {
+                    id: artistView
+                    anchors.fill: parent
+                }
             }
 
-            YtLibraryView {
-                anchors.fill: parent
-                onSettingsRequested: root.settingsRequested()
-                opacity: root.tab === 2 ? 1 : 0
-                visible: opacity > 0
-                transform: PageShift { page: 2 }
-                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-            }
-
-            YtSavedLinksView {
-                anchors.fill: parent
-                opacity: root.tab === 3 ? 1 : 0
-                visible: opacity > 0
-                transform: PageShift { page: 3 }
-                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+            // Above the artist's page: going back from an album returns to the artist.
+            YtOverlay {
+                shown: YouTubeController.collectionOpen
+                YtCollectionView {
+                    anchors.fill: parent
+                }
             }
         }
-
-
     }
 
     // Horizontal offset of a tab page: 0 when shown, else off to its side.
@@ -201,6 +234,20 @@ Rectangle {
         required property int page
         x: root.tab === page ? 0 : (page < root.tab ? -48 : 48)
         Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
+    }
+
+    // A page over the tabs (an artist, an album): slides in from the right.
+    component YtOverlay: Item {
+        id: overlay
+        required property bool shown
+        anchors.fill: parent
+        opacity: shown ? 1 : 0
+        visible: opacity > 0
+        transform: Translate {
+            x: overlay.shown ? 0 : 56
+            Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
+        }
+        Behavior on opacity { NumberAnimation { duration: Theme.anim } }
     }
 
     // Small notice at the bottom ("coming in a later phase", ...)

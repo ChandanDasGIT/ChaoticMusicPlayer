@@ -434,6 +434,27 @@ hook = '''    // ---- screenshot harness
                 }
                 else if (step == QLatin1String("wait"))
                     ;
+                else if (step == QLatin1String("printyt")) { // the first thumbnails of the YouTube views
+                    const auto first = [](const QVariantList &l) { return l.isEmpty() ? QString() : l.constFirst().toMap().value(QStringLiteral("thumbnail")).toString(); };
+                    std::printf("yt: songs=%d [%s] cards=%d [%s] artist=[%s] artistSongs=%d [%s] shelves=%d\\n",
+                                int(youtube.searchResults().size()), qPrintable(first(youtube.searchResults())),
+                                int(youtube.searchCards().size()), qPrintable(first(youtube.searchCards())),
+                                qPrintable(youtube.artistThumbnail()), int(youtube.artistSongs().size()),
+                                qPrintable(first(youtube.artistSongs())), int(youtube.artistShelves().size()));
+                }
+                else if (step.startsWith(QLatin1String("wheel:"))) { // wheel:x,y,dy — scroll (dy < 0: down)
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QStringList v = step.mid(6).split(QLatin1Char(','));
+                    const QPointF at(v.value(0).toInt(), v.value(1).toInt());
+                    QWheelEvent wheel(at, w->mapToGlobal(at), QPoint(), QPoint(0, v.value(2).toInt()), Qt::NoButton, Qt::NoModifier,
+                                      Qt::NoScrollPhase, false);
+                    QCoreApplication::sendEvent(w, &wheel);
+                }
+                else if (step.startsWith(QLatin1String("grab:"))) { // grab:name -> build/shot/name.png
+                    if (auto *w = qobject_cast<QQuickWindow *>(root))
+                        std::printf("%s.png %s\\n", qPrintable(step.mid(5)),
+                                    w->grabWindow().save(QStringLiteral("build/shot/") + step.mid(5) + QStringLiteral(".png")) ? "saved" : "FAILED");
+                }
                 else if (step == QLatin1String("player"))
                     QMetaObject::invokeMethod(root, "showPlayer");
                 else

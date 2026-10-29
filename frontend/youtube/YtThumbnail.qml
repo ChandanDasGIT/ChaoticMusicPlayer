@@ -2,15 +2,16 @@ import QtQuick
 
 // Artwork for YouTube items: the real thumbnail when there is one (rounded by
 // the album-art provider), over a colored placeholder that shows while it
-// loads or when there is none.
+// loads or when there is none. `round`: a circle (artists).
 Rectangle {
     id: root
 
     property string source    // thumbnail URL
     property real hue: 0.6
     property string iconName: "music"
+    property bool round: false
 
-    radius: Math.min(width, height) * 0.12
+    radius: round ? Math.min(width, height) / 2 : Math.min(width, height) * 0.12
     gradient: Gradient {
         GradientStop { position: 0.0; color: Qt.hsla(root.hue, 0.45, 0.48, 1) }
         GradientStop { position: 1.0; color: Qt.hsla((root.hue + 0.08) % 1, 0.5, 0.28, 1) }
@@ -27,7 +28,7 @@ Rectangle {
     Image {
         id: image
         anchors.fill: parent
-        source: root.source !== "" ? Util.coverSource("", root.source) : ""
+        source: root.source !== "" ? Util.coverSource("", root.source) + (root.round ? "?round=1" : "") : ""
         sourceSize: Qt.size(Math.max(64, root.width * 2), Math.max(64, root.height * 2))
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

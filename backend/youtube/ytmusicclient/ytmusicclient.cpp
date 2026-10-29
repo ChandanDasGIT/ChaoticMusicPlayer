@@ -16,7 +16,10 @@ namespace {
 constexpr const char *ApiBase = "https://music.youtube.com/youtubei/v1/";
 constexpr const char *ClientVersion = "1.20241023.01.00";
 // Search filter "songs only" (as used by the YouTube Music website).
+// Search filters (the "params" music.youtube.com sends for each search tab)
 constexpr const char *SongsFilter = "EgWKAQIIAWoMEA4QChADEAQQCRAF";
+constexpr const char *AlbumsFilter = "EgWKAQIYAWoMEA4QChADEAQQCRAF";
+constexpr const char *ArtistsFilter = "EgWKAQIgAWoMEA4QChADEAQQCRAF";
 
 // The Android app's client: its lyrics pages include timings, the website's don't.
 constexpr const char *AndroidClientVersion = "7.21.50";
@@ -224,6 +227,38 @@ std::string runsText(const json *runs)
     return out;
 }
 
+// Carousels of cards (home page, artist pages): playlists, albums, artists.
+std::vector<YtShelf> parseShelves(const json &response)
+{
+    std::vector<const json *> shelves;
+    collect(response, "musicCarouselShelfRenderer", shelves);
+    std::vector<YtShelf> result;
+    for (const json *shelfJson : shelves) {
+        YtShelf shelf;
+        shelf.title = runsText(at(*shelfJson, {"header", "musicCarouselShelfBasicHeaderRenderer", "title", "runs"}));
+        const json *contents = at(*shelfJson, {"contents"});
+        if (!contents || !contents->is_array())
+            continue;
+        for (const json &entry : *contents) {
+            const json *card = at(entry, {"musicTwoRowItemRenderer"});
+            if (!card)
+                continue;
+            YtCollection item;
+            item.browseId = text(at(*card, {"navigationEndpoint", "browseEndpoint", "browseId"}));
+            if (item.browseId.empty())
+                continue; // single songs / videos: not a collection
+            item.title = runsText(at(*card, {"title", "runs"}));
+            item.subtitle = runsText(at(*card, {"subtitle", "runs"}));
+            item.thumbnailUrl = largestThumbnail(at(*card, {"thumbnailRenderer", "musicThumbnailRenderer",
+                                                            "thumbnail", "thumbnails"}));
+            shelf.items.push_back(std::move(item));
+        }
+        if (!shelf.items.empty())
+            result.push_back(std::move(shelf));
+    }
+    return result;
+}
+
 } // namespace
 
 std::optional<std::vector<YtSong>> YtMusicClient::searchSongs(const std::string &query)
@@ -340,34 +375,60 @@ std::optional<std::vector<YtShelf>> YtMusicClient::home()
     const auto response = call("browse", {{"browseId", "FEmusic_home"}});
     if (!response)
         return std::nullopt;
+    return parseShelves(*response);
+}
 
-    std::vector<const json *> shelves;
-    collect(*response, "musicCarouselShelfRenderer", shelves);
-    std::vector<YtShelf> result;
-    for (const json *shelfJson : shelves) {
-        YtShelf shelf;
-        shelf.title = runsText(at(*shelfJson, {"header", "musicCarouselShelfBasicHeaderRenderer", "title", "runs"}));
-        const json *contents = at(*shelfJson, {"contents"});
-        if (!contents || !contents->is_array())
+std::optional<std::vector<YtCollection>> YtMusicClient::searchCollections(const std::string &query, bool artists)
+{
+    const auto response = call("search", {{"query", query}, {"params", artists ? ArtistsFilter : AlbumsFilter}});
+    if (!response)
+        return std::nullopt;
+    std::vector<const json *> items;
+    collect(*response, "musicResponsiveListItemRenderer", items);
+    std::vector<YtCollection> out;
+    for (const json *item : items) {
+        YtCollection c;
+        c.browseId = text(at(*item, {"navigationEndpoint", "browseEndpoint", "browseId"}));
+        const bool isArtist = c.browseId.rfind("UC", 0) == 0;
+        if (c.browseId.empty() || isArtist != artists)
             continue;
-        for (const json &entry : *contents) {
-            const json *card = at(entry, {"musicTwoRowItemRenderer"});
-            if (!card)
-                continue;
-            YtCollection item;
-            item.browseId = text(at(*card, {"navigationEndpoint", "browseEndpoint", "browseId"}));
-            if (item.browseId.empty())
-                continue; // single songs / videos: not a collection
-            item.title = runsText(at(*card, {"title", "runs"}));
-            item.subtitle = runsText(at(*card, {"subtitle", "runs"}));
-            item.thumbnailUrl = largestThumbnail(at(*card, {"thumbnailRenderer", "musicThumbnailRenderer",
-                                                            "thumbnail", "thumbnails"}));
-            shelf.items.push_back(std::move(item));
-        }
-        if (!shelf.items.empty())
-            result.push_back(std::move(shelf));
+        c.title = runsText(at(*item, {"flexColumns", size_t(0), "musicResponsiveListItemFlexColumnRenderer", "text", "runs"}));
+        c.subtitle = runsText(at(*item, {"flexColumns", size_t(1), "musicResponsiveListItemFlexColumnRenderer", "text", "runs"}));
+        c.thumbnailUrl = largestThumbnail(at(*item, {"thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"}));
+        if (!c.title.empty())
+            out.push_back(std::move(c));
     }
-    return result;
+    return out;
+}
+
+std::optional<YtArtist> YtMusicClient::artist(const std::string &browseId)
+{
+    const auto response = call("browse", {{"browseId", browseId}});
+    if (!response)
+        return std::nullopt;
+    YtArtist artist;
+    for (const char *header : {"musicImmersiveHeaderRenderer", "musicVisualHeaderRenderer"}) {
+        std::vector<const json *> found;
+        collect(*response, header, found);
+        if (found.empty())
+            continue;
+        artist.name = runsText(at(*found.front(), {"title", "runs"}));
+        artist.thumbnailUrl = largestThumbnail(at(*found.front(), {"thumbnail", "musicThumbnailRenderer", "thumbnail",
+                                                                   "thumbnails"}));
+        break;
+    }
+    // Top songs: the first list on the page
+    std::vector<const json *> lists;
+    collect(*response, "musicShelfRenderer", lists);
+    if (!lists.empty()) {
+        std::vector<const json *> items;
+        collect(*lists.front(), "musicResponsiveListItemRenderer", items);
+        for (const json *item : items)
+            if (auto song = parseSong(*item))
+                artist.songs.push_back(std::move(*song));
+    }
+    artist.shelves = parseShelves(*response);
+    return artist;
 }
 
 std::optional<std::vector<YtSong>> YtMusicClient::upNext(const std::string &videoId)

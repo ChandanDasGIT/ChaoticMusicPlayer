@@ -226,10 +226,14 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/settingsdialog/SettingsRow.qml
         frontend/settingsdialog/SettingsSwitch.qml
         frontend/youtube/YouTubePanel.qml
+        frontend/youtube/YtArtistView.qml
+        frontend/youtube/YtCard.qml
+        frontend/youtube/YtCollectionView.qml
         frontend/youtube/YtHomeView.qml
         frontend/youtube/YtLibraryView.qml
         frontend/youtube/YtSavedLinksView.qml
         frontend/youtube/YtSearchView.qml
+        frontend/youtube/YtShelf.qml
         frontend/youtube/YtSongMenu.qml
         frontend/youtube/YtStatus.qml
         frontend/youtube/YtThumbnail.qml

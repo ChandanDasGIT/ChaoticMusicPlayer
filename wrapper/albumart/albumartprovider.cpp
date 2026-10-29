@@ -14,9 +14,9 @@ namespace {
 // Corner radius as a fraction of the cover's side.
 constexpr qreal CornerRadius = 0.04;
 
-// Center-crops to a square, scales to fit `requested`, and rounds the corners,
-// so QML can show it as a plain Image on any renderer.
-QImage roundedSquare(const QImage &image, const QSize &requested)
+// Center-crops to a square, scales to fit `requested`, and rounds the corners
+// (or cuts a circle), so QML can show it as a plain Image on any renderer.
+QImage roundedSquare(const QImage &image, const QSize &requested, bool circle)
 {
     const int side = qMin(image.width(), image.height());
     QImage square = image.copy((image.width() - side) / 2, (image.height() - side) / 2, side, side);
@@ -31,7 +31,7 @@ QImage roundedSquare(const QImage &image, const QSize &requested)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(Qt::NoPen);
     painter.setBrush(QBrush(square));
-    const qreal radius = square.width() * CornerRadius;
+    const qreal radius = square.width() * (circle ? 0.5 : CornerRadius);
     painter.drawRoundedRect(QRectF(rounded.rect()), radius, radius);
     return rounded;
 }
@@ -46,7 +46,9 @@ AlbumArtProvider::AlbumArtProvider()
 
 QImage AlbumArtProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
-    // "?r=<n>" after the encoded path only makes QML ask again once a cover was found.
+    // "?r=<n>" after the encoded path only makes QML ask again once a cover was found;
+    // "round=1" there asks for a circle (artists).
+    const bool circle = id.section(QLatin1Char('?'), 1).contains(QLatin1String("round=1"));
     const QString path = QUrl::fromPercentEncoding(id.section(QLatin1Char('?'), 0, 0).toUtf8());
 
     QImage image;
@@ -65,7 +67,7 @@ QImage AlbumArtProvider::requestImage(const QString &id, QSize *size, const QSiz
         image = QImage(1, 1, QImage::Format_ARGB32_Premultiplied);
         image.fill(Qt::transparent);
     } else {
-        image = roundedSquare(image, requestedSize);
+        image = roundedSquare(image, requestedSize, circle);
     }
 
     if (size)

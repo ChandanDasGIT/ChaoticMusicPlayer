@@ -32,6 +32,15 @@ struct YtShelf
     std::vector<YtCollection> items;
 };
 
+// An artist's page: top songs, and shelves of albums, singles, similar artists...
+struct YtArtist
+{
+    std::string name;
+    std::string thumbnailUrl;
+    std::vector<YtSong> songs;
+    std::vector<YtShelf> shelves; // items: albums / playlists ("MPREb_" / "VL"), artists ("UC")
+};
+
 struct YtTimedLine
 {
     int64_t startMs;
@@ -53,6 +62,9 @@ class YtMusicClient
 {
 public:
     static std::optional<std::vector<YtSong>> searchSongs(const std::string &query);
+    // Albums, or artists ("UC..." browse ids), as cards.
+    static std::optional<std::vector<YtCollection>> searchCollections(const std::string &query, bool artists);
+    static std::optional<YtArtist> artist(const std::string &browseId);
     static std::optional<std::string> albumYear(const std::string &albumId); // "" if unknown
     static std::optional<YtLyrics> lyrics(const std::string &videoId);
 

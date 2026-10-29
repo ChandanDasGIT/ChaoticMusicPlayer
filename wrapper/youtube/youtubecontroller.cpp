@@ -62,6 +62,32 @@ YtSong fromVariant(const QVariantMap &map)
     return track;
 }
 
+QVariantList toCards(const std::vector<YtCollection> &items)
+{
+    QVariantList list;
+    for (const YtCollection &item : items) {
+        list.append(QVariantMap{
+            {QStringLiteral("browseId"), QString::fromStdString(item.browseId)},
+            {QStringLiteral("title"), QString::fromStdString(item.title)},
+            {QStringLiteral("subtitle"), QString::fromStdString(item.subtitle)},
+            {QStringLiteral("thumbnail"), QString::fromStdString(item.thumbnailUrl)},
+        });
+    }
+    return list;
+}
+
+QVariantList toShelves(const std::vector<YtShelf> &shelves)
+{
+    QVariantList list;
+    for (const YtShelf &shelf : shelves) {
+        list.append(QVariantMap{
+            {QStringLiteral("title"), QString::fromStdString(shelf.title)},
+            {QStringLiteral("items"), toCards(shelf.items)},
+        });
+    }
+    return list;
+}
+
 QString errorText(const char *what)
 {
     return QObject::tr("Couldn't reach YouTube Music (%1). Check your connection.").arg(QLatin1String(what));
@@ -139,13 +165,15 @@ QVariantList YouTubeController::savedSongs() const
     return toVariantList(m_links->songs());
 }
 
-void YouTubeController::search(const QString &query)
+void YouTubeController::search(const QString &query, const QString &kind)
 {
     const QString q = query.trimmed();
     const int generation = ++m_searchGeneration;
+    m_searchKind = kind == QLatin1String("albums") || kind == QLatin1String("artists") ? kind : QStringLiteral("songs");
     m_searchError.clear();
+    m_searchResults.clear();
+    m_searchCards.clear();
     if (q.isEmpty()) {
-        m_searchResults.clear();
         m_searching = false;
         emit searchChanged();
         return;
@@ -153,6 +181,19 @@ void YouTubeController::search(const QString &query)
     m_searching = true;
     emit searchChanged();
 
+    if (m_searchKind != QLatin1String("songs")) {
+        const bool artists = m_searchKind == QLatin1String("artists");
+        runAsync([q, artists] { return YtMusicClient::searchCollections(q.toStdString(), artists); },
+                 [this, generation](const std::optional<std::vector<YtCollection>> &cards) {
+                     if (generation != m_searchGeneration)
+                         return;
+                     m_searching = false;
+                     m_searchCards = cards ? toCards(*cards) : QVariantList();
+                     m_searchError = cards ? QString() : errorText("search");
+                     emit searchChanged();
+                 });
+        return;
+    }
     runAsync([q] { return YtMusicClient::searchSongs(q.toStdString()); },
              [this, generation](const std::optional<std::vector<YtSong>> &songs) {
                  if (generation != m_searchGeneration)
@@ -175,26 +216,8 @@ void YouTubeController::loadHome()
     runAsync([] { return YtMusicClient::home(); },
              [this](const std::optional<std::vector<YtShelf>> &shelves) {
                  m_homeLoading = false;
-                 m_homeShelves.clear();
-                 if (!shelves) {
-                     m_homeError = errorText("home");
-                 } else {
-                     for (const YtShelf &shelf : *shelves) {
-                         QVariantList items;
-                         for (const YtCollection &item : shelf.items) {
-                             items.append(QVariantMap{
-                                 {QStringLiteral("browseId"), QString::fromStdString(item.browseId)},
-                                 {QStringLiteral("title"), QString::fromStdString(item.title)},
-                                 {QStringLiteral("subtitle"), QString::fromStdString(item.subtitle)},
-                                 {QStringLiteral("thumbnail"), QString::fromStdString(item.thumbnailUrl)},
-                             });
-                         }
-                         m_homeShelves.append(QVariantMap{
-                             {QStringLiteral("title"), QString::fromStdString(shelf.title)},
-                             {QStringLiteral("items"), items},
-                         });
-                     }
-                 }
+                 m_homeShelves = shelves ? toShelves(*shelves) : QVariantList();
+                 m_homeError = shelves ? QString() : errorText("home");
                  emit homeChanged();
              });
 }
@@ -239,6 +262,44 @@ void YouTubeController::closeCollection()
     m_collectionOpen = false;
     m_collectionLoading = false;
     emit collectionChanged();
+}
+
+void YouTubeController::openArtist(const QString &browseId, const QString &name)
+{
+    const int generation = ++m_artistGeneration;
+    m_artistOpen = true;
+    m_artistName = name;
+    m_artistThumbnail.clear();
+    m_artistSongs.clear();
+    m_artistShelves.clear();
+    m_artistError.clear();
+    m_artistLoading = true;
+    emit artistChanged();
+
+    runAsync([id = browseId.toStdString()] { return YtMusicClient::artist(id); },
+             [this, generation](const std::optional<YtArtist> &artist) {
+                 if (generation != m_artistGeneration)
+                     return;
+                 m_artistLoading = false;
+                 if (artist) {
+                     if (!artist->name.empty())
+                         m_artistName = QString::fromStdString(artist->name);
+                     m_artistThumbnail = QString::fromStdString(artist->thumbnailUrl);
+                     m_artistSongs = toVariantList(artist->songs);
+                     m_artistShelves = toShelves(artist->shelves);
+                 } else {
+                     m_artistError = errorText("artist");
+                 }
+                 emit artistChanged();
+             });
+}
+
+void YouTubeController::closeArtist()
+{
+    ++m_artistGeneration;
+    m_artistOpen = false;
+    m_artistLoading = false;
+    emit artistChanged();
 }
 
 void YouTubeController::loadLibrary()
