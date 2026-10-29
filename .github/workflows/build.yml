@@ -24,3 +24,52 @@ jobs:
         run: cmake --preset linux-release
       - name: Build
         run: cmake --build --preset linux-release
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+    steps:
+      - uses: actions/checkout@v5
+      - name: Microsoft's compiler
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.2'
+          arch: win64_msvc2022_64
+          cache: true
+      - name: vcpkg (at the baseline in release/vcpkg.json)
+        shell: bash
+        run: |
+          baseline=$(python -c "import json; print(json.load(open('release/vcpkg.json'))['builtin-baseline'])")
+          git clone --filter=tree:0 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout "$baseline"
+          "$VCPKG_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+      - name: Built libraries from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-windows-${{ hashFiles('release/vcpkg.json') }}
+          restore-keys: vcpkg-windows-
+      - name: Configure
+        run: cmake --preset windows-release -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }}"
+      - name: Build
+        run: cmake --build --preset windows-release
+      - name: Portable folder (app, Qt, libraries, yt-dlp)
+        shell: bash
+        run: |
+          dist=dist/ChaoticMusicPlayer
+          mkdir -p "$dist"
+          cp build/windows-release/ChaoticMusicPlayer.exe build/windows-release/*.dll "$dist"/
+          windeployqt --release --qmldir . --no-translations "$dist/ChaoticMusicPlayer.exe"
+          curl -sSLo "$dist/yt-dlp.exe" https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
+          cp LICENSE "$dist"/
+      - name: Upload the ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChaoticMusicPlayer-windows-x64
+          path: dist/

@@ -37,15 +37,29 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS ${CMP_QT_COMPONENTS})
 qt_standard_project_setup(REQUIRES 6.8)
 
 find_package(Threads REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
-if(CMP_PLATFORM STREQUAL "linux")
-    pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3) # sound output
-endif()
-pkg_check_modules(TAGLIB REQUIRED IMPORTED_TARGET taglib)
-pkg_check_modules(ICU REQUIRED IMPORTED_TARGET icu-uc icu-i18n)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json 3 REQUIRED)
+
+# FFmpeg, TagLib and ICU: the system's on Linux (pkg-config); from vcpkg
+# (release/vcpkg.json) on Windows and Android.
+add_library(cmp_deps INTERFACE)
+if(CMP_PLATFORM STREQUAL "linux")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
+    pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3) # sound output
+    pkg_check_modules(TAGLIB REQUIRED IMPORTED_TARGET taglib)
+    pkg_check_modules(ICU REQUIRED IMPORTED_TARGET icu-uc icu-i18n)
+    target_link_libraries(cmp_deps INTERFACE PkgConfig::FFMPEG PkgConfig::PIPEWIRE PkgConfig::TAGLIB PkgConfig::ICU)
+else()
+    find_package(FFMPEG REQUIRED)
+    target_include_directories(cmp_deps INTERFACE ${FFMPEG_INCLUDE_DIRS})
+    target_link_directories(cmp_deps INTERFACE ${FFMPEG_LIBRARY_DIRS})
+    find_package(TagLib CONFIG REQUIRED)
+    find_package(ICU REQUIRED COMPONENTS uc i18n data)
+    find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED) # sound output
+    target_include_directories(cmp_deps INTERFACE ${MINIAUDIO_INCLUDE_DIR})
+    target_link_libraries(cmp_deps INTERFACE ${FFMPEG_LIBRARIES} TagLib::tag ICU::i18n ICU::uc ICU::data)
+endif()
 
 # ---------------------------------------------------------------------------
 # Backend: pure C++ engine. Must never link Qt.
@@ -116,8 +130,14 @@ if(CMP_PLATFORM STREQUAL "linux")
         backend/audioengine/audiooutput/audiooutput_linux.cpp
         backend/system/process/process_posix.cpp
     )
+elseif(CMP_PLATFORM STREQUAL "windows")
+    target_sources(backend PRIVATE
+        backend/audioengine/audiooutput/audiooutput_miniaudio.cpp
+        backend/system/process/process_windows.cpp
+    )
 elseif(CMP_PLATFORM STREQUAL "android")
     target_sources(backend PRIVATE
+        backend/audioengine/audiooutput/audiooutput_miniaudio.cpp
         backend/system/process/process_posix.cpp
     )
 endif()
@@ -126,10 +146,7 @@ set_target_properties(backend PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_include_directories(backend PUBLIC ${CMAKE_SOURCE_DIR})
 target_compile_options(backend PRIVATE ${CMP_WARNINGS})
 target_link_libraries(backend PRIVATE
-    PkgConfig::FFMPEG
-    $<$<STREQUAL:${CMP_PLATFORM},linux>:PkgConfig::PIPEWIRE>
-    PkgConfig::TAGLIB
-    PkgConfig::ICU
+    cmp_deps
     CURL::libcurl
     nlohmann_json::nlohmann_json
     Threads::Threads
@@ -171,6 +188,15 @@ if(CMP_PLATFORM STREQUAL "linux")
         wrapper/notifications/notificationcontroller_linux.cpp
         wrapper/systemmedia/systemmedia_linux.cpp
     )
+elseif(CMP_PLATFORM STREQUAL "windows")
+    target_sources(ChaoticMusicPlayer PRIVATE
+        wrapper/notifications/notificationcontroller_windows.cpp
+        wrapper/systemmedia/systemmedia_windows.cpp
+        # Icon, and the manifest: UTF-8 as the text encoding (see release/README.md)
+        release/windows/ChaoticMusicPlayer.rc
+        release/windows/ChaoticMusicPlayer.manifest
+    )
+    set_target_properties(ChaoticMusicPlayer PROPERTIES WIN32_EXECUTABLE TRUE) # no console window
 endif()
 
 set_source_files_properties(frontend/Theme.qml PROPERTIES

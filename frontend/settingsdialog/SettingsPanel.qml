@@ -1302,7 +1302,9 @@ Rectangle {
 
                             Label {
                                 Layout.fillWidth: true
-                                text: qsTr("A music player for your local music and YouTube Music. Built with Qt, FFmpeg, PipeWire and TagLib.")
+                                // The sound system differs: PipeWire on Linux, miniaudio elsewhere
+                                text: qsTr("A music player for your local music and YouTube Music. Built with Qt, FFmpeg, %1 and TagLib.")
+                                      .arg(Qt.platform.os === "linux" ? "PipeWire" : "miniaudio")
                                 color: Theme.textMuted
                                 font.pixelSize: Theme.fontSizeSmall
                                 wrapMode: Text.WordWrap
