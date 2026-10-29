@@ -19,7 +19,7 @@ jobs:
           git gcc-c++ cmake ninja-build pkgconf
           qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel
           ffmpeg-free-devel pipewire-devel taglib-devel libicu-devel libcurl-devel json-devel
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         run: cmake --preset linux-release
       - name: Build
