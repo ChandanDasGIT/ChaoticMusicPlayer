@@ -28,17 +28,6 @@ Rectangle {
         anchors.margins: Theme.spacing
         spacing: 6
 
-        PillButton {
-            iconName: "info"
-            iconSize: 14
-            implicitWidth: 40
-            implicitHeight: 40
-            enabled: PlayerController.hasTrack
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Track details")
-            onClicked: root.detailsRequested()
-        }
-
         // With background playing, closing the window doesn't quit: this does.
         PillButton {
             visible: SettingsController.backgroundPlayback
@@ -56,7 +45,8 @@ Rectangle {
     Item {
         id: area
         anchors.fill: parent
-        anchors.topMargin: 56
+        // Room for the power button when it shows; otherwise the cover gets it.
+        anchors.topMargin: SettingsController.backgroundPlayback ? 56 : Theme.padding
         anchors.bottomMargin: 4
     }
 
