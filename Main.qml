@@ -406,6 +406,7 @@ ApplicationWindow {
                     HomePanel {
                         id: dockedHome
                         anchors.fill: parent
+                        backdrop: homeCard.color
                         pinned: window.leftPinned === "home"
                         showCloseButton: !pinned
                         onPinToggled: window.togglePin("home")
@@ -766,6 +767,7 @@ ApplicationWindow {
             HomePanel {
                 objectName: "homePanel"
                 anchors.fill: parent
+                backdrop: homeSheet.color
                 showPinButton: false
                 showCloseButton: true
                 onCloseRequested: homeSheet.shown = false

@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QFileInfo>
 #include <QLocale>
+#include <QRegularExpression>
 #include <QJSEngine>
 #include <QStandardPaths>
 
@@ -35,6 +36,26 @@ constexpr int MixMinimum = 25;               // fewer most-played songs: topped 
 QString qs(const std::string &s)
 {
     return QString::fromStdString(s);
+}
+
+// An album name without a disc marker at its end ("… CD2", "… (Disc 1)", "… [CD 2]").
+QString withoutDisc(const QString &album)
+{
+    static const QRegularExpression disc(QStringLiteral("\\s*[-–(\\[]?\\s*\\b(cd|disc|disk)\\s*\\d+\\s*[)\\]]?\\s*$"),
+                                         QRegularExpression::CaseInsensitiveOption);
+    const QString name = QString(album).remove(disc).trimmed();
+    return name.isEmpty() ? album : name;
+}
+
+// The folder an album's songs are in: a disc's folder ("CD 1", "Disc 2") counts as its parent.
+QString albumFolder(const QString &path)
+{
+    static const QRegularExpression discFolder(QStringLiteral("^(cd|disc|disk)\\s*\\d+$"),
+                                               QRegularExpression::CaseInsensitiveOption);
+    QFileInfo folder(QFileInfo(path).absolutePath());
+    if (discFolder.match(folder.fileName()).hasMatch())
+        folder = QFileInfo(folder.absolutePath());
+    return folder.absoluteFilePath();
 }
 
 // "Today", "Yesterday", a weekday within the week, else the date.
@@ -208,11 +229,19 @@ void HistoryController::rebuild()
         if (m_recent.size() < RecentCount && seenSongs.insert(it->path).second)
             m_recent.append(songOf(*it));
         const bool local = !StreamResolver::isYouTube(it->path);
-        if (local && !it->album.empty() && m_recentAlbums.size() < AlbumCount
-            && seenAlbums.insert(it->album + '\t' + it->artist).second)
-            m_recentAlbums.append(QVariantMap{{QStringLiteral("album"), qs(it->album)},
-                                              {QStringLiteral("artist"), qs(it->artist)},
-                                              {QStringLiteral("path"), qs(it->path)}});
+        // One card per album: its songs share a folder (discs' folders count as one) and a
+        // name (disc markers left out); the songs' artists may differ (soundtracks).
+        if (local && !it->album.empty() && m_recentAlbums.size() < AlbumCount) {
+            const QString album = withoutDisc(qs(it->album));
+            const QString path = qs(it->path);
+            if (seenAlbums.insert((album.toLower() + QLatin1Char('\t') + albumFolder(path)).toStdString()).second) {
+                const Track *track = m_library->trackForPath(path);
+                const QString artist = track && !track->albumArtist.empty() ? qs(track->albumArtist) : qs(it->artist);
+                m_recentAlbums.append(QVariantMap{{QStringLiteral("album"), album},
+                                                  {QStringLiteral("artist"), artist},
+                                                  {QStringLiteral("path"), path}});
+            }
+        }
         if (m_entries.size() < EntryCount) {
             QVariantMap entry = songOf(*it);
             const QDateTime when = QDateTime::fromSecsSinceEpoch(it->time);

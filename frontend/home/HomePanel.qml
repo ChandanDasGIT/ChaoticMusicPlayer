@@ -37,12 +37,35 @@ Rectangle {
     }
 
     color: Theme.panelShade // softens the cover tint behind it
+
+    // The solid card this panel sits on (Main): the strip behind the pin / close
+    // buttons matches it, so scrolled content passes under them.
+    property color backdrop: "transparent"
+    readonly property bool scrolled: (root.page === "" && overview.contentY > 4)
+                                     || (root.page === "history" && historyList.contentY > historyList.originY + 4)
+                                     || (root.page === "stats" && statsPage.contentY > 4)
+
+    Rectangle {
+        z: 2
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 1
+        height: Theme.headerHeight
+        topLeftRadius: Theme.radiusCard - 1
+        topRightRadius: Theme.radiusCard - 1
+        color: Qt.tint(root.backdrop, Theme.panelShade)
+        visible: opacity > 0
+        opacity: root.scrolled && (root.showPinButton || root.showCloseButton) ? 1 : 0
+
+        Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
+    }
     radius: Theme.radiusCard
     border.color: Theme.border
 
     // Pin / close, top right
     Row {
-        z: 2
+        z: 3
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Theme.spacing
@@ -461,7 +484,7 @@ Rectangle {
                 }
                 StatTile {
                     value: HistoryController.stats.songs ?? 0
-                    label: qsTr("songs in your library")
+                    label: qsTr("songs in your library folders")
                 }
             }
 
