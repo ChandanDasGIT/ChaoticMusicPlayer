@@ -39,6 +39,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyChanged)
     // ReplayGain: 0 off, 1 track, 2 album
     Q_PROPERTY(int replayGain READ replayGain WRITE setReplayGain NOTIFY replayGainChanged)
+    // A desktop notification when the song changes (while the window isn't in front)
+    Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled WRITE setNotificationsEnabled NOTIFY notificationsEnabledChanged)
     Q_PROPERTY(bool historyYouTube READ historyYouTube WRITE setHistoryYouTube NOTIFY historyChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     Q_PROPERTY(bool resumeSession READ resumeSession WRITE setResumeSession NOTIFY resumeSessionChanged)
@@ -111,6 +113,8 @@ public:
     bool restorePlaylist() const;    // load the last playlist on startup
     void setRestorePlaylist(bool restore);
     bool backgroundPlayback() const; // closing the window keeps the music playing
+    bool notificationsEnabled() const;
+    void setNotificationsEnabled(bool enabled);
     int replayGain() const;
     void setReplayGain(int mode);
     bool historyEnabled() const;
@@ -206,6 +210,7 @@ signals:
     void backgroundPlaybackChanged();
     void historyChanged();
     void replayGainChanged();
+    void notificationsEnabledChanged();
     void themeModeChanged();
     void resumeSessionChanged();
     void showRemainingTimeChanged();

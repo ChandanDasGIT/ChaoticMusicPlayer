@@ -31,6 +31,7 @@ constexpr const char *RestorePlaylistKey = "playlist.restoreOnStartup";
 constexpr const char *BackgroundPlaybackKey = "playback.background";
 constexpr const char *HistoryEnabledKey = "history.enabled";
 constexpr const char *ReplayGainKey = "playback.replayGain";
+constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
 constexpr const char *ResumeKey = "playback.resume";
@@ -274,6 +275,20 @@ void SettingsController::setBackgroundPlayback(bool enabled)
     m_settings->setBool(BackgroundPlaybackKey, enabled);
     scheduleSave();
     emit backgroundPlaybackChanged();
+}
+
+bool SettingsController::notificationsEnabled() const
+{
+    return m_settings->boolValue(NotificationsKey, true);
+}
+
+void SettingsController::setNotificationsEnabled(bool enabled)
+{
+    if (enabled == notificationsEnabled())
+        return;
+    m_settings->setBool(NotificationsKey, enabled);
+    scheduleSave();
+    emit notificationsEnabledChanged();
 }
 
 int SettingsController::replayGain() const

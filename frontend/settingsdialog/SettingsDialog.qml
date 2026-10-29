@@ -244,6 +244,21 @@ Popup {
                     }
 
                     SettingsCard {
+                        title: qsTr("Notifications")
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            title: qsTr("Show the song when it changes")
+                            description: qsTr("A desktop notification with the title, artist and cover, while the app's window isn't in front.")
+
+                            SettingsSwitch {
+                                checked: SettingsController.notificationsEnabled
+                                onToggled: SettingsController.notificationsEnabled = checked
+                            }
+                        }
+                    }
+
+                    SettingsCard {
                         title: qsTr("Listening history")
 
                         SettingsRow {

@@ -392,6 +392,10 @@ hook = '''    // ---- screenshot harness
                         sleepTimer.start(step.mid(6).toInt());
                 } else if (step.startsWith(QLatin1String("rg:"))) { // ReplayGain mode 0 / 1 / 2
                     settings.setReplayGain(step.mid(3).toInt());
+                } else if (step == QLatin1String("hide")) { // like closing with background playing
+                    qobject_cast<QQuickWindow *>(root)->hide();
+                } else if (step == QLatin1String("printstate")) {
+                    std::printf("app state: %d (4 = active)\\n", int(QGuiApplication::applicationState()));
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {

@@ -7,6 +7,7 @@
 #include "wrapper/lyrics/lyricscontroller.h"
 #include "wrapper/mpris/mprisadaptor.h"
 #include "wrapper/player/playercontroller.h"
+#include "wrapper/notifications/notificationcontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
 #include "wrapper/playlists/playlistscontroller.h"
 #include "wrapper/session/sessioncontroller.h"
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
     HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);
     SmartPlaylistsController smartPlaylists(&history, &localLibrary, &playlist, nullptr);
     SleepTimerController sleepTimer(&player, nullptr);
+    NotificationController notifications(&player, &playlist, &settings, nullptr);
     SessionController session(&player, &playlist, &playlists, &settings, nullptr);
     session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);

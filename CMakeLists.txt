@@ -160,6 +160,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         wrapper/lyrics/lyricscontroller.h
         wrapper/player/playercontroller.cpp
         wrapper/player/playercontroller.h
+        wrapper/notifications/notificationcontroller.cpp
+        wrapper/notifications/notificationcontroller.h
         wrapper/playlist/playlistcontroller.cpp
         wrapper/playlist/playlistcontroller.h
         wrapper/playlist/playlistmodel.cpp
