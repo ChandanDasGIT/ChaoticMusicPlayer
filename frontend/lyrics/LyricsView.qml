@@ -13,6 +13,9 @@ Item {
 
     property bool showSynced: SettingsController.lyricsSyncedByDefault
     readonly property bool syncedView: showSynced && LyricsController.synced
+    // Japanese / Korean lyrics in a Japanese / Korean font (see Util.cjkFamily)
+    readonly property string lyricsFamily: LyricsController.status === LyricsController.Found
+        ? Util.cjkFamily(LyricsController.lines.slice(0, 40).map((l) => l.text).join("")) : ""
     readonly property bool following: syncedView && LyricsController.currentLine >= 0
     // 0 = closed .. 1 = open: the parts come in one after another (see phase()).
     property real progress: 1
@@ -147,6 +150,7 @@ Item {
             leftPadding: 4
             rightPadding: 12
             text: modelData.text !== "" ? modelData.text : (root.syncedView ? "♪" : " ")
+            font.family: root.lyricsFamily !== "" ? root.lyricsFamily : Qt.application.font.family
             wrapMode: Text.WordWrap
             font.pixelSize: root.syncedView ? 22 : 17
             font.weight: isCurrent ? Font.Bold : Font.Medium

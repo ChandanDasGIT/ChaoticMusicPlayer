@@ -38,4 +38,21 @@ QtObject {
         const m = totalMin % 60
         return h > 0 ? qsTr("%1 h %2 min").arg(h).arg(m) : qsTr("%1 min").arg(m)
     }
+
+    // Japanese and Chinese share most characters but draw some differently; so
+    // do Korean hanja. Without a hint the system may pick a Chinese font for
+    // them. For text with Japanese kana or Korean hangul: the matching Noto CJK
+    // font, if installed ("" = the normal font).
+    readonly property var installedFonts: Qt.fontFamilies()
+    function cjkFamily(text) {
+        if (!text)
+            return ""
+        const want = /[\u3040-\u30ff\u31f0-\u31ff]/.test(text) ? ["Noto Sans CJK JP", "Noto Sans JP", "Source Han Sans JP"]
+                   : /[\uac00-\ud7af\u1100-\u11ff]/.test(text) ? ["Noto Sans CJK KR", "Noto Sans KR", "Source Han Sans KR"]
+                   : []
+        for (const family of want)
+            if (installedFonts.indexOf(family) >= 0)
+                return family
+        return ""
+    }
 }

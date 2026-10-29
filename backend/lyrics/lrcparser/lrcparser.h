@@ -25,6 +25,9 @@ struct Lyrics
 //  - "[offset:+250]" shifts all times (positive = earlier, as in the LRC spec)
 //  - other "[tag:value]" lines and word-timing tags ("<00:12.34>") are ignored
 //  - text without any timestamp is returned as unsynced lines
+//  - credit lines ("作词 : …", "Composer: …") are left out
+//  - lyrics that carry a translation under each line (two lines per timestamp,
+//    as many copied from Chinese music sites do) keep only the original lines
 class LrcParser
 {
 public:

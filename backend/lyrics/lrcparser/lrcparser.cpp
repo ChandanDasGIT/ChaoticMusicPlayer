@@ -69,6 +69,28 @@ std::string stripWordTimings(const std::string &text)
     return out;
 }
 
+// "作词 : 米津玄師", "Composer: …": who wrote / arranged / produced it, not a lyric.
+bool isCreditLine(const std::string &text)
+{
+    static const char *const labels[] = {
+        "作词", "作詞", "作曲", "编曲", "編曲", "词", "詞", "曲", "制作人", "製作人", "监制", "監製", "混音", "母带",
+        "和声", "和聲", "录音", "錄音", "吉他", "贝斯", "鼓", "弦乐", "出品", "发行", "發行", "制作", "製作",
+        "作詞・作曲", "Lyrics", "Lyricist", "Lyricists", "Composer", "Composers", "Arranger", "Arrangement",
+        "Producer", "Producers", "Written by", "Music"};
+    // The label is everything before the first ":" / "：", if that comes early.
+    size_t colon = text.find(':');
+    const size_t wide = text.find("\xEF\xBC\x9A"); // "："
+    if (wide != std::string::npos && (colon == std::string::npos || wide < colon))
+        colon = wide;
+    if (colon == std::string::npos || colon > 24)
+        return false;
+    const std::string label = trimmed(text.substr(0, colon));
+    for (const char *known : labels)
+        if (label == known)
+            return true;
+    return false;
+}
+
 } // namespace
 
 Lyrics LrcParser::parse(const std::string &text)
@@ -118,9 +140,32 @@ Lyrics LrcParser::parse(const std::string &text)
         }
     }
 
+    timed.erase(std::remove_if(timed.begin(), timed.end(), [](const LyricLine &l) { return isCreditLine(l.text); }),
+                timed.end());
+    plain.erase(std::remove_if(plain.begin(), plain.end(), isCreditLine), plain.end());
+
     if (!timed.empty()) {
         std::stable_sort(timed.begin(), timed.end(),
                          [](const LyricLine &a, const LyricLine &b) { return a.timeMs < b.timeMs; });
+
+        // A translation under each line: the same time twice, again and again.
+        // Keep the first line of each time (the original). Now and then two lines
+        // at one time (e.g. a duet) stay as they are.
+        size_t times = 0, doubled = 0;
+        for (size_t i = 0; i < timed.size(); ++i) {
+            if (timed[i].text.empty() || (i > 0 && timed[i - 1].timeMs == timed[i].timeMs))
+                continue;
+            ++times;
+            if (i + 1 < timed.size() && timed[i + 1].timeMs == timed[i].timeMs && !timed[i + 1].text.empty())
+                ++doubled;
+        }
+        if (doubled >= 3 && doubled * 10 >= times * 3) {
+            std::vector<LyricLine> originals;
+            for (size_t i = 0; i < timed.size(); ++i)
+                if (i == 0 || timed[i - 1].timeMs != timed[i].timeMs)
+                    originals.push_back(std::move(timed[i]));
+            timed = std::move(originals);
+        }
         for (LyricLine &line : timed)
             line.timeMs = std::max<int64_t>(0, line.timeMs - offsetMs);
         lyrics.lines = std::move(timed);

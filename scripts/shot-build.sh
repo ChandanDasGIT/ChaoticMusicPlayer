@@ -396,6 +396,18 @@ hook = '''    // ---- screenshot harness
                     qobject_cast<QQuickWindow *>(root)->hide();
                 } else if (step == QLatin1String("printstate")) {
                     std::printf("app state: %d (4 = active)\\n", int(QGuiApplication::applicationState()));
+                } else if (step == QLatin1String("devices")) { // the output devices
+                    for (const QVariant &d : player.outputDevices())
+                        std::printf("device: %s | %s\\n", qPrintable(d.toMap().value(QStringLiteral("id")).toString()),
+                                    qPrintable(d.toMap().value(QStringLiteral("name")).toString()));
+                } else if (step.startsWith(QLatin1String("device:"))) { // device:<n>: switch to the nth, print the position around it
+                    const QVariantList devices = player.outputDevices();
+                    const int n = step.mid(7).toInt();
+                    std::printf("before switch: pos=%lldms\\n", (long long)player.position());
+                    if (n < devices.size())
+                        player.setOutputDevice(devices[n].toMap().value(QStringLiteral("id")).toString());
+                    for (int t : {50, 300, 1000})
+                        QTimer::singleShot(t, &player, [&player, t] { std::printf("  +%dms: pos=%lldms\\n", t, (long long)player.position()); });
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {
