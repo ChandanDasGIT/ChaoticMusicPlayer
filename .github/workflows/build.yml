@@ -29,7 +29,9 @@ jobs:
     name: Windows
     runs-on: windows-latest
     env:
-      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      # Our vcpkg, pinned. (Not VCPKG_ROOT here: the compiler setup below sets
+      # that to Visual Studio's own copy; Configure / Build pass ours instead.)
+      CMP_VCPKG_DIR: ${{ github.workspace }}/vcpkg
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
     steps:
       - uses: actions/checkout@v5
@@ -48,9 +50,9 @@ jobs:
         shell: bash
         run: |
           baseline=$(python -c "import json; print(json.load(open('release/vcpkg.json'))['builtin-baseline'])")
-          git clone --filter=tree:0 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
-          git -C "$VCPKG_ROOT" checkout "$baseline"
-          "$VCPKG_ROOT/bootstrap-vcpkg.bat" -disableMetrics
+          git clone --filter=tree:0 https://github.com/microsoft/vcpkg.git "$CMP_VCPKG_DIR"
+          git -C "$CMP_VCPKG_DIR" checkout "$baseline"
+          "$CMP_VCPKG_DIR/bootstrap-vcpkg.bat" -disableMetrics
           mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
       - name: Built libraries from earlier runs
         uses: actions/cache@v4
@@ -59,8 +61,12 @@ jobs:
           key: vcpkg-windows-${{ hashFiles('release/vcpkg.json') }}
           restore-keys: vcpkg-windows-
       - name: Configure
+        env:
+          VCPKG_ROOT: ${{ env.CMP_VCPKG_DIR }}
         run: cmake --preset windows-release -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }}"
       - name: Build
+        env:
+          VCPKG_ROOT: ${{ env.CMP_VCPKG_DIR }}
         run: cmake --build --preset windows-release
       - name: Portable folder (app, Qt, libraries, yt-dlp)
         shell: bash
