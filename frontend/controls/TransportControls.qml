@@ -3,7 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Big stadium buttons (previous | play/pause | next) and, below them, a
-// grouped row of toggles (shuffle | repeat | lyrics).
+// grouped row of toggles (shuffle | repeat | lyrics), and autoplay (YouTube
+// Mix) in a pill of its own beside it.
 ColumnLayout {
     id: root
 
@@ -77,80 +78,107 @@ ColumnLayout {
         }
     }
 
-    // Toggle group
-    Rectangle {
+    // The toggles, and autoplay in a pill of its own next to them
+    RowLayout {
         Layout.alignment: Qt.AlignHCenter
-        implicitWidth: toggles.implicitWidth + 10
-        implicitHeight: toggles.implicitHeight + 10
-        radius: height / 2
-        color: Theme.fill
+        spacing: Theme.spacing
 
-        RowLayout {
-            id: toggles
-            anchors.centerIn: parent
-            spacing: 4
+        // Shuffle | repeat | lyrics
+        Rectangle {
+            implicitWidth: toggles.implicitWidth + 10
+            implicitHeight: toggles.implicitHeight + 10
+            radius: height / 2
+            color: Theme.fill
 
-            PillButton {
-                iconName: "shuffle"
-                iconSize: 14
-                implicitWidth: 60
-                implicitHeight: 38
-                transparentIdle: true
-                active: PlaylistController.shuffle
-                onClicked: PlaylistController.shuffle = !PlaylistController.shuffle
-                ToolTip.visible: hovered
-                ToolTip.text: PlaylistController.shuffle ? qsTr("Shuffle: on") : qsTr("Shuffle: off")
-            }
+            RowLayout {
+                id: toggles
+                anchors.centerIn: parent
+                spacing: 4
 
-            PillButton {
-                iconName: "repeat"
-                iconSize: 14
-                implicitWidth: 60
-                implicitHeight: 38
-                transparentIdle: true
-                active: PlaylistController.repeatMode !== PlaylistController.RepeatOff
-                onClicked: PlaylistController.cycleRepeatMode()
-                ToolTip.visible: hovered
-                ToolTip.text: PlaylistController.repeatMode === PlaylistController.RepeatOne ? qsTr("Repeat: this track")
-                            : PlaylistController.repeatMode === PlaylistController.RepeatAll ? qsTr("Repeat: playlist")
-                            : qsTr("Repeat: off")
+                PillButton {
+                    iconName: "shuffle"
+                    iconSize: 14
+                    implicitWidth: 60
+                    implicitHeight: 38
+                    transparentIdle: true
+                    active: PlaylistController.shuffle
+                    onClicked: PlaylistController.shuffle = !PlaylistController.shuffle
+                    ToolTip.visible: hovered
+                    ToolTip.text: PlaylistController.shuffle ? qsTr("Shuffle: on") : qsTr("Shuffle: off")
+                }
 
-                // "1" badge for repeat-one (pops in)
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.rightMargin: 10
-                    anchors.topMargin: 4
-                    width: 13
-                    height: 13
-                    radius: width / 2
-                    color: Theme.accent
-                    scale: PlaylistController.repeatMode === PlaylistController.RepeatOne ? 1 : 0
-                    visible: scale > 0
+                PillButton {
+                    iconName: "repeat"
+                    iconSize: 14
+                    implicitWidth: 60
+                    implicitHeight: 38
+                    transparentIdle: true
+                    active: PlaylistController.repeatMode !== PlaylistController.RepeatOff
+                    onClicked: PlaylistController.cycleRepeatMode()
+                    ToolTip.visible: hovered
+                    ToolTip.text: PlaylistController.repeatMode === PlaylistController.RepeatOne ? qsTr("Repeat: this track")
+                                : PlaylistController.repeatMode === PlaylistController.RepeatAll ? qsTr("Repeat: playlist")
+                                : qsTr("Repeat: off")
 
-                    Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easingBack } }
+                    // "1" badge for repeat-one (pops in)
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.rightMargin: 10
+                        anchors.topMargin: 4
+                        width: 13
+                        height: 13
+                        radius: width / 2
+                        color: Theme.accent
+                        scale: PlaylistController.repeatMode === PlaylistController.RepeatOne ? 1 : 0
+                        visible: scale > 0
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "1"
-                        color: Theme.background
-                        font.pixelSize: 9
-                        font.bold: true
+                        Behavior on scale { NumberAnimation { duration: Theme.anim; easing.type: Theme.easingBack } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "1"
+                            color: Theme.background
+                            font.pixelSize: 9
+                            font.bold: true
+                        }
                     }
                 }
+
+                PillButton {
+                    iconName: "lyrics"
+                    iconSize: 14
+                    implicitWidth: 60
+                    implicitHeight: 38
+                    transparentIdle: true
+                    enabled: PlayerController.hasTrack
+                    active: root.lyricsOpen
+                    onClicked: root.lyricsToggled()
+                    ToolTip.visible: hovered
+                    ToolTip.text: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Show lyrics")
+                }
             }
+        }
+
+        // Autoplay: after a YouTube song, album or playlist, keep going with its Mix
+        Rectangle {
+            implicitWidth: autoplay.implicitWidth + 10
+            implicitHeight: autoplay.implicitHeight + 10
+            radius: height / 2
+            color: Theme.fill
 
             PillButton {
-                iconName: "lyrics"
+                id: autoplay
+                anchors.centerIn: parent
+                iconName: "infinity"
                 iconSize: 14
                 implicitWidth: 60
                 implicitHeight: 38
                 transparentIdle: true
-                enabled: PlayerController.hasTrack
-                active: root.lyricsOpen
-                onClicked: root.lyricsToggled()
+                active: SettingsController.ytAutoplay
+                onClicked: SettingsController.ytAutoplay = !SettingsController.ytAutoplay
                 ToolTip.visible: hovered
-                ToolTip.text: root.lyricsOpen ? qsTr("Hide lyrics") : qsTr("Show lyrics")
+                ToolTip.text: SettingsController.ytAutoplay ? qsTr("Autoplay similar songs: on") : qsTr("Autoplay similar songs: off")
             }
         }
     }
