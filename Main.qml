@@ -368,8 +368,7 @@ ApplicationWindow {
                 onCloseRequested: window.closePanel("library")
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onSettingsRequested: settingsDialog.open()
-                onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
-                                                        (folder) => LocalLibraryController.addFolder(folder))
+                onFoldersSettingsRequested: settingsDialog.openPage(settingsDialog.libraryPage)
 
                 // Swapping: the outgoing panel fades out while this one fades and slides in.
                 readonly property bool current: rightSlot.rightPanel === "library"
@@ -523,8 +522,10 @@ ApplicationWindow {
                     libraryDrawer.close()
                     settingsDialog.open()
                 }
-                onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
-                                                        (folder) => LocalLibraryController.addFolder(folder))
+                onFoldersSettingsRequested: {
+                    libraryDrawer.close()
+                    settingsDialog.openPage(settingsDialog.libraryPage)
+                }
             }
         }
     }
@@ -665,6 +666,8 @@ ApplicationWindow {
     SettingsDialog {
         id: settingsDialog
         objectName: "settingsDialog"
+        onAddFolderRequested: folderPicker.pick(qsTr("Add a music folder"), qsTr("Add this folder"), "",
+                                                (folder) => LocalLibraryController.addFolder(folder))
         onExcludeFolderRequested: (startFolder) => folderPicker.pick(
             qsTr("Leave a folder out of the library"), qsTr("Exclude this folder"), startFolder,
             (folder) => SettingsController.addLibraryExcluded(folder))

@@ -40,8 +40,8 @@ PlaylistController::PlaylistController(PlayerController *player, SettingsControl
 
     m_storePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                   + QStringLiteral("/ChaoticMusicPlayer/playlist.tsv");
-    m_youTubeStorePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                         + QStringLiteral("/ChaoticMusicPlayer/youtube-playing.tsv");
+    m_titledStorePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                         + QStringLiteral("/ChaoticMusicPlayer/playing-list.tsv");
 
     // Restore the last session (before QML exists, so no model signals are needed).
     m_playlist.sort(toBackend(m_settings->sortColumn()), m_settings->sortDescending());
@@ -189,10 +189,10 @@ void PlaylistController::playFromList(std::vector<::Track> tracks, int startInde
     startContext(std::move(tracks), startIndex, QString(), false);
 }
 
-void PlaylistController::playYouTube(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless)
+void PlaylistController::playTitled(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless)
 {
     startContext(std::move(tracks), startIndex, title, endless);
-    saveYouTubeContext();
+    saveTitledContext();
 }
 
 void PlaylistController::startContext(std::vector<::Track> tracks, int startIndex, const QString &title, bool endless,
@@ -236,7 +236,7 @@ void PlaylistController::extendList(const std::vector<::Track> &tracks)
     if (added == 0)
         return; // nothing new: don't keep asking
     m_moreRequested = false;
-    saveYouTubeContext();
+    saveTitledContext();
     emit currentChanged(); // hasNext / upcoming changed
     if (m_waitingForMore) {
         m_waitingForMore = false;
@@ -266,13 +266,13 @@ void PlaylistController::startFollowUp(bool load)
     std::vector<::Track> tracks = std::move(m_followUp);
     m_followUp.clear();
     startContext(std::move(tracks), 0, m_followUpTitle, true, load);
-    saveYouTubeContext();
+    saveTitledContext();
 }
 
-void PlaylistController::saveYouTubeContext() const
+void PlaylistController::saveTitledContext() const
 {
     if (m_active == &m_context && !m_contextTitle.isEmpty())
-        PlaylistStore::save(m_youTubeStorePath.toStdString(), m_context.tracks());
+        PlaylistStore::save(m_titledStorePath.toStdString(), m_context.tracks());
 }
 
 bool PlaylistController::hasNext() const
@@ -586,9 +586,9 @@ bool PlaylistController::resumeFromList(std::vector<::Track> tracks, const QStri
     return true;
 }
 
-bool PlaylistController::resumeYouTube(const QString &path, qint64 positionMs, const QString &title, bool endless)
+bool PlaylistController::resumeTitled(const QString &path, qint64 positionMs, const QString &title, bool endless)
 {
-    std::vector<::Track> tracks = PlaylistStore::load(m_youTubeStorePath.toStdString());
+    std::vector<::Track> tracks = PlaylistStore::load(m_titledStorePath.toStdString());
     const auto it = std::find_if(tracks.begin(), tracks.end(),
                                  [&](const ::Track &track) { return track.path == path.toStdString(); });
     if (it == tracks.end() || title.isEmpty())

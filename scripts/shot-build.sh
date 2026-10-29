@@ -56,7 +56,7 @@ hook = '''    // ---- screenshot harness
             });
             std::vector<::Track> first = {pool.front()};
             pool.erase(pool.begin());
-            playlist.playYouTube(first, 0, QStringLiteral("Mix – test"), true);
+            playlist.playTitled(first, 0, QStringLiteral("Mix – test"), true);
         }
         if (qEnvironmentVariableIsSet("SHOT_LEVELS")) // "fromMs,toMs": every 0.2 s, the loudest band and where playback is
             for (int t = qEnvironmentVariable("SHOT_LEVELS").section(QLatin1Char(','), 0, 0).toInt();
@@ -575,9 +575,9 @@ hook = '''    // ---- screenshot harness
                 localLibrary.showAlbum(localLibrary.albums().constFirst().toMap().value(QStringLiteral("key")).toString());
             if (QObject *drawer = root->findChild<QObject *>("libraryDrawer"))
                 QMetaObject::invokeMethod(drawer, "open");
-            if (qEnvironmentVariableIsSet("SHOT_LIBRARY_PLAY")) { // play Songs row n, add the opened album to the Queue
-                localLibrary.playInQueue(false, qEnvironmentVariableIntValue("SHOT_LIBRARY_PLAY"));
-                localLibrary.addToQueue(true, -1);
+            if (qEnvironmentVariableIsSet("SHOT_LIBRARY_PLAY")) { // play Songs row n (as a list), add the opened album to the Queue
+                localLibrary.play(LocalLibraryController::SongsList, qEnvironmentVariableIntValue("SHOT_LIBRARY_PLAY"));
+                localLibrary.addToQueue(LocalLibraryController::DetailList, -1);
                 QTimer::singleShot(600, [&] {
                     std::printf("playing: %s | from list: %d | queue: %d songs\\n", player.source().toUtf8().constData(),
                                 int(playlist.playingFromList()), playlist.count());

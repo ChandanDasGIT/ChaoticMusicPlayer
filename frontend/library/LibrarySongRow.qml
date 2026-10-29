@@ -5,8 +5,9 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // One library song: cover, title, artist · album · length, and play / "⋮"
-// buttons on hover. A click adds it to the Queue and plays it; hold and drag
-// to drop it on the Queue or the player. The song that is playing is tinted
+// buttons on hover. A click plays the list it's in from it (all songs, the
+// album, the artist...) without touching the Queue; hold and drag to drop it
+// on the Queue or the player. The song that is playing is tinted
 // and shows bouncing bars on its cover.
 Rectangle {
     id: root
@@ -17,7 +18,7 @@ Rectangle {
     required property string artist
     required property string album
     required property var duration
-    property bool inDetail: false   // in an opened album / artist (else the Songs tab)
+    property int list: LocalLibraryController.SongsList // the list it's shown in (Songs tab, album / artist, folder)
     property bool showAlbum: true
 
     readonly property bool isCurrent: PlayerController.source === root.path
@@ -32,7 +33,7 @@ Rectangle {
         if (root.isCurrent)
             PlayerController.togglePlayPause()
         else
-            LocalLibraryController.playInQueue(root.inDetail, root.index)
+            LocalLibraryController.play(root.list, root.index)
     }
 
     // Created on first use: one menu per row would be wasteful.
@@ -40,7 +41,7 @@ Rectangle {
         id: menuLoader
         active: false
         sourceComponent: LibrarySongMenu {
-            inDetail: root.inDetail
+            list: root.list
             index: root.index
             path: root.path
             onDetailsRequested: (path) => root.detailsRequested(path)

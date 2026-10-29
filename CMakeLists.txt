@@ -191,6 +191,7 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/dropzone/DropOverlay.qml
         frontend/layout/AppShortcuts.qml
         frontend/layout/DockSlot.qml
+        frontend/library/LibraryFolderRow.qml
         frontend/library/LibraryPanel.qml
         frontend/library/LibrarySongMenu.qml
         frontend/library/LibrarySongRow.qml

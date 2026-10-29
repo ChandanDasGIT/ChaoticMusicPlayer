@@ -5,7 +5,7 @@ import QtQuick.Controls
 ThemedMenu {
     id: root
 
-    property bool inDetail: false
+    property int list: LocalLibraryController.SongsList // the list the song is shown in
     property int index: -1
     property string path
 
@@ -14,7 +14,7 @@ ThemedMenu {
     Action {
         text: qsTr("Play")
         icon.name: "play"
-        onTriggered: LocalLibraryController.playInQueue(root.inDetail, root.index)
+        onTriggered: LocalLibraryController.play(root.list, root.index)
     }
 
     Action {
@@ -27,7 +27,7 @@ ThemedMenu {
     Action {
         text: qsTr("Add to queue")
         icon.name: "plus"
-        onTriggered: LocalLibraryController.addToQueue(root.inDetail, root.index)
+        onTriggered: LocalLibraryController.addToQueue(root.list, root.index)
     }
 
     AddToPlaylistMenu {

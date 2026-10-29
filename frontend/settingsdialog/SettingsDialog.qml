@@ -25,7 +25,16 @@ Popup {
         { name: qsTr("About"), icon: "info" }
     ]
 
-    // Asks Main for the folder picker (it lives in the main window).
+    readonly property int libraryPage: 3
+
+    // Opens on that page (e.g. the Library's music folders).
+    function openPage(index) {
+        page = index
+        open()
+    }
+
+    // Ask Main for the folder picker (it lives in the main window).
+    signal addFolderRequested()
     signal excludeFolderRequested(string startFolder)
 
     anchors.centerIn: Overlay.overlay
@@ -475,11 +484,76 @@ Popup {
                     title: qsTr("Library")
 
                     SettingsCard {
+                        title: qsTr("Music folders")
+
+                        SettingsRow {
+                            Layout.fillWidth: true
+                            description: qsTr("Your library is every song in these folders (and the folders inside them). Removing a folder leaves the files where they are.")
+                        }
+
+                        Repeater {
+                            model: SettingsController.libraryFolders
+
+                            delegate: Rectangle {
+                                id: folderRow
+
+                                required property string modelData
+
+                                Layout.fillWidth: true
+                                implicitHeight: 40
+                                radius: Theme.radius
+                                color: Theme.fill
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 4
+                                    spacing: Theme.spacing
+
+                                    Icon {
+                                        name: "folder"
+                                        size: 12
+                                        color: Theme.accent
+                                    }
+
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: folderRow.modelData
+                                        color: Theme.text
+                                        font.pixelSize: Theme.fontSize
+                                        elide: Text.ElideMiddle
+                                    }
+
+                                    PillButton {
+                                        iconName: "close"
+                                        iconSize: 11
+                                        implicitWidth: 30
+                                        implicitHeight: 30
+                                        transparentIdle: true
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: qsTr("Remove from the library (the files stay)")
+                                        onClicked: LocalLibraryController.removeFolder(folderRow.modelData)
+                                    }
+                                }
+                            }
+                        }
+
+                        PillButton {
+                            iconName: "folderPlus"
+                            iconSize: 12
+                            text: qsTr("Add folder…")
+                            implicitHeight: 32
+                            filled: SettingsController.libraryFolders.length === 0
+                            onClicked: root.addFolderRequested()
+                        }
+                    }
+
+                    SettingsCard {
                         title: qsTr("Excluded folders")
 
                         SettingsRow {
                             Layout.fillWidth: true
-                            description: qsTr("Folders inside your library folders that are left out (e.g. ringtones, recordings). Library folders are added in the Library panel.")
+                            description: qsTr("Folders inside your music folders that are left out (e.g. ringtones, recordings).")
                         }
 
                         Repeater {

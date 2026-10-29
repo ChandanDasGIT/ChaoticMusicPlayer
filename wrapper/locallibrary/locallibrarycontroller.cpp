@@ -6,6 +6,9 @@
 #include "wrapper/youtube/ytmetadatacontroller.h"
 #include "wrapper/settings/settingscontroller.h"
 
+#include <QCollator>
+#include <QDir>
+#include <QFileInfo>
 #include <QJSEngine>
 #include <QStandardPaths>
 #include <QStorageInfo>
@@ -106,17 +109,20 @@ LocalLibraryController::LocalLibraryController(PlaylistController *queue, Playli
     , m_cancel(std::make_shared<std::atomic<bool>>(false))
     , m_songs(std::make_unique<LibrarySongsModel>())
     , m_detail(std::make_unique<LibrarySongsModel>())
+    , m_folderSongs(std::make_unique<LibrarySongsModel>())
 {
     Q_ASSERT(!s_instance);
     s_instance = this;
     QJSEngine::setObjectOwnership(m_songs.get(), QJSEngine::CppOwnership);
     QJSEngine::setObjectOwnership(m_detail.get(), QJSEngine::CppOwnership);
+    QJSEngine::setObjectOwnership(m_folderSongs.get(), QJSEngine::CppOwnership);
     m_pool.setMaxThreadCount(1);
 
     m_playlists->setTrackLookup([this](const QString &path) { return trackForPath(path); });
     m_ytMetadata->setTrackLookup([this](const QString &path) { return trackForPath(path); });
 
     connect(m_settings, &SettingsController::libraryFoldersChanged, this, &LocalLibraryController::refresh);
+    connect(m_settings, &SettingsController::libraryFoldersChanged, this, &LocalLibraryController::rebuildFolder);
     connect(m_settings, &SettingsController::libraryExcludedChanged, this, &LocalLibraryController::refresh);
     startRefresh(true); // the saved library at once, then a check for changes
 }
@@ -271,6 +277,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     emit contentsChanged();
     applySearch();
     rebuildDetail();
+    rebuildFolder();
 }
 
 void LocalLibraryController::setSearch(const QString &search)
@@ -367,27 +374,23 @@ void LocalLibraryController::rebuildDetail()
     emit detailChanged();
 }
 
-std::vector<Track> LocalLibraryController::listFor(bool inDetail) const
+std::vector<Track> LocalLibraryController::listFor(int list) const
 {
-    return inDetail ? m_detail->tracks() : m_songs->tracks();
+    return list == DetailList ? m_detail->tracks() : list == FolderList ? m_folderSongs->tracks() : m_songs->tracks();
 }
 
-void LocalLibraryController::playInQueue(bool inDetail, int index)
+void LocalLibraryController::play(int list, int index)
 {
-    std::vector<Track> tracks = listFor(inDetail);
-    if (index >= 0) {
-        if (size_t(index) >= tracks.size())
-            return;
-        tracks = {tracks[size_t(index)]};
-    }
-    if (tracks.empty())
+    std::vector<Track> tracks = listFor(list);
+    if (tracks.empty() || index >= int(tracks.size()))
         return;
-    m_queue->addAndPlay(std::move(tracks), true);
+    const QString title = list == DetailList ? m_detailTitle : list == FolderList ? folderTitle() : tr("All songs");
+    m_queue->playTitled(std::move(tracks), std::max(index, 0), title, false);
 }
 
-void LocalLibraryController::addToQueue(bool inDetail, int index)
+void LocalLibraryController::addToQueue(int list, int index)
 {
-    std::vector<Track> tracks = listFor(inDetail);
+    std::vector<Track> tracks = listFor(list);
     if (index >= 0) {
         if (size_t(index) >= tracks.size())
             return;
@@ -400,14 +403,169 @@ void LocalLibraryController::addToQueue(bool inDetail, int index)
     emit notice(tr("Added %1 to the Queue").arg(songsText(count)));
 }
 
-QVariantList LocalLibraryController::items(bool inDetail, int index) const
+QVariantList LocalLibraryController::items(int list, int index) const
 {
-    const std::vector<Track> tracks = listFor(inDetail);
+    const std::vector<Track> tracks = listFor(list);
     QVariantList out;
     for (size_t i = 0; i < tracks.size(); ++i) {
         if (index < 0 || size_t(index) == i)
             out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(tracks[i].path)}});
     }
+    return out;
+}
+
+// ---- Folders tab
+
+namespace {
+
+QString cleanFolder(const QString &path)
+{
+    return QDir::cleanPath(path.startsWith(QStringLiteral("file:")) ? QUrl(path).toLocalFile() : path);
+}
+
+// Names as a file manager sorts them: "2 Foo" before "10 Bar", case ignored.
+QCollator &natural()
+{
+    static QCollator collator = [] {
+        QCollator c;
+        c.setNumericMode(true);
+        c.setCaseSensitivity(Qt::CaseInsensitive);
+        return c;
+    }();
+    return collator;
+}
+
+} // namespace
+
+QString LocalLibraryController::folderTitle() const
+{
+    return m_folder.isEmpty() ? tr("Folders") : QFileInfo(m_folder).fileName();
+}
+
+// From the music folder the open folder is in, down to it.
+QVariantList LocalLibraryController::folderCrumbs() const
+{
+    QVariantList crumbs;
+    if (m_folder.isEmpty())
+        return crumbs;
+    QString top;
+    for (const QString &folder : m_settings->libraryFolders()) {
+        const QString clean = cleanFolder(folder);
+        if ((m_folder == clean || m_folder.startsWith(clean + QLatin1Char('/'))) && clean.size() > top.size())
+            top = clean;
+    }
+    if (top.isEmpty())
+        top = m_folder;
+    crumbs.append(QVariantMap{{QStringLiteral("name"), QFileInfo(top).fileName()}, {QStringLiteral("path"), top}});
+    QString path = top;
+    for (const QString &part : m_folder.mid(top.size()).split(QLatin1Char('/'), Qt::SkipEmptyParts)) {
+        path += QLatin1Char('/') + part;
+        crumbs.append(QVariantMap{{QStringLiteral("name"), part}, {QStringLiteral("path"), path}});
+    }
+    return crumbs;
+}
+
+void LocalLibraryController::openFolder(const QString &path)
+{
+    m_folder = path.isEmpty() ? QString() : cleanFolder(path);
+    rebuildFolder();
+}
+
+void LocalLibraryController::folderUp()
+{
+    if (m_folder.isEmpty())
+        return;
+    for (const QString &folder : m_settings->libraryFolders()) {
+        if (cleanFolder(folder) == m_folder) {
+            openFolder({}); // a music folder: back to the list of them
+            return;
+        }
+    }
+    openFolder(QFileInfo(m_folder).path());
+}
+
+std::vector<Track> LocalLibraryController::folderTracks(const QString &folder, bool withSubfolders) const
+{
+    std::vector<Track> out;
+    if (folder.isEmpty())
+        return out;
+    const std::string prefix = (folder + QLatin1Char('/')).toStdString();
+    for (const Track &t : m_tracks) {
+        if (t.path.compare(0, prefix.size(), prefix) != 0)
+            continue;
+        if (withSubfolders || t.path.find('/', prefix.size()) == std::string::npos)
+            out.push_back(t);
+    }
+    std::sort(out.begin(), out.end(), [](const Track &a, const Track &b) {
+        return natural().compare(QString::fromStdString(a.path), QString::fromStdString(b.path)) < 0;
+    });
+    return out;
+}
+
+// What the open folder holds: its subfolders (with how many songs are in each,
+// subfolders included) and its own songs. At the top, the music folders.
+void LocalLibraryController::rebuildFolder()
+{
+    m_subfolders.clear();
+    if (m_folder.isEmpty()) {
+        for (const QString &folder : m_settings->libraryFolders()) {
+            const QString clean = cleanFolder(folder);
+            const std::string prefix = (clean + QLatin1Char('/')).toStdString();
+            const int count = int(std::count_if(m_tracks.begin(), m_tracks.end(), [&](const Track &t) {
+                return t.path.compare(0, prefix.size(), prefix) == 0;
+            }));
+            m_subfolders.append(QVariantMap{{QStringLiteral("name"), QFileInfo(clean).fileName()},
+                                            {QStringLiteral("path"), clean},
+                                            {QStringLiteral("count"), count},
+                                            {QStringLiteral("location"), QFileInfo(clean).path()}});
+        }
+        m_folderSongs->setTracks({});
+        emit folderChanged();
+        return;
+    }
+
+    const std::string prefix = (m_folder + QLatin1Char('/')).toStdString();
+    std::map<QString, int> counts; // subfolder name -> songs in it
+    for (const Track &t : m_tracks) {
+        if (t.path.compare(0, prefix.size(), prefix) != 0)
+            continue;
+        const size_t slash = t.path.find('/', prefix.size());
+        if (slash != std::string::npos)
+            ++counts[QString::fromStdString(t.path.substr(prefix.size(), slash - prefix.size()))];
+    }
+    QStringList names;
+    for (const auto &entry : counts)
+        names.append(entry.first);
+    std::sort(names.begin(), names.end(), [](const QString &a, const QString &b) { return natural().compare(a, b) < 0; });
+    for (const QString &name : names)
+        m_subfolders.append(QVariantMap{{QStringLiteral("name"), name},
+                                        {QStringLiteral("path"), m_folder + QLatin1Char('/') + name},
+                                        {QStringLiteral("count"), counts[name]}});
+    m_folderSongs->setTracks(folderTracks(m_folder, false));
+    emit folderChanged();
+}
+
+void LocalLibraryController::playFolder()
+{
+    std::vector<Track> tracks = folderTracks(m_folder, true);
+    if (!tracks.empty())
+        m_queue->playTitled(std::move(tracks), 0, folderTitle(), false);
+}
+
+void LocalLibraryController::addFolderToQueue()
+{
+    std::vector<Track> tracks = folderTracks(m_folder, true);
+    if (tracks.empty())
+        return;
+    const int added = m_queue->insertTracks(tracks, m_queue->count()); // in file order, at the end
+    emit notice(tr("Added %1 to the Queue").arg(songsText(added)));
+}
+
+QVariantList LocalLibraryController::folderItems(const QString &path) const
+{
+    QVariantList out;
+    for (const Track &t : folderTracks(cleanFolder(path), true))
+        out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
     return out;
 }
 

@@ -50,6 +50,13 @@ class LocalLibraryController : public QObject
     Q_PROPERTY(QString detailSubtitle READ detailSubtitle NOTIFY detailChanged)
     Q_PROPERTY(QString detailCoverPath READ detailCoverPath NOTIFY detailChanged)
 
+    // Folders tab, browsed like a file manager. folder "" = the music folders.
+    Q_PROPERTY(QString folder READ folder NOTIFY folderChanged)
+    Q_PROPERTY(QString folderTitle READ folderTitle NOTIFY folderChanged)
+    Q_PROPERTY(QVariantList folderCrumbs READ folderCrumbs NOTIFY folderChanged)   // [{ name, path }] for the path bar
+    Q_PROPERTY(QVariantList subfolders READ subfolders NOTIFY folderChanged)       // [{ name, path, count, location }]
+    Q_PROPERTY(LibrarySongsModel *folderSongs READ folderSongs CONSTANT)           // songs right in the folder
+
 public:
     LocalLibraryController(PlaylistController *queue, PlaylistsController *playlists, YtMetadataController *ytMetadata,
                            SettingsController *settings, QObject *parent);
@@ -72,6 +79,11 @@ public:
     QString detailTitle() const { return m_detailTitle; }
     QString detailSubtitle() const { return m_detailSubtitle; }
     QString detailCoverPath() const { return m_detailCoverPath; }
+    QString folder() const { return m_folder; }
+    QString folderTitle() const;
+    QVariantList folderCrumbs() const;
+    QVariantList subfolders() const { return m_subfolders; }
+    LibrarySongsModel *folderSongs() const { return m_folderSongs.get(); }
 
     // A library song by path (nullptr if it is not in the library).
     const Track *trackForPath(const QString &path) const;
@@ -84,11 +96,22 @@ public:
     Q_INVOKABLE void showArtist(const QString &name);
     Q_INVOKABLE void closeDetail();
 
-    // `inDetail`: the opened album / artist, else the Songs tab. index -1 = all.
-    Q_INVOKABLE void playInQueue(bool inDetail, int index); // add to the Queue, play the first
-    Q_INVOKABLE void addToQueue(bool inDetail, int index);
-    Q_INVOKABLE QVariantList items(bool inDetail, int index) const; // [{ path }] for the playlist menus
+    Q_INVOKABLE void openFolder(const QString &path); // "" = back to the music folders
+    Q_INVOKABLE void folderUp();
+    Q_INVOKABLE void playFolder();       // everything in the open folder, subfolders too
+    Q_INVOKABLE void addFolderToQueue(); // same, to the Queue
+
+    // The lists songs are shown in (`list` below).
+    enum List { SongsList, DetailList, FolderList }; // Songs tab, opened album / artist, open folder
+    Q_ENUM(List)
+
+    // index -1 = all. play(): that list from the song (the first one for -1),
+    // leaving the Queue alone.
+    Q_INVOKABLE void play(int list, int index);
+    Q_INVOKABLE void addToQueue(int list, int index);
+    Q_INVOKABLE QVariantList items(int list, int index) const; // [{ path }] for the playlist menus
     Q_INVOKABLE QVariantList albumItems(const QString &key) const;  // [{ path }] in disc / track order
+    Q_INVOKABLE QVariantList folderItems(const QString &path) const; // [{ path }], subfolders too, in file order
 
     // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]
     Q_INVOKABLE QVariantList drives() const;
@@ -98,6 +121,7 @@ signals:
     void contentsChanged();
     void scanChanged();
     void detailChanged();
+    void folderChanged();
     void notice(const QString &text);
 
 private:
@@ -105,7 +129,9 @@ private:
     void setTracks(std::vector<Track> tracks);
     void applySearch();
     void rebuildDetail();
-    std::vector<Track> listFor(bool inDetail) const;
+    void rebuildFolder();
+    std::vector<Track> listFor(int list) const;
+    std::vector<Track> folderTracks(const QString &folder, bool withSubfolders) const; // in file order
 
     static inline LocalLibraryController *s_instance = nullptr;
 
@@ -122,6 +148,9 @@ private:
     std::unordered_map<std::string, size_t> m_byPath;
     std::unique_ptr<LibrarySongsModel> m_songs;
     std::unique_ptr<LibrarySongsModel> m_detail;
+    std::unique_ptr<LibrarySongsModel> m_folderSongs;
+    QString m_folder;
+    QVariantList m_subfolders;
     QString m_search;
     QVariantList m_albums;
     QVariantList m_artists;

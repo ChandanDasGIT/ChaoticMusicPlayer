@@ -294,7 +294,7 @@ void YouTubeController::play(const QVariantMap &song)
 {
     const QString title = song.value(QStringLiteral("title")).toString();
     const bool mix = m_settings->ytAutoplay();
-    m_playlist->playYouTube({trackFromMap(song)}, 0, mix ? tr("Mix – %1").arg(title) : title, mix);
+    m_playlist->playTitled({trackFromMap(song)}, 0, mix ? tr("Mix – %1").arg(title) : title, mix);
 }
 
 void YouTubeController::playList(const QVariantList &songs, int index, const QString &title)
@@ -302,7 +302,7 @@ void YouTubeController::playList(const QVariantList &songs, int index, const QSt
     std::vector<::Track> tracks;
     for (const QVariant &song : songs)
         tracks.push_back(trackFromMap(song.toMap()));
-    m_playlist->playYouTube(std::move(tracks), index, title, m_settings->ytAutoplay());
+    m_playlist->playTitled(std::move(tracks), index, title, m_settings->ytAutoplay());
 }
 
 // What YouTube plays after `seedPath`: more for the Mix playing, or a Mix for

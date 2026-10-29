@@ -5,8 +5,10 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // The local library panel: Songs / Albums / Artists / Folders. Opening an
-// album or an artist shows its songs, with a back button. The header has
-// Refresh, Pin and Close. Excluded folders are set in Settings.
+// album or an artist shows its songs, with a back button; Folders is browsed
+// like a file manager. Clicking a song plays the list it's in (never adding it
+// to the Queue). The header has Refresh, Pin and Close. The music folders (and
+// the ones left out) are chosen in Settings.
 Rectangle {
     id: root
 
@@ -23,7 +25,7 @@ Rectangle {
     signal openPlayerRequested()
     signal settingsRequested()
     signal detailsRequested(string path)
-    signal addFolderRequested()
+    signal foldersSettingsRequested() // the music folders are chosen in Settings
 
     onTabChanged: LocalLibraryController.closeDetail()
 
@@ -230,7 +232,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     model: LocalLibraryController.songs
-                    inDetail: false
+                    list: LocalLibraryController.SongsList
                 }
             }
 
@@ -493,7 +495,7 @@ Rectangle {
                         text: qsTr("Play all")
                         implicitHeight: 32
                         filled: true
-                        onClicked: LocalLibraryController.playInQueue(true, -1)
+                        onClicked: LocalLibraryController.play(LocalLibraryController.DetailList, -1)
                     }
 
                     PillButton {
@@ -501,7 +503,7 @@ Rectangle {
                         iconSize: 11
                         text: qsTr("Add all to queue")
                         implicitHeight: 32
-                        onClicked: LocalLibraryController.addToQueue(true, -1)
+                        onClicked: LocalLibraryController.addToQueue(LocalLibraryController.DetailList, -1)
                     }
                 }
 
@@ -509,118 +511,179 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     model: LocalLibraryController.detailSongs
-                    inDetail: true
+                    list: LocalLibraryController.DetailList
                     showAlbum: LocalLibraryController.detailKind === 2
                 }
             }
 
-            // ---- Folders
+            // ---- Folders, browsed like a file manager: a path bar, then the
+            // folder's subfolders and its songs. At the top, the music folders
+            // (added and removed in Settings).
             ColumnLayout {
                 anchors.fill: parent
-                anchors.leftMargin: Theme.padding
-                anchors.rightMargin: Theme.padding
-                spacing: Theme.spacing
-                opacity: root.tab === 3 ? 1 : 0
+                spacing: 4
+                opacity: root.tab === 3 && root.hasFolders ? 1 : 0
                 visible: opacity > 0
                 transform: PageShift { page: 3 }
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
-                Label {
+                readonly property bool atTop: LocalLibraryController.folder === ""
+
+                // Path bar: up, then where we are (each part opens that folder)
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    text: qsTr("The library is every song in these folders (and the folders inside them).")
-                    color: Theme.textMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                    wrapMode: Text.WordWrap
-                }
+                    Layout.leftMargin: Theme.spacing
+                    Layout.rightMargin: Theme.padding
+                    spacing: 2
 
-                ListView {
-                    populate: ListPopulate {}
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: contentHeight
-                    Layout.maximumHeight: pages.height * 0.6
-                    clip: true
-                    interactive: contentHeight > height
-                    spacing: 4
-                    model: SettingsController.libraryFolders
+                    PillButton {
+                        iconName: "back"
+                        iconSize: 12
+                        implicitWidth: 34
+                        implicitHeight: 34
+                        enabled: !parent.parent.atTop
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Up one folder")
+                        onClicked: LocalLibraryController.folderUp()
+                    }
 
-                    delegate: Rectangle {
-                        id: folderRow
+                    Flickable {
+                        id: pathBar
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 34
+                        clip: true
+                        contentWidth: crumbs.width
+                        flickableDirection: Flickable.HorizontalFlick
+                        boundsBehavior: Flickable.StopAtBounds
+                        // The deepest part stays in view.
+                        onContentWidthChanged: contentX = Math.max(0, contentWidth - width)
 
-                        required property string modelData
+                        Row {
+                            id: crumbs
+                            height: parent.height
+                            spacing: 0
 
-                        width: ListView.view.width
-                        height: 44
-                        radius: Theme.radius
-                        color: Theme.fill
+                            Repeater {
+                                model: [{ name: qsTr("Folders"), path: "" }].concat(LocalLibraryController.folderCrumbs)
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 4
-                            spacing: Theme.spacing
+                                delegate: Row {
+                                    id: crumb
 
-                            Icon {
-                                name: "folder"
-                                size: 13
-                                color: Theme.accent
-                            }
+                                    required property var modelData
+                                    required property int index
+                                    readonly property bool last: index === LocalLibraryController.folderCrumbs.length
 
-                            Label {
-                                Layout.fillWidth: true
-                                text: folderRow.modelData
-                                color: Theme.text
-                                font.pixelSize: Theme.fontSize
-                                elide: Text.ElideMiddle
-                            }
+                                    height: crumbs.height
 
-                            PillButton {
-                                iconName: "close"
-                                iconSize: 11
-                                implicitWidth: 32
-                                implicitHeight: 32
-                                transparentIdle: true
-                                ToolTip.visible: hovered
-                                ToolTip.text: qsTr("Remove from the library (the files stay)")
-                                onClicked: LocalLibraryController.removeFolder(folderRow.modelData)
+                                    Icon {
+                                        visible: crumb.index > 0
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        name: "chevronRight"
+                                        size: 9
+                                        color: Theme.textDim
+                                    }
+
+                                    PillButton {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        iconName: crumb.index === 0 ? "home" : ""
+                                        iconSize: 11
+                                        text: crumb.modelData.name
+                                        implicitHeight: 30
+                                        transparentIdle: true
+                                        active: crumb.last
+                                        onClicked: if (!crumb.last) LocalLibraryController.openFolder(crumb.modelData.path)
+                                    }
+                                }
                             }
                         }
                     }
-                }
-
-                Flow {
-                    Layout.fillWidth: true
-                    spacing: 6
 
                     PillButton {
-                        iconName: "folderPlus"
-                        iconSize: 12
-                        text: qsTr("Add folder…")
+                        visible: !parent.parent.atTop
+                        iconName: "play"
+                        iconSize: 11
+                        implicitWidth: 34
                         implicitHeight: 34
-                        filled: !root.hasFolders
-                        onClicked: root.addFolderRequested()
+                        filled: true
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Play all (subfolders too)")
+                        onClicked: LocalLibraryController.playFolder()
                     }
 
                     PillButton {
-                        iconName: "eyeSlash"
-                        iconSize: 12
-                        text: qsTr("Excluded folders…")
+                        visible: !parent.parent.atTop
+                        iconName: "plus"
+                        iconSize: 11
+                        implicitWidth: 34
                         implicitHeight: 34
                         ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Folders to leave out are set in Settings")
-                        onClicked: root.settingsRequested()
+                        ToolTip.text: qsTr("Add all to queue")
+                        onClicked: LocalLibraryController.addFolderToQueue()
                     }
                 }
 
-                Item { Layout.fillHeight: true }
+                // Subfolders first, then the songs, in one scrolling list
+                ListView {
+                    id: folderView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.leftMargin: Theme.spacing
+                    Layout.rightMargin: Theme.spacing
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    spacing: 2
+                    ScrollBar.vertical: ScrollBar {}
+                    model: LocalLibraryController.folderSongs
+
+                    header: Column {
+                        width: folderView.width
+                        spacing: 2
+                        bottomPadding: LocalLibraryController.subfolders.length > 0 && folderView.count > 0 ? 6 : 0
+
+                        Repeater {
+                            model: LocalLibraryController.subfolders
+
+                            delegate: LibraryFolderRow {
+                                required property var modelData
+
+                                width: folderView.width
+                                name: modelData.name
+                                path: modelData.path
+                                count: modelData.count
+                                location: modelData.location || ""
+                                onOpened: {
+                                    LocalLibraryController.openFolder(path)
+                                    folderView.positionViewAtBeginning()
+                                }
+                            }
+                        }
+                    }
+
+                    delegate: LibrarySongRow {
+                        width: ListView.view.width
+                        list: LocalLibraryController.FolderList
+                        onDetailsRequested: (path) => root.detailsRequested(path)
+                    }
+
+                    Label {
+                        anchors.centerIn: parent
+                        width: parent.width - 4 * Theme.padding
+                        visible: folderView.count === 0 && LocalLibraryController.subfolders.length === 0
+                        text: qsTr("No songs in this folder.")
+                        color: Theme.textMuted
+                        font.pixelSize: Theme.fontSize
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+                }
             }
 
-            // ---- No folders yet (Songs / Albums / Artists)
+            // ---- No music folders yet (they're chosen in Settings)
             Column {
                 anchors.centerIn: parent
                 width: parent.width - 4 * Theme.padding
                 spacing: Theme.spacing
-                visible: !root.hasFolders && root.tab !== 3
+                visible: !root.hasFolders
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -650,7 +713,7 @@ Rectangle {
 
                 Label {
                     width: parent.width
-                    text: qsTr("Add the folders where your music is. Every song in them shows up here, sorted into albums and artists.")
+                    text: qsTr("Choose the folders where your music is. Every song in them shows up here, sorted into albums, artists and folders.")
                     color: Theme.textMuted
                     font.pixelSize: Theme.fontSizeSmall
                     horizontalAlignment: Text.AlignHCenter
@@ -663,10 +726,10 @@ Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     iconName: "folderPlus"
                     iconSize: 12
-                    text: qsTr("Add folder…")
+                    text: qsTr("Choose music folders")
                     implicitHeight: 36
                     filled: true
-                    onClicked: root.addFolderRequested()
+                    onClicked: root.foldersSettingsRequested()
                 }
             }
 
@@ -699,10 +762,10 @@ Rectangle {
 
     // A list of library songs.
     component SongList: ListView {
-        id: list
+        id: songList
         populate: ListPopulate {}
 
-        property bool inDetail: false
+        property int list: LocalLibraryController.SongsList
         property bool showAlbum: true
 
         Layout.leftMargin: Theme.spacing
@@ -714,8 +777,8 @@ Rectangle {
 
         delegate: LibrarySongRow {
             width: ListView.view.width
-            inDetail: list.inDetail
-            showAlbum: list.showAlbum
+            list: songList.list
+            showAlbum: songList.showAlbum
             onDetailsRequested: (path) => root.detailsRequested(path)
         }
     }
