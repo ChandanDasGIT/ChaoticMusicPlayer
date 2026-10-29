@@ -26,6 +26,8 @@ class SettingsController : public QObject
     // The YouTube and Library panels share the right-hand column: pinning one unpins the other.
     Q_PROPERTY(bool youtubePanelPinned READ youtubePanelPinned WRITE setYoutubePanelPinned NOTIFY youtubePanelPinnedChanged)
     Q_PROPERTY(bool libraryPanelPinned READ libraryPanelPinned WRITE setLibraryPanelPinned NOTIFY libraryPanelPinnedChanged)
+    // Home, YouTube Music and the Library share a column: at most one of them is pinned.
+    Q_PROPERTY(bool homePanelPinned READ homePanelPinned WRITE setHomePanelPinned NOTIFY homePanelPinnedChanged)
     Q_PROPERTY(int artistAlbumWidth READ artistAlbumWidth WRITE setArtistAlbumWidth NOTIFY columnWidthsChanged)
     Q_PROPERTY(int trackWidth READ trackWidth WRITE setTrackWidth NOTIFY columnWidthsChanged)
     Q_PROPERTY(int durationWidth READ durationWidth WRITE setDurationWidth NOTIFY columnWidthsChanged)
@@ -94,6 +96,8 @@ public:
     bool youtubePanelPinned() const;
     void setYoutubePanelPinned(bool pinned);
     bool libraryPanelPinned() const;
+    bool homePanelPinned() const;
+    void setHomePanelPinned(bool pinned);
     void setLibraryPanelPinned(bool pinned);
     int artistAlbumWidth() const;
     void setArtistAlbumWidth(int width);
@@ -191,6 +195,7 @@ signals:
     void playlistPinnedChanged();
     void youtubePanelPinnedChanged();
     void libraryPanelPinnedChanged();
+    void homePanelPinnedChanged();
     void columnWidthsChanged();
     void volumeStepChanged();
     void restorePlaylistChanged();

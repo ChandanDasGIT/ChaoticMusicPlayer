@@ -29,9 +29,12 @@ public:
     const std::vector<Play> &plays() const { return m_plays; } // oldest first
 
     bool append(const Play &play);
+    bool remove(size_t index); // one play (index into plays())
     bool clear();
 
 private:
+    bool save(const std::vector<Play> &plays) const; // rewrites the file
+
     std::filesystem::path m_file;
     std::vector<Play> m_plays;
 };

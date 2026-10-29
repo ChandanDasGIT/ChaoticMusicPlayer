@@ -87,6 +87,7 @@ public:
 
     // A library song by path (nullptr if it is not in the library).
     const Track *trackForPath(const QString &path) const;
+    const std::vector<Track> &tracks() const { return m_tracks; } // the whole library
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void addFolder(const QString &folder); // path or file:// URL
@@ -111,6 +112,7 @@ public:
     Q_INVOKABLE void addToQueue(int list, int index);
     Q_INVOKABLE QVariantList items(int list, int index) const; // [{ path }] for the playlist menus
     Q_INVOKABLE QVariantList albumItems(const QString &key) const;  // [{ path }] in disc / track order
+    Q_INVOKABLE void playAlbumOf(const QString &path);              // that song's album, from its first track
     Q_INVOKABLE QVariantList folderItems(const QString &path) const; // [{ path }], subfolders too, in file order
 
     // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]

@@ -198,6 +198,8 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/layout/AppShortcuts.qml
         frontend/layout/DockSlot.qml
         frontend/layout/NavBar.qml
+        frontend/home/HomePanel.qml
+        frontend/home/HomeSongRow.qml
         frontend/library/LibraryFolderRow.qml
         frontend/library/LibraryPanel.qml
         frontend/library/LibrarySongMenu.qml

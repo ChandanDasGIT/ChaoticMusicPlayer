@@ -32,13 +32,15 @@ ApplicationWindow {
     property bool playerRecalled: false // half: the player in place of two pinned panels
     property string lastOpened: ""     // the panel opened last pushes the player away from its side
     readonly property bool queuePinned: SettingsController.playlistPinned
-    readonly property string rightPinned: SettingsController.youtubePanelPinned ? "youtube"
+    readonly property string rightPinned: SettingsController.homePanelPinned ? "home"
+                                        : SettingsController.youtubePanelPinned ? "youtube"
                                         : SettingsController.libraryPanelPinned ? "library" : ""
     // What the columns show
     readonly property bool playlistDocked: !compact && (queueOpen || queuePinned)
     readonly property string rightShown: compact || playerRecalled ? "" : rightOpen !== "" ? rightOpen : rightPinned
     readonly property bool youtubeDocked: rightShown === "youtube"
     readonly property bool libraryDocked: rightShown === "library"
+    readonly property bool homeDocked: rightShown === "home"
     readonly property bool playerShown: layout !== "half" || !(playlistDocked && rightShown !== "")
 
     function openPanel(name) {
@@ -61,11 +63,18 @@ ApplicationWindow {
             SettingsController.playlistPinned = false
         } else if (rightOpen === name) {
             rightOpen = "" // a pinned panel under it comes back
-        } else if (name === "youtube") {
-            SettingsController.youtubePanelPinned = false
         } else {
-            SettingsController.libraryPanelPinned = false
+            setRightPinned(name, false)
         }
+    }
+    // Home, YouTube Music or the Library pinned (pinning one unpins the others).
+    function setRightPinned(name, pinned) {
+        if (name === "home")
+            SettingsController.homePanelPinned = pinned
+        else if (name === "youtube")
+            SettingsController.youtubePanelPinned = pinned
+        else
+            SettingsController.libraryPanelPinned = pinned
     }
     // A column's pin button: the panel stays open either way.
     function togglePin(name) {
@@ -74,12 +83,10 @@ ApplicationWindow {
             SettingsController.playlistPinned = !queuePinned
         } else if (rightPinned === name) {
             rightOpen = name
-            name === "youtube" ? (SettingsController.youtubePanelPinned = false)
-                               : (SettingsController.libraryPanelPinned = false)
+            setRightPinned(name, false)
         } else {
             rightOpen = ""
-            name === "youtube" ? (SettingsController.youtubePanelPinned = true)
-                               : (SettingsController.libraryPanelPinned = true)
+            setRightPinned(name, true)
         }
     }
     // Half layout, the floating mini player tapped: make room for the player.
@@ -106,9 +113,9 @@ ApplicationWindow {
             rightOpen = rightPinned === "youtube" ? "" : "youtube"
         else if (libraryDrawer.opened)
             rightOpen = rightPinned === "library" ? "" : "library"
-        playlistDrawer.close()
-        youtubeDrawer.close()
-        libraryDrawer.close()
+        else if (homeDrawer.opened)
+            rightOpen = rightPinned === "home" ? "" : "home"
+        closeDrawers()
         if (layout === "half" && queueOpen && !queuePinned && rightOpen !== "")
             queueOpen = false
     }
@@ -155,39 +162,43 @@ ApplicationWindow {
 
     // The Now Playing buttons and the keyboard shortcuts (Ctrl+1 / 2 / 3) share these.
     // Phone size shows one panel at a time: opening one closes the others.
+    function closeDrawers() {
+        playlistDrawer.close()
+        youtubeDrawer.close()
+        libraryDrawer.close()
+        homeDrawer.close()
+    }
+    function toggleDrawer(drawer) {
+        if (drawer.opened) {
+            drawer.close()
+        } else {
+            closeDrawers()
+            drawer.open()
+        }
+    }
     function toggleQueue() {
-        if (compact) {
-            if (playlistDrawer.opened) {
-                playlistDrawer.close()
-            } else {
-                youtubeDrawer.close()
-                libraryDrawer.close()
-                playlistDrawer.open()
-            }
-        } else
+        if (compact)
+            toggleDrawer(playlistDrawer)
+        else
             playlistDocked ? closePanel("queue") : openPanel("queue")
     }
     function toggleYoutube() {
-        if (!compact)
+        if (compact)
+            toggleDrawer(youtubeDrawer)
+        else
             youtubeDocked ? closePanel("youtube") : openPanel("youtube")
-        else if (youtubeDrawer.opened)
-            youtubeDrawer.close()
-        else {
-            playlistDrawer.close()
-            libraryDrawer.close()
-            youtubeDrawer.open()
-        }
     }
     function toggleLibrary() {
-        if (!compact)
+        if (compact)
+            toggleDrawer(libraryDrawer)
+        else
             libraryDocked ? closePanel("library") : openPanel("library")
-        else if (libraryDrawer.opened)
-            libraryDrawer.close()
-        else {
-            playlistDrawer.close()
-            youtubeDrawer.close()
-            libraryDrawer.open()
-        }
+    }
+    function toggleHome() {
+        if (compact)
+            toggleDrawer(homeDrawer)
+        else
+            homeDocked ? closePanel("home") : openPanel("home")
     }
     // Ctrl+F: the Library's search if the Library is showing, else YouTube Music's.
     // A drawer takes the focus itself once it has opened, so a drawer that is
@@ -216,7 +227,7 @@ ApplicationWindow {
         dialogOpen: settingsDialog.visible || detailsDialog.visible || nameDialog.visible || confirmDialog.visible
                     || folderPicker.visible
         escapeEnabled: nowPlaying.lyricsOpen && !dialogOpen && !playlistDrawer.opened && !youtubeDrawer.opened
-                       && !libraryDrawer.opened
+                       && !libraryDrawer.opened && !homeDrawer.opened
         onEscapePressed: nowPlaying.lyricsOpen = false
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
@@ -230,6 +241,7 @@ ApplicationWindow {
     onPlaylistDockedChanged: if (playlistDocked) playlistDrawer.close()
     onYoutubeDockedChanged: if (youtubeDocked) youtubeDrawer.close()
     onLibraryDockedChanged: if (libraryDocked) libraryDrawer.close()
+    onHomeDockedChanged: if (homeDocked) homeDrawer.close()
 
     Rectangle {
         anchors.fill: parent
@@ -328,7 +340,7 @@ ApplicationWindow {
             }
         }
 
-        // YouTube or Library, one at a time: swapping them cross-fades in place.
+        // Home, YouTube or Library, one at a time: swapping them cross-fades in place.
         DockSlot {
             id: rightSlot
             docked: window.rightShown !== ""
@@ -359,6 +371,24 @@ ApplicationWindow {
                 visible: current || opacity > 0
                 z: current ? 1 : 0
                 transform: Translate { x: (1 - dockedYoutube.opacity) * 24 }
+
+                Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+            }
+
+            HomePanel {
+                id: dockedHome
+                anchors.fill: parent
+                pinned: window.rightPinned === "home"
+                showCloseButton: !pinned
+                onPinToggled: window.togglePin("home")
+                onCloseRequested: window.closePanel("home")
+
+                // Swapping: the outgoing panel fades out while this one fades and slides in.
+                readonly property bool current: rightSlot.rightPanel === "home"
+                opacity: current ? 1 : 0
+                visible: current || opacity > 0
+                z: current ? 1 : 0
+                transform: Translate { x: (1 - dockedHome.opacity) * 24 }
 
                 Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
             }
@@ -404,6 +434,7 @@ ApplicationWindow {
     // covered by a panel at phone size), a floating mini player above the
     // navigation bar stands in for it; tap the cover or title to bring it back.
     readonly property bool anyDrawerOpen: playlistDrawer.visible || youtubeDrawer.visible || libraryDrawer.visible
+                                          || homeDrawer.visible
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
@@ -420,29 +451,29 @@ ApplicationWindow {
         acceptsDrops: true
         onOpenPlayerRequested: {
             if (window.compact) {
-                playlistDrawer.close()
-                youtubeDrawer.close()
-                libraryDrawer.close()
+                window.closeDrawers()
             } else {
                 window.showPlayer()
             }
         }
     }
 
-    // The way around: Queue, YouTube Music, Library and Settings, always at the bottom.
+    // The way around: Home, Queue, YouTube Music, Library and Settings, always at the bottom.
     NavBar {
         id: navBar
         objectName: "navBar"
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Theme.cardGap
         anchors.horizontalCenter: parent.horizontalCenter
-        width: window.compact ? parent.width - 2 * Theme.cardGap : Math.min(parent.width - 2 * Theme.cardGap, 480)
+        width: window.compact ? parent.width - 2 * Theme.cardGap : Math.min(parent.width - 2 * Theme.cardGap, 560)
         height: implicitHeight
         z: 5
+        homeOpen: window.homeDocked || homeDrawer.visible
         queueOpen: window.playlistDocked || playlistDrawer.visible
         youtubeOpen: window.youtubeDocked || youtubeDrawer.visible
         libraryOpen: window.libraryDocked || libraryDrawer.visible
         settingsOpen: settingsDialog.visible
+        onHomeClicked: window.toggleHome()
         onQueueClicked: window.toggleQueue()
         onYoutubeClicked: window.toggleYoutube()
         onLibraryClicked: window.toggleLibrary()
@@ -526,6 +557,39 @@ ApplicationWindow {
                     youtubeDrawer.close()
                     settingsDialog.open()
                 }
+            }
+        }
+    }
+
+    // Home, sliding in from the right.
+    Drawer {
+        id: homeDrawer
+        objectName: "homeDrawer"
+        edge: Qt.RightEdge
+        enter: Transition {
+            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
+        }
+        exit: Transition {
+            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
+        }
+        width: window.width
+        height: window.drawerHeight
+        padding: 0
+        modal: false
+        dim: false
+        closePolicy: Popup.CloseOnEscape
+        interactive: window.compact
+        background: Item {}
+
+        DrawerCard {
+            drawer: homeDrawer
+            transformOrigin: Item.Right
+
+            HomePanel {
+                anchors.fill: parent
+                showPinButton: false
+                showCloseButton: true
+                onCloseRequested: homeDrawer.close()
             }
         }
     }
@@ -641,8 +705,7 @@ ApplicationWindow {
             if (!playlistDocked)
                 openPanel("queue")
         } else {
-            youtubeDrawer.close()
-            libraryDrawer.close()
+            closeDrawers()
             playlistDrawer.open()
         }
     }

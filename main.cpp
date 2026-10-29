@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).
-    HistoryController history(&player, &playlist, &playlists, &settings, nullptr);
+    HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);
     SessionController session(&player, &playlist, &playlists, &settings, nullptr);
     session.restore();
     VisualizerController visualizer(&player, &settings, nullptr);

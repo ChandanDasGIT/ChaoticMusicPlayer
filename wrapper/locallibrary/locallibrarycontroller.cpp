@@ -569,6 +569,20 @@ QVariantList LocalLibraryController::folderItems(const QString &path) const
     return out;
 }
 
+void LocalLibraryController::playAlbumOf(const QString &path)
+{
+    const Track *song = trackForPath(path);
+    if (!song || song->album.empty())
+        return;
+    const std::string key = albumKey(*song);
+    std::vector<Track> tracks;
+    for (const Track &t : m_tracks)
+        if (albumKey(t) == key)
+            tracks.push_back(t);
+    std::sort(tracks.begin(), tracks.end(), byAlbumOrder);
+    m_queue->playTitled(std::move(tracks), 0, QString::fromStdString(song->album), false);
+}
+
 QVariantList LocalLibraryController::albumItems(const QString &key) const
 {
     std::vector<Track> tracks;

@@ -84,7 +84,27 @@ bool ListeningHistory::append(const Play &play)
     return true;
 }
 
+bool ListeningHistory::remove(size_t index)
+{
+    if (index >= m_plays.size())
+        return false;
+    std::vector<Play> plays = m_plays;
+    plays.erase(plays.begin() + std::ptrdiff_t(index));
+    if (!save(plays))
+        return false;
+    m_plays = std::move(plays);
+    return true;
+}
+
 bool ListeningHistory::clear()
+{
+    if (!save({}))
+        return false;
+    m_plays.clear();
+    return true;
+}
+
+bool ListeningHistory::save(const std::vector<Play> &plays) const
 {
     std::error_code ec;
     fs::create_directories(m_file.parent_path(), ec);
@@ -95,12 +115,11 @@ bool ListeningHistory::clear()
         if (!out)
             return false;
         out << Header << '\n';
+        for (const Play &play : plays)
+            out << line(play) << '\n';
         if (!out)
             return false;
     }
     fs::rename(temp, m_file, ec);
-    if (ec)
-        return false;
-    m_plays.clear();
-    return true;
+    return !ec;
 }

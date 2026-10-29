@@ -18,6 +18,7 @@ constexpr const char *VolumeKey = "volume";
 constexpr const char *PinnedKey = "playlistPinned";
 constexpr const char *YoutubePinnedKey = "youtube.panelPinned";
 constexpr const char *LibraryPinnedKey = "library.panelPinned";
+constexpr const char *HomePinnedKey = "home.panelPinned";
 constexpr const char *ArtistAlbumWidthKey = "column.artistAlbum.width";
 constexpr const char *TrackWidthKey = "column.track.width";
 constexpr const char *DurationWidthKey = "column.duration.width";
@@ -157,8 +158,10 @@ void SettingsController::setYoutubePanelPinned(bool pinned)
     m_settings->setBool(YoutubePinnedKey, pinned);
     scheduleSave();
     emit youtubePanelPinnedChanged();
-    if (pinned)
+    if (pinned) {
         setLibraryPanelPinned(false);
+        setHomePanelPinned(false);
+    }
 }
 
 bool SettingsController::libraryPanelPinned() const
@@ -173,8 +176,28 @@ void SettingsController::setLibraryPanelPinned(bool pinned)
     m_settings->setBool(LibraryPinnedKey, pinned);
     scheduleSave();
     emit libraryPanelPinnedChanged();
-    if (pinned)
+    if (pinned) {
         setYoutubePanelPinned(false);
+        setHomePanelPinned(false);
+    }
+}
+
+bool SettingsController::homePanelPinned() const
+{
+    return m_settings->boolValue(HomePinnedKey, false);
+}
+
+void SettingsController::setHomePanelPinned(bool pinned)
+{
+    if (pinned == homePanelPinned())
+        return;
+    m_settings->setBool(HomePinnedKey, pinned);
+    scheduleSave();
+    emit homePanelPinnedChanged();
+    if (pinned) {
+        setYoutubePanelPinned(false);
+        setLibraryPanelPinned(false);
+    }
 }
 
 int SettingsController::artistAlbumWidth() const
