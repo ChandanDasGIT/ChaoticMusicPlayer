@@ -95,8 +95,9 @@ local music and can also browse and play YouTube Music.
   Settings.
 - The layout follows how much of the screen the window covers, on any
   monitor:
-  - **full screen**: the Queue, the player and Home, YouTube Music or the
-    Library side by side, sharing the width equally;
+  - **full screen**: the Queue or Home, the player, and YouTube Music, the
+    Library or Settings side by side, sharing the width equally (Home and
+    Settings slide up over the panel under them);
   - **half screen**: two columns at most; an opened panel can push the player
     aside, and a floating mini player stands in for it. Panels can be swiped
     away, or swiped in from the window's edge;

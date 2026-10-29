@@ -228,8 +228,9 @@ hook = '''    // ---- screenshot harness
         const QStringList steps = qEnvironmentVariable("SHOT_OPEN").split(QLatin1Char(' '), Qt::SkipEmptyParts);
         const auto columns = [&, findItems](const QString &label) {
             QObject *root = engine.rootObjects().constFirst();
-            std::printf("%-16s open=%s pinR=%s layout=%s queue=%d right=%s player=%d |", qPrintable(label), qPrintable(root->property("rightOpen").toString()), qPrintable(root->property("rightPinned").toString()),
-                        qPrintable(root->property("layout").toString()), root->property("playlistDocked").toInt(),
+            std::printf("%-16s open=%s pinR=%s pinL=%s layout=%s left=%s right=%s player=%d |", qPrintable(label), qPrintable(root->property("rightOpen").toString()), qPrintable(root->property("rightPinned").toString()),
+                        qPrintable(root->property("leftPinned").toString()), qPrintable(root->property("layout").toString()),
+                        qPrintable(root->property("leftShown").toString()),
                         qPrintable(root->property("rightShown").toString()), root->property("playerShown").toInt());
             for (const char *type : {"PlaylistPanel", "NowPlayingPanel", "YouTubePanel", "LibraryPanel", "MiniPlayer"})
                 for (QQuickItem *item : findItems(type))

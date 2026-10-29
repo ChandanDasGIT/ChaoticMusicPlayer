@@ -9,11 +9,12 @@ ApplicationWindow {
     // ---- Layout -------------------------------------------------------------------
     // Picked by how much of the screen the window covers, so a full-screen
     // window behaves the same on any monitor:
-    //  "wide" (most of the screen): columns Queue | Player | YouTube or Library;
+    //  "wide" (most of the screen): columns Queue or Home | Player | YouTube, Library or Settings;
     //  "half": two columns at most, so an opened panel can push the player out
     //          (a floating mini player then stands in for it);
     //  "compact" (phone size): the player alone, panels slide over it as drawers.
-    // The columns share the width equally. YouTube and Library take turns in the
+    // The columns share the width equally. Queue and Home take turns in the
+    // left-hand one (Home slides up over the Queue), YouTube and Library in the
     // right-hand one. A pinned panel stays open (also after a restart).
     property real screenWidthOverride: 0 // tests: pretend the screen is this wide
     readonly property real screenWidth: screenWidthOverride > 0 ? screenWidthOverride : Screen.width > 0 ? Screen.width : width
@@ -27,79 +28,86 @@ ApplicationWindow {
     readonly property bool compact: layout === "compact"
 
     // Opened without being pinned (wide / half layouts; compact uses the drawers).
-    property bool queueOpen: false
-    property string rightOpen: ""      // "home" / "youtube" / "library" / "settings", shown over a pinned one
+    property string leftOpen: ""       // "queue" / "home", shown over a pinned one
+    property string rightOpen: ""      // "youtube" / "library" / "settings", shown over a pinned one
     property bool playerRecalled: false // half: the player in place of two pinned panels
     property string lastOpened: ""     // the panel opened last pushes the player away from its side
-    readonly property bool queuePinned: SettingsController.playlistPinned
-    readonly property string rightPinned: SettingsController.homePanelPinned ? "home"
-                                        : SettingsController.youtubePanelPinned ? "youtube"
+    readonly property string leftPinned: SettingsController.playlistPinned ? "queue"
+                                       : SettingsController.homePanelPinned ? "home" : ""
+    readonly property string rightPinned: SettingsController.youtubePanelPinned ? "youtube"
                                         : SettingsController.libraryPanelPinned ? "library" : ""
     // What the columns show
-    readonly property bool playlistDocked: !compact && (queueOpen || queuePinned)
+    readonly property string leftShown: compact ? "" : leftOpen !== "" ? leftOpen : leftPinned
+    readonly property bool playlistDocked: leftShown === "queue"
+    readonly property bool homeDocked: leftShown === "home"
     readonly property string rightShown: compact || playerRecalled ? "" : rightOpen !== "" ? rightOpen : rightPinned
     readonly property bool youtubeDocked: rightShown === "youtube"
     readonly property bool libraryDocked: rightShown === "library"
-    readonly property bool homeDocked: rightShown === "home"
     // Settings: in the right-hand column (never pinned), or a sheet at phone size
     readonly property bool settingsShown: rightShown === "settings" || settingsSheet.shown
     onSettingsShownChanged: if (settingsShown && settingsPanel.page < 0) settingsPanel.intro()
-    readonly property bool playerShown: layout !== "half" || !(playlistDocked && rightShown !== "")
+    readonly property bool playerShown: layout !== "half" || !(leftShown !== "" && rightShown !== "")
 
+    function isLeft(name) {
+        return name === "queue" || name === "home"
+    }
     function openPanel(name) {
         playerRecalled = false
         lastOpened = name
-        if (name === "queue") {
-            queueOpen = true
+        if (isLeft(name)) {
+            leftOpen = name === leftPinned ? "" : name
             if (layout === "half")
                 rightOpen = "" // only one unpinned panel at a time
         } else {
             rightOpen = name === rightPinned ? "" : name
-            if (layout === "half" && !queuePinned)
-                queueOpen = false
+            if (layout === "half")
+                leftOpen = ""
         }
     }
     // Closing a pinned panel unpins it.
     function closePanel(name) {
-        if (name === "queue") {
-            queueOpen = false
-            SettingsController.playlistPinned = false
-        } else if (rightOpen === name) {
-            rightOpen = "" // a pinned panel under it comes back
-        } else {
-            setRightPinned(name, false)
-        }
-    }
-    // Home, YouTube Music or the Library pinned (pinning one unpins the others).
-    function setRightPinned(name, pinned) {
-        if (name === "home")
-            SettingsController.homePanelPinned = pinned
-        else if (name === "youtube")
-            SettingsController.youtubePanelPinned = pinned
+        if (isLeft(name) && leftOpen === name)
+            leftOpen = "" // a pinned panel under it comes back
+        else if (isLeft(name))
+            setPinned(name, false)
+        else if (rightOpen === name)
+            rightOpen = ""
         else
-            SettingsController.libraryPanelPinned = pinned
+            setPinned(name, false)
+    }
+    // Pinning a panel unpins the other one of its column (the one pinned last wins).
+    function setPinned(name, pinned) {
+        if (name === "queue" || name === "home") {
+            SettingsController.playlistPinned = name === "queue" ? pinned : pinned ? false : SettingsController.playlistPinned
+            SettingsController.homePanelPinned = name === "home" ? pinned : pinned ? false : SettingsController.homePanelPinned
+        } else {
+            SettingsController.youtubePanelPinned = name === "youtube" ? pinned : pinned ? false : SettingsController.youtubePanelPinned
+            SettingsController.libraryPanelPinned = name === "library" ? pinned : pinned ? false : SettingsController.libraryPanelPinned
+        }
     }
     // A column's pin button: the panel stays open either way.
     function togglePin(name) {
-        if (name === "queue") {
-            queueOpen = true
-            SettingsController.playlistPinned = !queuePinned
-        } else if (rightPinned === name) {
-            rightOpen = name
-            setRightPinned(name, false)
-        } else {
-            rightOpen = ""
-            setRightPinned(name, true)
-        }
+        const left = isLeft(name)
+        const wasPinned = (left ? leftPinned : rightPinned) === name
+        if (left)
+            leftOpen = wasPinned ? name : ""
+        else
+            rightOpen = wasPinned ? name : ""
+        setPinned(name, !wasPinned)
     }
     // Half layout, the floating mini player tapped: make room for the player.
     function showPlayer() {
         if (rightOpen !== "")
             rightOpen = ""
-        else if (queueOpen && !queuePinned)
-            queueOpen = false
+        else if (leftOpen !== "")
+            leftOpen = ""
         else
             playerRecalled = true
+    }
+    // Queue and Home used to sit in different columns, so both could be pinned.
+    Component.onCompleted: {
+        if (SettingsController.playlistPinned && SettingsController.homePanelPinned)
+            SettingsController.homePanelPinned = false
     }
 
     // Panels opened in one layout stay open in the next.
@@ -107,7 +115,8 @@ ApplicationWindow {
         playerRecalled = false
         if (compact) {
             settingsSheet.shown = rightOpen === "settings"
-            queueOpen = false
+            homeSheet.shown = leftOpen === "home"
+            leftOpen = ""
             rightOpen = ""
             return
         }
@@ -115,17 +124,17 @@ ApplicationWindow {
             settingsSheet.shown = false
             rightOpen = "settings"
         }
-        if (playlistDrawer.opened)
-            queueOpen = true
+        if (homeSheet.shown)
+            leftOpen = leftPinned === "home" ? "" : "home"
+        else if (playlistDrawer.opened)
+            leftOpen = leftPinned === "queue" ? "" : "queue"
         if (youtubeDrawer.opened)
             rightOpen = rightPinned === "youtube" ? "" : "youtube"
         else if (libraryDrawer.opened)
             rightOpen = rightPinned === "library" ? "" : "library"
-        else if (homeDrawer.opened)
-            rightOpen = rightPinned === "home" ? "" : "home"
         closeDrawers()
-        if (layout === "half" && queueOpen && !queuePinned && rightOpen !== "")
-            queueOpen = false
+        if (layout === "half" && leftOpen !== "" && rightOpen !== "")
+            leftOpen = ""
     }
 
     // Background tone from the playing track's cover (blended by the strength
@@ -172,10 +181,10 @@ ApplicationWindow {
     // Phone size shows one panel at a time: opening one closes the others.
     function closeDrawers() {
         settingsSheet.shown = false
+        homeSheet.shown = false
         playlistDrawer.close()
         youtubeDrawer.close()
         libraryDrawer.close()
-        homeDrawer.close()
     }
     function toggleDrawer(drawer) {
         if (drawer.opened) {
@@ -223,10 +232,13 @@ ApplicationWindow {
         settingsShown ? closeSettings() : openSettings()
     }
     function toggleHome() {
-        if (compact)
-            toggleDrawer(homeDrawer)
-        else
+        if (compact) {
+            const show = !homeSheet.shown
+            closeDrawers()
+            homeSheet.shown = show
+        } else {
             homeDocked ? closePanel("home") : openPanel("home")
+        }
     }
     // Ctrl+F: the Library's search if the Library is showing, else YouTube Music's.
     // A drawer takes the focus itself once it has opened, so a drawer that is
@@ -254,11 +266,13 @@ ApplicationWindow {
     AppShortcuts {
         dialogOpen: detailsDialog.visible || nameDialog.visible || confirmDialog.visible
                     || folderPicker.visible
-        escapeEnabled: !dialogOpen && (window.settingsShown || nowPlaying.lyricsOpen && !playlistDrawer.opened
-                       && !youtubeDrawer.opened && !libraryDrawer.opened && !homeDrawer.opened)
-        // Settings: back to its list, then closed; else the lyrics close
+        escapeEnabled: !dialogOpen && (window.settingsShown || homeSheet.shown || nowPlaying.lyricsOpen
+                       && !playlistDrawer.opened && !youtubeDrawer.opened && !libraryDrawer.opened)
+        // Settings: back to its list, then closed; the Home sheet closes; else the lyrics close
         onEscapePressed: {
-            if (window.settingsShown) {
+            if (homeSheet.shown) {
+                homeSheet.shown = false
+            } else if (window.settingsShown) {
                 if (!settingsPanel.back())
                     window.closeSettings()
             } else {
@@ -277,7 +291,7 @@ ApplicationWindow {
     onPlaylistDockedChanged: if (playlistDocked) playlistDrawer.close()
     onYoutubeDockedChanged: if (youtubeDocked) youtubeDrawer.close()
     onLibraryDockedChanged: if (libraryDocked) libraryDrawer.close()
-    onHomeDockedChanged: if (homeDocked) homeDrawer.close()
+    onHomeDockedChanged: if (homeDocked) homeSheet.shown = false
 
     Rectangle {
         anchors.fill: parent
@@ -297,7 +311,7 @@ ApplicationWindow {
                                                      + rightSlot.openness)
         readonly property real share: (width - (openColumns - 1) * Theme.cardGap) / openColumns
         // A column opened or closed: back to equal widths, even after the dividers were dragged.
-        readonly property string columns: [window.playlistDocked, window.playerShown, window.rightShown].join()
+        readonly property string columns: [window.leftShown !== "", window.playerShown, window.rightShown].join()
         onColumnsChanged: [playlistSlot, playerSlot, rightSlot].forEach((slot) => slot.equalize())
 
         anchors.fill: parent
@@ -325,30 +339,79 @@ ApplicationWindow {
             }
         }
 
+        // Queue or Home: Home slides up from the bottom over the Queue, and back down.
         DockSlot {
             id: playlistSlot
-            docked: window.playlistDocked
+            docked: window.leftShown !== ""
             share: split.share
             minimumWidth: 240
             leftSide: true
             SplitView.fillWidth: !window.playerShown && window.rightShown === ""
-            // Song rows keep their own swipe (delete): the header and empty space put the Queue away.
+            // Song rows keep their own swipe (delete): the header and empty space put the panel away.
             swipeEnabled: window.layout === "half"
             swipeAnywhere: false
-            onSwipedAway: window.closePanel("queue")
+            onSwipedAway: window.closePanel(shown !== "" ? shown : leftPanel)
+
+            // The panel opened last (the left edge swipe brings it back)
+            property string leftPanel: "queue"
+            // The Queue shows under Home only if it was showing when Home came up
+            property bool queueUnder: true
+            readonly property string shown: window.leftShown
+            property string previous: ""
+            onShownChanged: {
+                if (shown === "home")
+                    queueUnder = previous === "queue"
+                else if (shown === "queue")
+                    queueUnder = true
+                if (shown !== "")
+                    leftPanel = shown
+                previous = shown
+            }
 
             PlaylistPanel {
                 id: dockedPlaylist
                 anchors.fill: parent
                 acceptsDrops: true
                 showPinButton: true
-                pinned: window.queuePinned
+                pinned: window.leftPinned === "queue"
                 showCloseButton: !pinned
+                visible: playlistSlot.queueUnder || homeCard.down > 0
                 onPinToggled: window.togglePin("queue")
                 onCloseRequested: window.closePanel("queue")
                 onDetailsRequested: (path) => detailsDialog.show(path)
                 onImportM3uRequested: window.importM3u()
                 onExportM3uRequested: (id, name) => window.exportM3u(id, name)
+            }
+
+            Item {
+                anchors.fill: parent
+                z: 3
+                clip: true
+                visible: homeCard.y < height
+
+                // Solid, so the Queue doesn't show through
+                Rectangle {
+                    id: homeCard
+                    readonly property bool up: window.leftShown === "home"
+                    // 0: in place, 1: below the column (a fraction: see settingsCard)
+                    property real down: up ? 0 : 1
+                    width: parent.width
+                    height: parent.height
+                    y: down * (height + Theme.cardGap)
+                    radius: Theme.radiusCard
+                    color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
+
+                    Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+
+                    HomePanel {
+                        id: dockedHome
+                        anchors.fill: parent
+                        pinned: window.leftPinned === "home"
+                        showCloseButton: !pinned
+                        onPinToggled: window.togglePin("home")
+                        onCloseRequested: window.closePanel("home")
+                    }
+                }
             }
         }
 
@@ -358,7 +421,7 @@ ApplicationWindow {
             docked: window.playerShown
             share: split.share
             minimumWidth: 280
-            leftSide: window.lastOpened !== "queue"
+            leftSide: !window.isLeft(window.lastOpened)
             SplitView.fillWidth: window.playerShown
 
             NowPlayingPanel {
@@ -378,7 +441,7 @@ ApplicationWindow {
             }
         }
 
-        // Home, YouTube or Library, one at a time: swapping them cross-fades in place.
+        // YouTube or Library, one at a time: swapping them cross-fades in place.
         DockSlot {
             id: rightSlot
             docked: window.rightShown !== ""
@@ -421,24 +484,6 @@ ApplicationWindow {
                 visible: current || opacity > 0
                 z: current ? 1 : 0
                 transform: Translate { x: (1 - dockedYoutube.opacity) * 24 }
-
-                Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
-            }
-
-            HomePanel {
-                id: dockedHome
-                anchors.fill: parent
-                pinned: window.rightPinned === "home"
-                showCloseButton: !pinned
-                onPinToggled: window.togglePin("home")
-                onCloseRequested: window.closePanel("home")
-
-                // Swapping: the outgoing panel fades out while this one fades and slides in.
-                readonly property bool current: rightSlot.face === "home"
-                opacity: current ? 1 : 0
-                visible: current || opacity > 0
-                z: current ? 1 : 0
-                transform: Translate { x: (1 - dockedHome.opacity) * 24 }
 
                 Behavior on opacity { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
             }
@@ -494,9 +539,9 @@ ApplicationWindow {
     // Half layout: drag in from an empty window edge to bring that side's panel back.
     EdgeSwipe {
         anchors.left: parent.left
-        enabled: window.layout === "half" && !window.playlistDocked
+        enabled: window.layout === "half" && window.leftShown === ""
         inward: 1
-        onTriggered: window.openPanel("queue")
+        onTriggered: window.openPanel(playlistSlot.leftPanel)
     }
     EdgeSwipe {
         anchors.right: parent.right
@@ -509,7 +554,7 @@ ApplicationWindow {
     // covered by a panel at phone size), a floating mini player above the
     // navigation bar stands in for it; tap the cover or title to bring it back.
     readonly property bool anyDrawerOpen: playlistDrawer.visible || youtubeDrawer.visible || libraryDrawer.visible
-                                          || homeDrawer.visible || settingsSheet.shown
+                                          || homeSheet.shown || settingsSheet.shown
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
@@ -543,7 +588,7 @@ ApplicationWindow {
         width: window.compact ? parent.width - 2 * Theme.cardGap : Math.min(parent.width - 2 * Theme.cardGap, 560)
         height: implicitHeight
         z: 5
-        homeOpen: window.homeDocked || homeDrawer.visible
+        homeOpen: window.homeDocked || homeSheet.shown
         queueOpen: window.playlistDocked || playlistDrawer.visible
         youtubeOpen: window.youtubeDocked || youtubeDrawer.visible
         libraryOpen: window.libraryDocked || libraryDrawer.visible
@@ -633,40 +678,6 @@ ApplicationWindow {
         }
     }
 
-    // Home, sliding in from the right.
-    Drawer {
-        id: homeDrawer
-        objectName: "homeDrawer"
-        edge: Qt.RightEdge
-        enter: Transition {
-            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
-        }
-        exit: Transition {
-            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
-        }
-        width: window.width
-        height: window.drawerHeight
-        padding: 0
-        modal: false
-        dim: false
-        closePolicy: Popup.CloseOnEscape
-        interactive: window.compact
-        background: Item {}
-
-        DrawerCard {
-            drawer: homeDrawer
-            transformOrigin: Item.Right
-
-            HomePanel {
-                objectName: "homePanel"
-                anchors.fill: parent
-                showPinButton: false
-                showCloseButton: true
-                onCloseRequested: homeDrawer.close()
-            }
-        }
-    }
-
     // The local library, sliding in from the right.
     Drawer {
         id: libraryDrawer
@@ -728,6 +739,37 @@ ApplicationWindow {
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
             Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+        }
+    }
+
+    // Phone size: Home as a sheet sliding up, like Settings.
+    Item {
+        width: window.width
+        height: window.drawerHeight
+        clip: true
+        z: 4
+        visible: homeSheet.y < height
+
+        Rectangle {
+            id: homeSheet
+            property bool shown: false
+            property real down: shown ? 0 : 1 // as for settingsCard
+            x: Theme.cardGap
+            width: parent.width - 2 * Theme.cardGap
+            height: parent.height - 2 * Theme.cardGap
+            y: Theme.cardGap + down * (parent.height - Theme.cardGap)
+            radius: Theme.radiusCard
+            color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
+
+            Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+
+            HomePanel {
+                objectName: "homePanel"
+                anchors.fill: parent
+                showPinButton: false
+                showCloseButton: true
+                onCloseRequested: homeSheet.shown = false
+            }
         }
     }
 
