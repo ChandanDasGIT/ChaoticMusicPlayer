@@ -6,13 +6,42 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 DBus Network)
+# ---------------------------------------------------------------------------
+# Platforms: one code base for Linux, Windows and Android. Code that only
+# works on one of them lives behind a small interface with one .cpp per
+# platform; the lists below pick the right ones (see release/README.md).
+# ---------------------------------------------------------------------------
+if(ANDROID)
+    set(CMP_PLATFORM android)
+elseif(WIN32)
+    set(CMP_PLATFORM windows)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(CMP_PLATFORM linux)
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+message(STATUS "Building for ${CMP_PLATFORM}")
+
+# Warnings, and UTF-8 source files with Microsoft's compiler
+if(MSVC)
+    set(CMP_WARNINGS /W3 /utf-8 /Zc:__cplusplus)
+else()
+    set(CMP_WARNINGS -Wall -Wextra)
+endif()
+
+set(CMP_QT_COMPONENTS Quick QuickControls2 Network)
+if(CMP_PLATFORM STREQUAL "linux")
+    list(APPEND CMP_QT_COMPONENTS DBus) # media controls (MPRIS), notifications
+endif()
+find_package(Qt6 6.8 REQUIRED COMPONENTS ${CMP_QT_COMPONENTS})
 qt_standard_project_setup(REQUIRES 6.8)
 
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
-pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3)
+if(CMP_PLATFORM STREQUAL "linux")
+    pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3) # sound output
+endif()
 pkg_check_modules(TAGLIB REQUIRED IMPORTED_TARGET taglib)
 pkg_check_modules(ICU REQUIRED IMPORTED_TARGET icu-uc icu-i18n)
 find_package(CURL REQUIRED)
@@ -85,10 +114,10 @@ add_library(backend STATIC
 
 set_target_properties(backend PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_include_directories(backend PUBLIC ${CMAKE_SOURCE_DIR})
-target_compile_options(backend PRIVATE -Wall -Wextra)
+target_compile_options(backend PRIVATE ${CMP_WARNINGS})
 target_link_libraries(backend PRIVATE
     PkgConfig::FFMPEG
-    PkgConfig::PIPEWIRE
+    $<$<STREQUAL:${CMP_PLATFORM},linux>:PkgConfig::PIPEWIRE>
     PkgConfig::TAGLIB
     PkgConfig::ICU
     CURL::libcurl
@@ -266,7 +295,7 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
     wrapper/youtube
 )
 
-target_compile_options(ChaoticMusicPlayer PRIVATE -Wall -Wextra)
+target_compile_options(ChaoticMusicPlayer PRIVATE ${CMP_WARNINGS})
 
 # Shown in Settings > About (QCoreApplication::applicationVersion).
 target_compile_definitions(ChaoticMusicPlayer PRIVATE APP_VERSION="${PROJECT_VERSION}")
@@ -275,7 +304,7 @@ target_link_libraries(ChaoticMusicPlayer PRIVATE
     backend
     Qt6::Quick
     Qt6::QuickControls2
-    Qt6::DBus
+    $<$<STREQUAL:${CMP_PLATFORM},linux>:Qt6::DBus>
     Qt6::Network
     chaoticstyleplugin
 )

@@ -1,0 +1,26 @@
+# Builds the app on every push and pull request, so a change that breaks a
+# platform shows up at once. (More platforms join as they are added; releases
+# have their own workflow.)
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Install build tools and libraries
+        run: >
+          dnf install -y --setopt=install_weak_deps=False
+          git gcc-c++ cmake ninja-build pkgconf
+          qt6-qtbase-devel qt6-qtbase-private-devel qt6-qtdeclarative-devel
+          ffmpeg-free-devel pipewire-devel taglib-devel libicu-devel libcurl-devel json-devel
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake --preset linux-release
+      - name: Build
+        run: cmake --build --preset linux-release

@@ -2,12 +2,17 @@
 # Adds ChaoticMusicPlayer to your app launcher (for your user only):
 #   ~/.local/share/applications/ChaoticMusicPlayer.desktop
 #   ~/.local/share/icons/hicolor/scalable/apps/chaoticmusicplayer.svg
-# It starts the build in this project (build/ChaoticMusicPlayer); run it again
-# if you move the project. Undo with scripts/uninstall-desktop.sh.
+# It starts the build in this project (build/linux-release/ChaoticMusicPlayer
+# or build/ChaoticMusicPlayer, whichever was built last); run it again if you
+# move the project or switch builds. Undo with scripts/uninstall-desktop.sh.
 set -euo pipefail
 
 project="$(cd "$(dirname "$0")/.." && pwd)"
 binary="$project/build/ChaoticMusicPlayer"
+preset="$project/build/linux-release/ChaoticMusicPlayer"
+if [ -x "$preset" ] && { [ ! -x "$binary" ] || [ "$preset" -nt "$binary" ]; }; then
+    binary="$preset"
+fi
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
 apps="$data/applications"
 icons="$data/icons/hicolor/scalable/apps"

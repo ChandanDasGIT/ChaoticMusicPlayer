@@ -163,10 +163,13 @@ sudo pacman -S base-devel cmake ninja qt6-base qt6-declarative ffmpeg pipewire t
 ## Build and run
 
 ```sh
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-./build/ChaoticMusicPlayer
+cmake --preset linux-release
+cmake --build --preset linux-release
+./build/linux-release/ChaoticMusicPlayer
 ```
+
+Packaging and releases (Windows, Android and Linux packages) are described in
+[release/README.md](release/README.md).
 
 To add it to your app launcher (for your user only), run
 `scripts/install-desktop.sh` after building; `scripts/uninstall-desktop.sh`
