@@ -2,6 +2,7 @@
 
 #include <QDBusAbstractAdaptor>
 #include <QDBusObjectPath>
+#include <QGuiApplication>
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
@@ -57,7 +58,7 @@ public:
     bool fullscreen() const { return false; }
     bool hasTrackList() const { return false; }
     QString identity() const { return QStringLiteral("ChaoticMusicPlayer"); }
-    QString desktopEntry() const { return QStringLiteral("ChaoticMusicPlayer"); }
+    QString desktopEntry() const { return QGuiApplication::desktopFileName(); }
     // OpenUri is not supported, so both lists are empty (as the spec asks).
     QStringList supportedUriSchemes() const { return {}; }
     QStringList supportedMimeTypes() const { return {}; }

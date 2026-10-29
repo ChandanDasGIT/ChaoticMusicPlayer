@@ -46,7 +46,8 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationName("ChaoticMusicPlayer");
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION)); // from CMake (project version)
     QGuiApplication::setOrganizationName("ChaoticMusicPlayer");
-    QGuiApplication::setDesktopFileName("ChaoticMusicPlayer"); // app id; matches MPRIS DesktopEntry
+    // The app id: its desktop file's name (release/linux), for the window, media controls and notifications
+    QGuiApplication::setDesktopFileName(QStringLiteral("io.github.chandandasgit.ChaoticMusicPlayer"));
     // Window / task bar icon (the launcher uses the installed copy, see scripts/install-desktop.sh).
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/ChaoticMusicPlayer/resources/icons/chaoticmusicplayer.svg")));
 

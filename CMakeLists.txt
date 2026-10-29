@@ -347,6 +347,18 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
 
 target_compile_options(ChaoticMusicPlayer PRIVATE ${CMP_WARNINGS})
 
+# Linux install (Flatpak, distribution packages): the app, its launcher entry,
+# icon and metainfo, named by the app id (release/linux).
+if(CMP_PLATFORM STREQUAL "linux")
+    include(GNUInstallDirs)
+    set(CMP_APP_ID io.github.chandandasgit.ChaoticMusicPlayer)
+    install(TARGETS ChaoticMusicPlayer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES release/linux/${CMP_APP_ID}.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES release/linux/${CMP_APP_ID}.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+    install(FILES resources/icons/chaoticmusicplayer.svg
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps RENAME ${CMP_APP_ID}.svg)
+endif()
+
 # yt-dlp updates itself (wrapper/youtube/ytdlpmanager.h). Off for builds whose
 # store updates yt-dlp and forbids downloads at runtime (Flathub).
 option(CMP_YTDLP_SELF_UPDATE "Let the app download yt-dlp updates" ON)

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What software centers (GNOME Software, KDE Discover, Flathub) show about the app. -->
+<component type="desktop-application">
+  <id>io.github.chandandasgit.ChaoticMusicPlayer</id>
+  <name>ChaoticMusicPlayer</name>
+  <summary>Play your music library, playlists and YouTube Music</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <developer id="io.github.chandandasgit">
+    <name>Chandan Das</name>
+  </developer>
+  <description>
+    <p>
+      A music player for your own music and YouTube Music, in one window that
+      fits any screen: full screen, half the screen or phone size.
+    </p>
+    <ul>
+      <li>Your library by songs, albums, artists and folders, with live search</li>
+      <li>A queue, playlists and smart playlists that fill themselves</li>
+      <li>Home: your mix, what you played recently and most, and your listening stats</li>
+      <li>YouTube Music: search songs, albums and artists, your library and mixes</li>
+      <li>Synced lyrics, album art found online, and a tag editor</li>
+      <li>Gapless playback or fades, a 10-band equalizer, ReplayGain and a sleep timer</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.chandandasgit.ChaoticMusicPlayer.desktop</launchable>
+  <url type="homepage">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
+  <url type="bugtracker">https://github.com/ChandanDasGIT/ChaoticMusicPlayer/issues</url>
+  <url type="vcs-browser">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>music</keyword>
+    <keyword>player</keyword>
+    <keyword>youtube</keyword>
+    <keyword>lyrics</keyword>
+  </keywords>
+  <provides>
+    <binary>ChaoticMusicPlayer</binary>
+  </provides>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-30">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

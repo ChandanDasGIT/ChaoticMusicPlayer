@@ -41,6 +41,19 @@ forbids downloads at runtime (Flathub).
 | Windows | portable ZIP, installer EXE (NSIS), MSI |
 | Android | APK |
 
+## Linux packages (`release/linux/`)
+
+- `io.github.chandandasgit.ChaoticMusicPlayer.desktop` / `.metainfo.xml`: the
+  app's launcher entry and what software centers show; every package uses
+  them (the app id is also the app's desktop name).
+- `make-packages.sh <build> <output>`: the AppImage and the tarball. Both hold
+  the app with Qt, its libraries and yt-dlp (linuxdeploy). They run on systems
+  as new as the one that built them, so CI builds them on Ubuntu 24.04.
+- `install-app.sh` / `uninstall-app.sh`: inside the tarball; installs for the
+  user in `~/.local/opt/ChaoticMusicPlayer` with a launcher entry.
+- `flatpak/`: the Flatpak manifest (KDE runtime). Built in CI with Flathub's
+  own tools; for Flathub, see the notes at its top.
+
 ## Building locally
 
 Linux:

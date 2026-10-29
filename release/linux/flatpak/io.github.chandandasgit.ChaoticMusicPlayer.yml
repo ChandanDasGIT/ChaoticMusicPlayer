@@ -1,0 +1,80 @@
+# Flatpak build of ChaoticMusicPlayer (KDE runtime: Qt 6.10; FFmpeg, PipeWire,
+# ICU and curl come with the runtime). Every download is pinned by checksum.
+#
+# For Flathub later: the app's source below becomes its git repository at a
+# release tag, and -DCMP_YTDLP_SELF_UPDATE=OFF goes into its config-opts
+# (Flathub updates yt-dlp through the x-checker-data below and forbids apps
+# downloading code at runtime).
+id: io.github.chandandasgit.ChaoticMusicPlayer
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+command: ChaoticMusicPlayer
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --share=network                       # YouTube Music, covers, lyrics
+  - --filesystem=xdg-run/pipewire-0       # sound (PipeWire)
+  - --filesystem=xdg-music                # your music
+  - --filesystem=home                     # music folders anywhere in home, tag editor
+  - --filesystem=/media                   # other disks and USB sticks
+  - --filesystem=/run/media
+  - --filesystem=/mnt
+  - --own-name=org.mpris.MediaPlayer2.chaoticmusicplayer  # media controls
+  - --talk-name=org.freedesktop.Notifications             # song-change notifications
+
+modules:
+  - name: taglib
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DBUILD_TESTING=OFF
+      - -DBUILD_EXAMPLES=OFF
+    sources:
+      - type: archive
+        url: https://github.com/taglib/taglib/releases/download/v2.3.2/taglib-2.3.2.tar.gz
+        sha256: 3ca2d8afaa7f1cf7f6ed10e511ebc368bfacd6dcaa3dbfa690b89e502e8963dc
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+
+  - name: nlohmann-json
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DJSON_BuildTests=OFF
+    sources:
+      - type: archive
+        url: https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+        sha256: 42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+    cleanup:
+      - '*'
+
+  # yt-dlp's pure Python build (the runtime has Python); the app keeps it up to date
+  - name: yt-dlp
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 yt-dlp /app/bin/yt-dlp
+    sources:
+      - type: file
+        url: https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp
+        sha256: e51e69e89489f199530f13d32a4342da3ddb2cf34842f364603a066db05afbf3
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest
+          version-query: .tag_name
+          url-query: '.assets[] | select(.name=="yt-dlp") | .browser_download_url'
+
+  - name: chaoticmusicplayer
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: dir
+        path: ../../..
+        skip:
+          - build
+          - .git

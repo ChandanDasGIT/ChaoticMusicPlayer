@@ -3,12 +3,13 @@
 # playlists in ~/.config and ~/.local/share/ChaoticMusicPlayer are kept).
 set -euo pipefail
 
+id=io.github.chandandasgit.ChaoticMusicPlayer
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
 apps="$data/applications"
-desktop="$apps/ChaoticMusicPlayer.desktop"
-icon="$data/icons/hicolor/scalable/apps/chaoticmusicplayer.svg"
+icons="$data/icons/hicolor/scalable/apps"
 
-for file in "$desktop" "$icon"; do
+# (also the names from before the app had its id)
+for file in "$apps/$id.desktop" "$icons/$id.svg" "$apps/ChaoticMusicPlayer.desktop" "$icons/chaoticmusicplayer.svg"; do
     if [ -e "$file" ]; then
         rm -f -- "$file"
         echo "Removed $file"

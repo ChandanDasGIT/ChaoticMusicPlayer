@@ -6,6 +6,7 @@
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QGuiApplication>
 #include <QUrl>
 
 namespace {
@@ -24,7 +25,7 @@ QString plain(QString text)
 
 void NotificationController::send(const QString &title, const QString &subtitle, const QString &cover)
 {
-    QVariantMap hints{{QStringLiteral("desktop-entry"), QStringLiteral("ChaoticMusicPlayer")},
+    QVariantMap hints{{QStringLiteral("desktop-entry"), QGuiApplication::desktopFileName()},
                       {QStringLiteral("category"), QStringLiteral("x-gnome.music")},
                       {QStringLiteral("urgency"), QVariant::fromValue(uchar(0))},
                       {QStringLiteral("transient"), true}};
@@ -35,7 +36,7 @@ void NotificationController::send(const QString &title, const QString &subtitle,
                                                        QStringLiteral("/org/freedesktop/Notifications"),
                                                        QStringLiteral("org.freedesktop.Notifications"),
                                                        QStringLiteral("Notify"));
-    call << QStringLiteral("ChaoticMusicPlayer") << m_lastId << QStringLiteral("chaoticmusicplayer") << title
+    call << QStringLiteral("ChaoticMusicPlayer") << m_lastId << QGuiApplication::desktopFileName() << title
          << plain(subtitle) << QStringList() << hints << ShownMs;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {
