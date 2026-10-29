@@ -57,7 +57,7 @@ Rectangle {
         id: area
         anchors.fill: parent
         anchors.topMargin: 56
-        anchors.bottomMargin: Theme.padding
+        anchors.bottomMargin: 4
     }
 
     Column {
@@ -65,12 +65,10 @@ Rectangle {
 
         // Height of everything except the cover, so the cover takes what is left.
         readonly property real otherHeight: spacer.height + titleLabel.height + subtitleLabel.height
-                                            + seekBar.height + transport.height + volume.height
-                                            + 6 * spacing
-                                            + (visualizer.visible ? visualizer.height + spacing : 0)
+                                            + seekBar.height + controls.height + 5 * spacing
 
         anchors.centerIn: area
-        width: Math.min(area.width - 4 * Theme.padding, 420)
+        width: Math.min(area.width - 4 * Theme.padding, 520)
         spacing: Theme.padding
 
         // Square, shrinks to leave room for the controls.
@@ -135,24 +133,31 @@ Rectangle {
             onDetailsRequested: root.detailsRequested()
         }
 
-        TransportControls {
-            id: transport
-            anchors.horizontalCenter: parent.horizontalCenter
-            lyricsOpen: root.lyricsOpen
-            onLyricsToggled: root.lyricsOpen = !root.lyricsOpen
-        }
+        // The controls, kept close together: buttons and toggles, volume, visualizer
+        Column {
+            id: controls
+            width: parent.width
+            spacing: 4
 
-        VolumeSlider {
-            id: volume
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, 290)
-            onEqualizerRequested: root.equalizerRequested()
-        }
+            TransportControls {
+                id: transport
+                anchors.horizontalCenter: parent.horizontalCenter
+                lyricsOpen: root.lyricsOpen
+                onLyricsToggled: root.lyricsOpen = !root.lyricsOpen
+            }
 
-        Visualizer {
-            id: visualizer
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, 260)
+            VolumeSlider {
+                id: volume
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width, 290)
+                onEqualizerRequested: root.equalizerRequested()
+            }
+
+            Visualizer {
+                id: visualizer
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width, 260)
+            }
         }
     }
 
