@@ -16,8 +16,11 @@ public:
     // yt-dlp's version, or nullopt if it is not installed.
     static std::optional<std::string> version();
 
+    enum class AudioQuality { Best, Lowest }; // highest / lowest bitrate stream
+
     // Direct audio stream address for a video (expires after a few hours).
-    static std::optional<std::string> streamUrl(const std::string &videoId, const std::string &cookiesBrowser);
+    static std::optional<std::string> streamUrl(const std::string &videoId, const std::string &cookiesBrowser,
+                                                AudioQuality quality = AudioQuality::Best);
 
     // The videos behind a link: one for a video link, all of them for a playlist.
     // nullopt = yt-dlp failed (bad link, offline, not signed in, ...).

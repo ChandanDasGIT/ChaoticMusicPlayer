@@ -856,6 +856,38 @@ Popup {
 
                         SettingsRow {
                             Layout.fillWidth: true
+                            title: qsTr("Audio quality")
+                            description: SettingsController.ytQuality === SettingsController.YtAuto
+                                         ? qsTr("The best sound, but the smallest streams on a metered connection (e.g. a phone hotspot).")
+                                         : SettingsController.ytQuality === SettingsController.YtBest
+                                           ? qsTr("Always the best sound YouTube Music has (up to 256 kbps with Premium).")
+                                           : qsTr("Always the smallest streams, to save data.")
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Repeater {
+                                model: [
+                                    { value: SettingsController.YtAuto, name: qsTr("Auto") },
+                                    { value: SettingsController.YtBest, name: qsTr("Best") },
+                                    { value: SettingsController.YtLowest, name: qsTr("Lowest") }
+                                ]
+
+                                delegate: PillButton {
+                                    required property var modelData
+
+                                    text: modelData.name
+                                    implicitHeight: 32
+                                    active: SettingsController.ytQuality === modelData.value
+                                    onClicked: SettingsController.ytQuality = modelData.value
+                                }
+                            }
+                        }
+
+                        SettingsRow {
+                            Layout.fillWidth: true
                             title: qsTr("yt-dlp")
                             description: YouTubeController.available
                                          ? qsTr("Installed (version %1). It plays YouTube songs; keep it up to date.").arg(YouTubeController.ytDlpVersion)

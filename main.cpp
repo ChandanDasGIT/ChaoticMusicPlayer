@@ -18,6 +18,7 @@
 #include <QFontDatabase>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QNetworkInformation>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QWindow>
@@ -75,6 +76,20 @@ int main(int argc, char *argv[])
     player.setYtCookiesBrowser(settings.ytCookiesBrowser());
     QObject::connect(&settings, &SettingsController::ytCookiesBrowserChanged,
                      &player, [&] { player.setYtCookiesBrowser(settings.ytCookiesBrowser()); });
+
+    // YouTube audio quality. Auto takes the smallest streams on a metered
+    // connection (e.g. a phone hotspot), as NetworkManager reports it.
+    QNetworkInformation::loadBackendByFeatures(QNetworkInformation::Feature::Metered);
+    const auto applyYtQuality = [&] {
+        const QNetworkInformation *network = QNetworkInformation::instance();
+        const bool metered = network && network->isMetered();
+        player.setYtLowestQuality(settings.ytQuality() == SettingsController::YtLowest
+                                  || (settings.ytQuality() == SettingsController::YtAuto && metered));
+    };
+    applyYtQuality();
+    QObject::connect(&settings, &SettingsController::ytQualityChanged, &player, applyYtQuality);
+    if (const QNetworkInformation *network = QNetworkInformation::instance())
+        QObject::connect(network, &QNetworkInformation::isMeteredChanged, &player, applyYtQuality);
 
     // Remember the volume and the output device between sessions.
     player.setOutputDevice(settings.outputDevice());

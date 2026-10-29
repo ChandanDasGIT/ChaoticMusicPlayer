@@ -1,5 +1,7 @@
 #pragma once
 
+#include "backend/youtube/ytdlp/ytdlp.h"
+
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -34,6 +36,7 @@ public:
     void prefetch(const std::string &path);
 
     void setCookiesBrowser(const std::string &browser);
+    void setQuality(YtDlp::AudioQuality quality); // for the songs resolved from now on
 
     // Why the last resolve failed, in plain words ("" = no failure yet).
     std::string lastError() const;
@@ -53,6 +56,7 @@ private:
     std::set<std::string> m_resolving;               // videoIds being resolved right now
     std::deque<std::string> m_prefetchQueue;
     std::string m_cookiesBrowser;
+    YtDlp::AudioQuality m_quality = YtDlp::AudioQuality::Best;
     std::string m_lastError;
     int64_t m_limitedUntil = 0; // unix seconds: no background prefetches before this
     bool m_quit = false;

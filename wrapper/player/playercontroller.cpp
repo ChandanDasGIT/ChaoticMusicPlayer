@@ -192,6 +192,11 @@ void PlayerController::setYtCookiesBrowser(const QString &browser)
     m_resolver->setCookiesBrowser(browser.toStdString());
 }
 
+void PlayerController::setYtLowestQuality(bool lowest)
+{
+    m_resolver->setQuality(lowest ? YtDlp::AudioQuality::Lowest : YtDlp::AudioQuality::Best);
+}
+
 void PlayerController::refreshOutputDevices()
 {
     m_probePool.start([this] {

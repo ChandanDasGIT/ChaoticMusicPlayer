@@ -46,6 +46,7 @@ constexpr const char *YtLookupKey = "youtube.backgroundLookup";
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
+constexpr const char *YtQualityKey = "youtube.quality";
 constexpr int MaxYtSearchHistory = 50;
 constexpr const char *YtCookiesKey = "youtube.cookiesBrowser";
 constexpr const char *TintStrengthKey = "appearance.tintStrength";
@@ -512,6 +513,20 @@ void SettingsController::setYtQueueMix(bool enabled)
     m_settings->setBool(YtQueueMixKey, enabled);
     scheduleSave();
     emit ytQueueMixChanged();
+}
+
+SettingsController::YtQuality SettingsController::ytQuality() const
+{
+    return YtQuality(qBound(int(YtAuto), m_settings->intValue(YtQualityKey, YtAuto), int(YtLowest)));
+}
+
+void SettingsController::setYtQuality(YtQuality quality)
+{
+    if (quality == ytQuality())
+        return;
+    m_settings->setInt(YtQualityKey, int(quality));
+    scheduleSave();
+    emit ytQualityChanged();
 }
 
 QStringList SettingsController::ytSearchHistory() const

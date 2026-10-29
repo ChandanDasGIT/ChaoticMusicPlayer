@@ -68,6 +68,7 @@ std::optional<std::string> StreamResolver::resolve(const std::string &path)
     const std::string id = videoId(path);
 
     std::string cookies;
+    YtDlp::AudioQuality quality;
     {
         std::unique_lock lock(m_mutex);
         // Someone (e.g. a prefetch) is already on it: wait for that result.
@@ -79,9 +80,10 @@ std::optional<std::string> StreamResolver::resolve(const std::string &path)
             return std::nullopt;
         m_resolving.insert(id);
         cookies = m_cookiesBrowser;
+        quality = m_quality;
     }
 
-    const std::optional<std::string> url = YtDlp::streamUrl(id, cookies);
+    const std::optional<std::string> url = YtDlp::streamUrl(id, cookies, quality);
 
     {
         std::lock_guard lock(m_mutex);
@@ -121,6 +123,15 @@ void StreamResolver::setCookiesBrowser(const std::string &browser)
     if (browser != m_cookiesBrowser) {
         m_cookiesBrowser = browser;
         m_cache.clear(); // addresses may differ when signed in
+    }
+}
+
+void StreamResolver::setQuality(YtDlp::AudioQuality quality)
+{
+    std::lock_guard lock(m_mutex);
+    if (quality != m_quality) {
+        m_quality = quality;
+        m_cache.clear(); // the next songs come in the new quality
     }
 }
 

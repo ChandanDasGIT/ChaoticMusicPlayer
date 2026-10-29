@@ -89,6 +89,7 @@ public:
 
     // Browser whose YouTube session yt-dlp may use ("" = none).
     void setYtCookiesBrowser(const QString &browser);
+    void setYtLowestQuality(bool lowest); // smallest YouTube streams (else the best ones)
 
     // Analysis of what is being played (for VisualizerController).
     SpectrumAnalyzer &spectrum();

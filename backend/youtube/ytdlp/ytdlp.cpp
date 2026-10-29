@@ -129,13 +129,14 @@ std::optional<std::string> YtDlp::version()
     return v;
 }
 
-std::optional<std::string> YtDlp::streamUrl(const std::string &videoId, const std::string &cookiesBrowser)
+std::optional<std::string> YtDlp::streamUrl(const std::string &videoId, const std::string &cookiesBrowser,
+                                         AudioQuality quality)
 {
     std::vector<std::string> args = baseArgs(cookiesBrowser);
-    // Audio only, preferring Opus/WebM (what YouTube Music serves best).
+    // Audio only, the stream with the highest (or lowest) bitrate.
     // "--": what follows is always a link, never an option (links can come from the user).
-    args.insert(args.end(), {"-f", "bestaudio[ext=webm]/bestaudio", "--get-url", "--no-playlist",
-                             "--", YtMusicClient::watchUrl(videoId)});
+    args.insert(args.end(), {"-f", "bestaudio", "-S", quality == AudioQuality::Lowest ? "+abr" : "abr",
+                             "--get-url", "--no-playlist", "--", YtMusicClient::watchUrl(videoId)});
     ProcessResult result = run(args, 30000);
     if (!result.ok())
         return std::nullopt;
