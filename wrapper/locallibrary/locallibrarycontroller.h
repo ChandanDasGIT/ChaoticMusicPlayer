@@ -40,6 +40,8 @@ class LocalLibraryController : public QObject
     Q_PROPERTY(int songCount READ songCount NOTIFY contentsChanged)       // whole library
     Q_PROPERTY(QVariantList albums READ albums NOTIFY contentsChanged)    // [{ key, album, artist, coverPath, count }]
     Q_PROPERTY(QVariantList artists READ artists NOTIFY contentsChanged)  // [{ name, count }]
+    // Albums by when their newest song was added, newest first (as albums, + addedAt)
+    Q_PROPERTY(QVariantList recentlyAdded READ recentlyAdded NOTIFY contentsChanged)
     Q_PROPERTY(bool loaded READ loaded NOTIFY contentsChanged)            // index read (startup)
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanChanged)
     Q_PROPERTY(int scanDone READ scanDone NOTIFY scanChanged)
@@ -71,6 +73,7 @@ public:
     int songCount() const { return int(m_tracks.size()); }
     QVariantList albums() const { return m_albums; }
     QVariantList artists() const { return m_artists; }
+    QVariantList recentlyAdded() const { return m_recentlyAdded; }
     bool loaded() const { return m_loaded; }
     bool scanning() const { return m_scanning; }
     int scanDone() const { return m_scanDone; }
@@ -113,6 +116,7 @@ public:
     Q_INVOKABLE QVariantList items(int list, int index) const; // [{ path }] for the playlist menus
     Q_INVOKABLE QVariantList albumItems(const QString &key) const;  // [{ path }] in disc / track order
     Q_INVOKABLE void playAlbumOf(const QString &path);              // that song's album, from its first track
+    Q_INVOKABLE void playAlbum(const QString &key);
     Q_INVOKABLE QVariantList folderItems(const QString &path) const; // [{ path }], subfolders too, in file order
 
     // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]
@@ -156,6 +160,7 @@ private:
     QString m_search;
     QVariantList m_albums;
     QVariantList m_artists;
+    QVariantList m_recentlyAdded;
     bool m_loaded = false;
     bool m_scanning = false;
     int m_scanDone = 0;

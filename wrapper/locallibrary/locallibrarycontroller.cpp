@@ -253,6 +253,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
         std::string albumArtist; // tagged on its songs
         QString coverPath;
         int count = 0;
+        int64_t addedAt = 0; // its newest song's
     };
     std::map<std::string, Album> albums; // by key
     for (const Track &t : m_tracks) {
@@ -266,6 +267,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
         if (album.coverPath.isEmpty() || (t.hasCover && album.count == 0))
             album.coverPath = QString::fromStdString(t.path);
         ++album.count;
+        album.addedAt = std::max(album.addedAt, t.addedAt);
     }
     std::vector<std::pair<std::string, Album>> sortedAlbums(albums.begin(), albums.end());
     std::sort(sortedAlbums.begin(), sortedAlbums.end(), [](const auto &a, const auto &b) {
@@ -280,8 +282,16 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
                                     {QStringLiteral("album"), album.name},
                                     {QStringLiteral("artist"), artist},
                                     {QStringLiteral("coverPath"), album.coverPath},
-                                    {QStringLiteral("count"), album.count}});
+                                    {QStringLiteral("count"), album.count},
+                                    {QStringLiteral("addedAt"), qint64(album.addedAt)}});
     }
+    // Recently added: the same albums, newest first
+    constexpr int RecentlyAddedCount = 12;
+    QVariantList byAdded = m_albums;
+    std::stable_sort(byAdded.begin(), byAdded.end(), [](const QVariant &a, const QVariant &b) {
+        return a.toMap().value(QStringLiteral("addedAt")).toLongLong() > b.toMap().value(QStringLiteral("addedAt")).toLongLong();
+    });
+    m_recentlyAdded = byAdded.mid(0, RecentlyAddedCount);
 
     // Artists
     std::map<std::string, std::pair<QString, int>> artists; // lowercase -> (name, songs)
@@ -593,6 +603,20 @@ QVariantList LocalLibraryController::folderItems(const QString &path) const
     for (const Track &t : folderTracks(cleanFolder(path), true))
         out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
     return out;
+}
+
+void LocalLibraryController::playAlbum(const QString &key)
+{
+    std::vector<Track> tracks;
+    const std::string wanted = key.toStdString();
+    for (const Track &t : m_tracks)
+        if (albumKey(t) == wanted)
+            tracks.push_back(t);
+    if (tracks.empty())
+        return;
+    std::sort(tracks.begin(), tracks.end(), byAlbumOrder);
+    const QString title = QString::fromStdString(tracks.front().album);
+    m_queue->playTitled(std::move(tracks), 0, title, false);
 }
 
 void LocalLibraryController::playAlbumOf(const QString &path)

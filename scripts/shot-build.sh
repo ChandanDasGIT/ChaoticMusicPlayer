@@ -361,6 +361,11 @@ hook = '''    // ---- screenshot harness
                         std::printf("album: %s | %s | %d songs\\n", qPrintable(m.value(QStringLiteral("album")).toString()),
                                     qPrintable(m.value(QStringLiteral("artist")).toString()), m.value(QStringLiteral("count")).toInt());
                     }
+                    for (const QVariant &a : localLibrary.recentlyAdded()) {
+                        const QVariantMap m = a.toMap();
+                        std::printf("recently added: %s (added %lld)\\n", qPrintable(m.value(QStringLiteral("album")).toString()),
+                                    (long long)m.value(QStringLiteral("addedAt")).toLongLong());
+                    }
                     for (const QVariant &a : localLibrary.artists()) {
                         const QVariantMap m = a.toMap();
                         std::printf("artist: %s | %d songs\\n", qPrintable(m.value(QStringLiteral("name")).toString()),

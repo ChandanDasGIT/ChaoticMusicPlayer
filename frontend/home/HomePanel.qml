@@ -6,9 +6,10 @@ import QtQuick.Layouts
 
 // Home: a greeting for the time of day, "Your Mix" (your most played songs,
 // shuffled), and what you've been listening to: recently played, most played
-// this month, albums to jump back into, a YouTube Mix recommended from the
-// YouTube song you play most, and the whole history ("See all", by day). It
-// all comes from the private listening history.
+// this month, albums to jump back into, albums recently added to the library,
+// a YouTube Mix recommended from the YouTube song you play most, and the whole
+// history ("See all", by day). Most of it comes from the private listening
+// history.
 Rectangle {
     id: root
 
@@ -242,6 +243,33 @@ Rectangle {
                     cover: Util.coverSource(modelData.path, "")
                     iconName: "compactDisc"
                     onClicked: LocalLibraryController.playAlbumOf(modelData.path)
+                }
+            }
+
+            // Albums newest in the library
+            SectionTitle {
+                visible: LocalLibraryController.recentlyAdded.length > 0
+                text: qsTr("Recently added")
+            }
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 172
+                visible: LocalLibraryController.recentlyAdded.length > 0
+                orientation: ListView.Horizontal
+                spacing: Theme.padding
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: LocalLibraryController.recentlyAdded
+
+                delegate: CoverCard {
+                    required property var modelData
+
+                    title: modelData.album
+                    subtitle: modelData.artist
+                    cover: Util.coverSource(modelData.coverPath, "")
+                    iconName: "compactDisc"
+                    dragItems: LocalLibraryController.albumItems(modelData.key)
+                    onClicked: LocalLibraryController.playAlbum(modelData.key)
                 }
             }
 

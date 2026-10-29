@@ -5,6 +5,7 @@
 #include "backend/storage/tsv/tsv.h"
 
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <system_error>
 
@@ -12,8 +13,10 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr const char *Header = "ChaoticMusicPlayer library v2";
-constexpr size_t FieldCount = 12;
+constexpr const char *Header = "ChaoticMusicPlayer library v3";
+constexpr size_t FieldCount = 13;
+constexpr const char *HeaderV2 = "ChaoticMusicPlayer library v2"; // before "added"
+constexpr size_t FieldCountV2 = 12;
 // v1 had no album artist: its songs are kept, and read again on the next refresh.
 constexpr const char *HeaderV1 = "ChaoticMusicPlayer library v1";
 constexpr size_t FieldCountV1 = 11;
@@ -23,6 +26,19 @@ struct Stamp
     int64_t size = 0;
     int64_t modified = 0;
 };
+
+int64_t nowSeconds()
+{
+    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+// A file's modification stamp (file clock ticks) as unix seconds.
+int64_t stampSeconds(int64_t modified)
+{
+    const auto time = fs::file_time_type(fs::file_time_type::duration(modified));
+    const auto system = std::chrono::file_clock::to_sys(time);
+    return std::chrono::duration_cast<std::chrono::seconds>(system.time_since_epoch()).count();
+}
 
 bool stampOf(const fs::path &path, Stamp &stamp)
 {
@@ -105,10 +121,11 @@ void MusicLibrary::load()
     std::ifstream in(m_indexFile);
     std::string line;
     const bool v1 = in && std::getline(in, line) && line == HeaderV1;
-    if (in && (v1 || line == Header)) {
+    const bool v2 = line == HeaderV2;
+    if (in && (v1 || v2 || line == Header)) {
         while (std::getline(in, line)) {
             const std::vector<std::string> f = tsv::split(line);
-            if (f.size() != (v1 ? FieldCountV1 : FieldCount))
+            if (f.size() != (v1 ? FieldCountV1 : v2 ? FieldCountV2 : FieldCount))
                 continue;
             Entry e;
             e.track.path = tsv::unescape(f[0]);
@@ -126,6 +143,8 @@ void MusicLibrary::load()
                 e.size = -1; // never matches the file: its tags are read again
             else
                 e.track.albumArtist = tsv::unescape(f[11]);
+            // Not known before v3: the file's own date is the best guess.
+            e.track.addedAt = v1 || v2 ? stampSeconds(e.modified) : tsv::toNumber<int64_t>(f[12]);
             m_entries.push_back(std::move(e));
         }
     }
@@ -149,7 +168,7 @@ bool MusicLibrary::save() const
             out << tsv::escape(t.path) << '\t' << e.size << '\t' << e.modified << '\t' << tsv::escape(t.title)
                 << '\t' << tsv::escape(t.artist) << '\t' << tsv::escape(t.album) << '\t' << t.disc << '\t'
                 << t.discTotal << '\t' << t.track << '\t' << t.durationMs << '\t' << (t.hasCover ? 1 : 0) << '\t'
-                << tsv::escape(t.albumArtist) << '\n';
+                << tsv::escape(t.albumArtist) << '\t' << t.addedAt << '\n';
         }
         if (!out)
             return false;
@@ -196,6 +215,7 @@ MusicLibrary::RefreshResult MusicLibrary::refresh(const std::vector<std::string>
             e.track.path = path;
             e.size = stamp.size;
             e.modified = stamp.modified;
+            e.track.addedAt = known ? old->track.addedAt : nowSeconds(); // a changed file keeps its date
             fresh.push_back(std::move(e));
             ++(known ? result.updated : result.added);
         }
