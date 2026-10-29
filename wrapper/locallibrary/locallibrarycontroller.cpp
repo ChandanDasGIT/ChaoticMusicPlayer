@@ -29,9 +29,13 @@ std::string lower(std::string s)
     return s;
 }
 
-// Same album name in the same folder = one album.
+// One album: the same album name and album artist (wherever the files are, so
+// "CD1" / "CD2" folders stay together); without an album artist tag, the same
+// album name in the same folder.
 std::string albumKey(const Track &track)
 {
+    if (!track.albumArtist.empty())
+        return lower(track.album) + "\x1f\x1f" + lower(track.albumArtist);
     return lower(track.album) + '\x1f' + std::filesystem::path(track.path).parent_path().string();
 }
 
@@ -51,6 +55,21 @@ std::vector<std::string> artistNames(const std::string &artist)
     }
     names.erase(std::remove_if(names.begin(), names.end(), [](const std::string &n) { return n.empty(); }),
                 names.end());
+    return names;
+}
+
+// Everyone a song is listed under in Artists: its artists and its album artists.
+std::vector<std::string> songArtistNames(const Track &track)
+{
+    std::vector<std::string> names = artistNames(track.artist);
+    if (!track.albumArtist.empty()) {
+        for (const std::string &name : artistNames(track.albumArtist)) {
+            const bool known = std::any_of(names.begin(), names.end(),
+                                           [&](const std::string &n) { return lower(n) == lower(name); });
+            if (!known)
+                names.push_back(name);
+        }
+    }
     return names;
 }
 
@@ -231,6 +250,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     {
         QString name;
         std::set<std::string> artists;
+        std::string albumArtist; // tagged on its songs
         QString coverPath;
         int count = 0;
     };
@@ -241,6 +261,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
         Album &album = albums[albumKey(t)];
         album.name = QString::fromStdString(t.album);
         album.artists.insert(t.artist);
+        if (album.albumArtist.empty())
+            album.albumArtist = t.albumArtist;
         if (album.coverPath.isEmpty() || (t.hasCover && album.count == 0))
             album.coverPath = QString::fromStdString(t.path);
         ++album.count;
@@ -251,7 +273,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     });
     m_albums.clear();
     for (const auto &[key, album] : sortedAlbums) {
-        const QString artist = album.artists.size() == 1 ? QString::fromStdString(*album.artists.begin())
+        const QString artist = !album.albumArtist.empty() ? QString::fromStdString(album.albumArtist)
+                             : album.artists.size() == 1 ? QString::fromStdString(*album.artists.begin())
                                                          : tr("Various artists");
         m_albums.append(QVariantMap{{QStringLiteral("key"), QString::fromStdString(key)},
                                     {QStringLiteral("album"), album.name},
@@ -263,7 +286,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     // Artists
     std::map<std::string, std::pair<QString, int>> artists; // lowercase -> (name, songs)
     for (const Track &t : m_tracks) {
-        for (const std::string &name : artistNames(t.artist)) {
+        for (const std::string &name : songArtistNames(t)) {
             auto &entry = artists[lower(name)];
             if (entry.first.isEmpty())
                 entry.first = QString::fromStdString(name);
@@ -338,7 +361,7 @@ void LocalLibraryController::rebuildDetail()
     } else if (m_detailKind == 2) {
         const std::string wanted = lower(key);
         for (const Track &t : m_tracks) {
-            const auto names = artistNames(t.artist);
+            const auto names = songArtistNames(t);
             if (std::any_of(names.begin(), names.end(), [&](const std::string &n) { return lower(n) == wanted; }))
                 tracks.push_back(t);
         }
@@ -359,7 +382,10 @@ void LocalLibraryController::rebuildDetail()
         const QString length = lengthText(totalMs);
         if (m_detailKind == 1) {
             m_detailTitle = QString::fromStdString(tracks.front().album);
-            const QString artist = artists.size() == 1 ? QString::fromStdString(*artists.begin()) : tr("Various artists");
+            const std::string &albumArtist = tracks.front().albumArtist;
+            const QString artist = !albumArtist.empty()  ? QString::fromStdString(albumArtist)
+                                 : artists.size() == 1 ? QString::fromStdString(*artists.begin())
+                                                       : tr("Various artists");
             m_detailSubtitle = artist + QStringLiteral(" · ") + songs + QStringLiteral(" · ") + length;
             m_detailCoverPath = QString::fromStdString(tracks.front().path);
         } else {

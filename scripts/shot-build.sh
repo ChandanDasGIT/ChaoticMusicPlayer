@@ -355,6 +355,17 @@ hook = '''    // ---- screenshot harness
                     for (const auto &play : history.plays())
                         std::printf("  play: %s | %s | from %s | %llds\\n", play.title.c_str(), play.artist.c_str(),
                                     play.from.c_str(), (long long)(play.durationMs / 1000));
+                } else if (step == QLatin1String("printlib")) { // the Library's albums and artists
+                    for (const QVariant &a : localLibrary.albums()) {
+                        const QVariantMap m = a.toMap();
+                        std::printf("album: %s | %s | %d songs\\n", qPrintable(m.value(QStringLiteral("album")).toString()),
+                                    qPrintable(m.value(QStringLiteral("artist")).toString()), m.value(QStringLiteral("count")).toInt());
+                    }
+                    for (const QVariant &a : localLibrary.artists()) {
+                        const QVariantMap m = a.toMap();
+                        std::printf("artist: %s | %d songs\\n", qPrintable(m.value(QStringLiteral("name")).toString()),
+                                    m.value(QStringLiteral("count")).toInt());
+                    }
                 } else if (step == QLatin1String("histoff")) {
                     settings.setHistoryEnabled(false);
                 } else if (step == QLatin1String("printeq")) {
