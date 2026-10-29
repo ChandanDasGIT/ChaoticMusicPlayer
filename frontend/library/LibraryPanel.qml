@@ -274,6 +274,17 @@ Rectangle {
                         HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
                         TapHandler { onTapped: LocalLibraryController.showAlbum(tile.modelData.key) }
 
+                        // Hold and drag the whole album onto the Queue or the player
+                        DragSource {
+                            payload: function() {
+                                return { items: LocalLibraryController.albumItems(tile.modelData.key),
+                                         title: tile.modelData.album,
+                                         subtitle: tile.modelData.count === 1 ? qsTr("1 song")
+                                                                             : qsTr("%1 songs").arg(tile.modelData.count),
+                                         cover: Util.coverSource(tile.modelData.coverPath, "") }
+                            }
+                        }
+
                         Rectangle {
                             id: cover
                             x: 6
@@ -681,6 +692,7 @@ Rectangle {
             Layout.topMargin: shown ? 4 : 0
             Layout.preferredHeight: implicitHeight
             active: root.showMiniPlayer
+            acceptsDrops: true
             onOpenPlayerRequested: root.openPlayerRequested()
         }
     }

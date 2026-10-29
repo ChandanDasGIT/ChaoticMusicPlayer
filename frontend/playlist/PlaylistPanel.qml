@@ -5,6 +5,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // Playlist panel: header bar, column header and track list (or an empty-state hint).
+// With acceptsDrops, songs dragged from the Library or YouTube can be dropped
+// into the list shown (the Queue or a playlist), at the spot under the pointer.
 Rectangle {
     id: root
 
@@ -12,6 +14,22 @@ Rectangle {
     property bool pinned: false
     property bool showCloseButton: false
     property bool showMiniPlayer: false // when this panel covers the player
+    property bool acceptsDrops: false
+
+    // Dragged songs would go before this row (-1: not over the panel).
+    readonly property int dropRow: dropHint.over ? rowAt(SongDrag.scenePos, list.contentY, list.count) : -1
+
+    // The row a drop at `scenePos` goes before (contentY / count: so bindings follow them).
+    function rowAt(scenePos, contentY, count) {
+        if (count === 0 || !list.visible)
+            return 0
+        const y = list.contentItem.mapFromItem(null, scenePos.x, scenePos.y).y
+        const index = list.indexAt(list.width / 2, y)
+        if (index < 0)
+            return y < list.originY ? 0 : count
+        const item = list.itemAtIndex(index)
+        return item && y > item.y + item.height / 2 ? index + 1 : index
+    }
 
     // Column geometry shared by header and rows. Title takes the remaining space;
     // Artist - Album gives way on narrow screens so the title stays readable.
@@ -428,6 +446,39 @@ Rectangle {
                 }
             }
 
+            // Where dragged songs would be dropped
+            Rectangle {
+                readonly property Item neighbour: root.dropRow < 0 || list.count === 0 ? null
+                                                  : list.itemAtIndex(Math.min(root.dropRow, list.count - 1))
+                visible: neighbour !== null
+                z: 20
+                x: 10
+                width: list.width - 20
+                height: 3
+                radius: 1.5
+                color: Theme.accent
+                y: neighbour ? (root.dropRow < list.count ? neighbour.y : neighbour.y + neighbour.height) - 1.5 : 0
+            }
+
+            // Scrolls while dragged songs are held near the top / bottom edge.
+            Timer {
+                interval: 16
+                repeat: true
+                running: root.dropRow >= 0 && list.contentHeight > list.height
+                onTriggered: {
+                    const pointer = list.mapFromItem(null, SongDrag.scenePos.x, SongDrag.scenePos.y).y
+                    const edge = 44
+                    let step = 0
+                    if (pointer < edge)
+                        step = -Math.ceil((edge - pointer) / 4)
+                    else if (pointer > list.height - edge)
+                        step = Math.ceil((pointer - (list.height - edge)) / 4)
+                    if (step !== 0)
+                        list.contentY = Math.max(list.originY, Math.min(list.originY + list.contentHeight - list.height,
+                                                                       list.contentY + step))
+                }
+            }
+
             PlaylistContextMenu {
                 id: contextMenu
                 inQueue: root.viewingQueue
@@ -502,5 +553,17 @@ Rectangle {
             active: root.showMiniPlayer
             onOpenPlayerRequested: root.openPlayerRequested()
         }
+    }
+
+    // Songs dragged from the Library or YouTube. An empty list says where they
+    // go; otherwise a line between the rows shows the spot.
+    DropHint {
+        id: dropHint
+        accepts: root.acceptsDrops
+        radius: root.radius
+        showLabel: root.shownCount === 0
+        text: root.viewingQueue ? qsTr("Drop to add to the Queue")
+                                : qsTr("Drop to add to “%1”").arg(PlaylistsController.viewedName)
+        onDropped: SongDrag.deliver(PlaylistsController.viewedId, root.dropRow)
     }
 }

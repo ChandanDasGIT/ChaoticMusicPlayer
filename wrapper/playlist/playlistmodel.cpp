@@ -1,5 +1,7 @@
 #include "wrapper/playlist/playlistmodel.h"
 
+#include <algorithm>
+
 PlaylistModel::PlaylistModel(Playlist &playlist, QObject *parent)
     : QAbstractListModel(parent)
     , m_playlist(playlist)
@@ -64,6 +66,17 @@ bool PlaylistModel::appendTrack(Track track)
     const int row = rowCount();
     beginInsertRows({}, row, row);
     m_playlist.append(std::move(track));
+    endInsertRows();
+    return true;
+}
+
+bool PlaylistModel::insertTrack(int row, Track track)
+{
+    if (m_playlist.contains(track.path))
+        return false;
+    row = std::clamp(row, 0, rowCount());
+    beginInsertRows({}, row, row);
+    m_playlist.insert(size_t(row), std::move(track));
     endInsertRows();
     return true;
 }

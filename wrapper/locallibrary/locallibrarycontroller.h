@@ -88,6 +88,7 @@ public:
     Q_INVOKABLE void playInQueue(bool inDetail, int index); // add to the Queue, play the first
     Q_INVOKABLE void addToQueue(bool inDetail, int index);
     Q_INVOKABLE QVariantList items(bool inDetail, int index) const; // [{ path }] for the playlist menus
+    Q_INVOKABLE QVariantList albumItems(const QString &key) const;  // [{ path }] in disc / track order
 
     // Mounted drives (USB sticks, other disks) for the folder picker: [{ name, url }]
     Q_INVOKABLE QVariantList drives() const;

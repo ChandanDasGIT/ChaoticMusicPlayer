@@ -186,6 +186,33 @@ void PlaylistsController::addToQueue(const QVariantList &items)
     emit notice(count == 1 ? tr("Added to the queue") : tr("Added %1 songs to the queue").arg(count));
 }
 
+void PlaylistsController::insertItems(const QString &id, const QVariantList &items, int row)
+{
+    const std::vector<::Track> tracks = tracksFromItems(items);
+    if (tracks.empty())
+        return;
+    int added = 0;
+    if (id.isEmpty()) {
+        added = m_queue->insertTracks(tracks, row < 0 ? m_queue->count() : row);
+    } else {
+        const PlaylistLibrary::Entry *entry = m_library->find(id.toStdString());
+        if (!entry)
+            return;
+        added = m_library->insertTracks(id.toStdString(), tracks, row < 0 ? entry->tracks.size() : size_t(row));
+        if (id == m_viewedId)
+            refreshView();
+        else if (id == m_playingFromId)
+            if (const PlaylistLibrary::Entry *playing = m_library->find(id.toStdString()))
+                m_queue->updateListTracks(playing->tracks);
+        emit playlistsChanged();
+    }
+    const QString where = id.isEmpty() ? tr("the Queue") : QStringLiteral("“%1”").arg(nameOf(id));
+    if (added == 0)
+        emit notice(tr("Moved in %1").arg(where));
+    else
+        emit notice(added == 1 ? tr("Added to %1").arg(where) : tr("Added %1 songs to %2").arg(added).arg(where));
+}
+
 void PlaylistsController::playNext(const QVariantList &items)
 {
     const std::vector<::Track> tracks = tracksFromItems(items);

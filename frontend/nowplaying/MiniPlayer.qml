@@ -3,12 +3,15 @@ import QtQuick.Layouts
 
 // Compact player pinned to the bottom of a panel that covers the main player:
 // a progress line, cover, title / artist and previous / play-pause / next.
-// Tapping the cover or title asks to go back to the full player.
+// Tapping the cover or title asks to go back to the full player. With
+// acceptsDrops, songs dragged from the Library or YouTube can be dropped on it
+// (added to the Queue); it then also shows up while nothing is loaded.
 Rectangle {
     id: root
 
     property bool active: true // false: never shown (e.g. the panel is docked next to the player)
-    readonly property bool shown: active && PlayerController.hasTrack
+    property bool acceptsDrops: false
+    readonly property bool shown: active && (PlayerController.hasTrack || (acceptsDrops && SongDrag.active))
 
     signal openPlayerRequested()
 
@@ -158,5 +161,11 @@ Rectangle {
             enabled: PlaylistController.hasNext
             onClicked: PlaylistController.next()
         }
+    }
+
+    DropHint {
+        accepts: root.acceptsDrops && root.active
+        radius: root.radius
+        onDropped: SongDrag.deliver("", -1)
     }
 }

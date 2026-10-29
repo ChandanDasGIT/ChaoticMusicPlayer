@@ -41,6 +41,8 @@ hook = '''    // ---- screenshot harness
                                 int(player.playing()), qPrintable(playlist.currentTitle()), int(playlist.playingFromList()));
                     std::fflush(stdout);
                 });
+        if (qEnvironmentVariableIsSet("SHOT_LIB_DIR")) // a Library folder
+            localLibrary.addFolder(qEnvironmentVariable("SHOT_LIB_DIR"));
         if (qEnvironmentVariableIsSet("SHOT_ADD_DIR")) // like dropping a folder
             library.addUrls({QUrl::fromLocalFile(qEnvironmentVariable("SHOT_ADD_DIR"))});
         if (qEnvironmentVariableIsSet("SHOT_VIEW")) {
@@ -293,6 +295,28 @@ hook = '''    // ---- screenshot harness
                     }
                     QTest::qWait(150); // slow release: no fling
                     QTest::mouseRelease(w, Qt::LeftButton, {}, from + QPoint(dx, 0));
+                }
+                else if (step.startsWith(QLatin1String("hold:"))) { // hold:x,y,dx,dy — long press, drag in steps, release
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    const QStringList v = step.mid(5).split(QLatin1Char(','));
+                    const QPoint from(v.value(0).toInt(), v.value(1).toInt());
+                    const QPoint by(v.value(2).toInt(), v.value(3).toInt());
+                    QTest::mouseMove(w, from);
+                    QTest::mousePress(w, Qt::LeftButton, {}, from);
+                    QTest::qWait(600);
+                    for (int k = 1; k <= 15; ++k) {
+                        QTest::mouseMove(w, from + by * k / 15);
+                        QTest::qWait(20);
+                    }
+                    QTest::qWait(qEnvironmentVariableIsSet("SHOT_HOLD_SHOT") ? 300 : 100);
+                    if (qEnvironmentVariableIsSet("SHOT_HOLD_SHOT")) // the screen while still dragging
+                        w->grabWindow().save(QStringLiteral("build/shot/hold.png"));
+                    QTest::mouseRelease(w, Qt::LeftButton, {}, from + by);
+                } else if (step == QLatin1String("printq")) { // the Queue's songs in order
+                    std::printf("queue:");
+                    for (int r = 0; r < playlist.count(); ++r)
+                        std::printf(" %s", qPrintable(QFileInfo(playlist.pathAt(r)).baseName()));
+                    std::printf("\\n");
                 }
                 else if (step == QLatin1String("wait"))
                     ;

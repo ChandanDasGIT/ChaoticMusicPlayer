@@ -40,6 +40,8 @@ public:
     bool addTrack(Track track);
     // Adds at the end; false if the path is already present.
     bool appendTrack(Track track);
+    // Inserts at `row` (clamped); false if the path is already present.
+    bool insertTrack(int row, Track track);
     void removeTrack(int row);
     void moveTrack(int from, int to);
     void setTracks(std::vector<Track> tracks); // replaces everything

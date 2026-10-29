@@ -5,7 +5,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // One YouTube song: thumbnail, title, artists · duration, and play /
-// add-to-playlist / save buttons that appear on hover. Double-click plays.
+// add-to-playlist / save buttons that appear on hover. Double-click plays;
+// hold and drag to drop it on the Queue or the player.
 // The song that is playing is tinted, shows bouncing bars on its thumbnail,
 // and its play button becomes pause (always visible).
 // `song` is a YouTubeController song map.
@@ -55,6 +56,14 @@ Rectangle {
 
     TapHandler {
         onDoubleTapped: root.playOrToggle()
+    }
+
+    // Hold and drag onto the Queue or the player
+    DragSource {
+        payload: function() {
+            return { items: [root.song], title: root.song.title || "", subtitle: root.song.artists || "",
+                     cover: root.song.thumbnail || "" }
+        }
     }
 
     RowLayout {

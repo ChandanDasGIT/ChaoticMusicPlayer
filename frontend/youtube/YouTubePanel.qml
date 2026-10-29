@@ -204,6 +204,7 @@ Rectangle {
             Layout.topMargin: shown ? 4 : 0
             Layout.preferredHeight: implicitHeight
             active: root.showMiniPlayer
+            acceptsDrops: true
             onOpenPlayerRequested: root.openPlayerRequested()
         }
 

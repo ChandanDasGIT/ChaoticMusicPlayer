@@ -242,6 +242,19 @@ void YouTubeController::openCollection(const QString &browseId, const QString &t
              });
 }
 
+void YouTubeController::fetchCollection(const QString &browseId, const QString &title)
+{
+    emit notice(tr("Adding “%1”…").arg(title));
+    runAsync([id = browseId.toStdString()] { return YtMusicClient::collection(id); },
+             [this, browseId](const std::optional<std::vector<YtSong>> &songs) {
+                 if (!songs || songs->empty()) {
+                     emit notice(songs ? tr("That playlist is empty") : errorText("playlist"));
+                     return;
+                 }
+                 emit collectionFetched(browseId, toVariantList(*songs));
+             });
+}
+
 void YouTubeController::closeCollection()
 {
     ++m_collectionGeneration;

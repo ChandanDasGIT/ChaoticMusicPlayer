@@ -280,6 +280,7 @@ ApplicationWindow {
             PlaylistPanel {
                 id: dockedPlaylist
                 anchors.fill: parent
+                acceptsDrops: true
                 showPinButton: true
                 pinned: window.queuePinned
                 showCloseButton: !pinned
@@ -313,6 +314,13 @@ ApplicationWindow {
                 libraryOpen: window.libraryDocked || libraryDrawer.opened
                 onLibraryRequested: window.toggleLibrary()
                 onYoutubeRequested: window.toggleYoutube()
+            }
+
+            // Songs dragged from the Library or YouTube: dropped here, they join the Queue.
+            // (Phone size: the drawers' mini players take them instead.)
+            DropHint {
+                accepts: !window.compact
+                onDropped: SongDrag.deliver("", -1)
             }
         }
 
@@ -401,6 +409,7 @@ ApplicationWindow {
         height: implicitHeight
         radius: Theme.radiusCard
         active: window.layout === "half" && !window.playerShown
+        acceptsDrops: true
         onOpenPlayerRequested: window.showPlayer()
     }
 
@@ -533,6 +542,8 @@ ApplicationWindow {
         DragHandler {
             property bool done: false
 
+            enabled: !SongDrag.active
+
             target: null
             xAxis.enabled: true
             yAxis.enabled: false
@@ -571,6 +582,12 @@ ApplicationWindow {
             window.showPlaylistPanel()
         }
         onPlaylistsDropped: window.showPlaylistPanel() // the import opens the new playlist
+    }
+
+    // The card following the pointer while songs are dragged (over drawers too)
+    DragCard {
+        parent: Overlay.overlay
+        z: 2000
     }
 
     function showPlaylistPanel() {

@@ -32,6 +32,9 @@ public:
 
     // Appends tracks not already in the playlist; returns how many were added.
     int addTracks(const std::string &id, const std::vector<Track> &tracks);
+    // Puts tracks (in this order) at `index`; one already in the playlist is
+    // moved there instead. Returns how many were added.
+    int insertTracks(const std::string &id, const std::vector<Track> &tracks, size_t index);
     void removeTrack(const std::string &id, size_t index);
     void moveTrack(const std::string &id, size_t from, size_t to);
 

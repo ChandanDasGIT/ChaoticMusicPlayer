@@ -277,6 +277,34 @@ int PlaylistController::addTracks(std::vector<::Track> tracks, std::vector<std::
     return added;
 }
 
+int PlaylistController::insertTracks(const std::vector<::Track> &tracks, int row)
+{
+    if (tracks.empty())
+        return 0;
+    setQueueCustomOrder(); // songs are placed by hand now
+    int at = std::clamp(row, 0, count());
+    int added = 0;
+    for (const ::Track &track : tracks) {
+        const int existing = m_playlist.indexOf(track.path);
+        if (existing < 0) {
+            if (m_model->insertTrack(at, track)) {
+                ++added;
+                ++at;
+            }
+            continue;
+        }
+        // Where it ends up once taken out of its old slot.
+        const int target = existing < at ? at - 1 : at;
+        m_model->moveTrack(existing, target);
+        at = target + 1;
+    }
+    emit countChanged();
+    emit currentChanged(); // hasNext / upcoming changed
+    queueNext();
+    save();
+    return added;
+}
+
 void PlaylistController::setQueueCustomOrder()
 {
     if (m_playlist.sortColumn() == Playlist::SortColumn::Custom)

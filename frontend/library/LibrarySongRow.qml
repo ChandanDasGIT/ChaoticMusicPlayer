@@ -5,8 +5,9 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // One library song: cover, title, artist · album · length, and play / "⋮"
-// buttons on hover. A click adds it to the Queue and plays it. The song that
-// is playing is tinted and shows bouncing bars on its cover.
+// buttons on hover. A click adds it to the Queue and plays it; hold and drag
+// to drop it on the Queue or the player. The song that is playing is tinted
+// and shows bouncing bars on its cover.
 Rectangle {
     id: root
 
@@ -59,6 +60,14 @@ Rectangle {
 
     TapHandler {
         onTapped: root.playOrToggle()
+    }
+
+    // Hold and drag onto the Queue or the player
+    DragSource {
+        payload: function() {
+            return { items: [{ path: root.path }], title: root.title, subtitle: root.artist,
+                     cover: Util.coverSource(root.path, "") }
+        }
     }
 
     TapHandler {

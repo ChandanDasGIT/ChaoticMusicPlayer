@@ -116,6 +116,31 @@ int PlaylistLibrary::addTracks(const std::string &id, const std::vector<Track> &
     return added;
 }
 
+int PlaylistLibrary::insertTracks(const std::string &id, const std::vector<Track> &tracks, size_t index)
+{
+    Entry *entry = findMutable(id);
+    if (!entry || tracks.empty())
+        return 0;
+    std::vector<Track> &list = entry->tracks;
+    size_t at = std::min(index, list.size());
+    int added = 0;
+    for (const Track &track : tracks) {
+        const auto existing = std::find_if(list.begin(), list.end(), [&](const Track &t) { return t.path == track.path; });
+        if (existing != list.end()) {
+            const size_t from = size_t(existing - list.begin());
+            if (from < at)
+                --at; // taken out ahead of the drop spot
+            list.erase(existing);
+        } else {
+            ++added;
+        }
+        list.insert(list.begin() + std::ptrdiff_t(at), track);
+        ++at;
+    }
+    savePlaylist(*entry);
+    return added;
+}
+
 void PlaylistLibrary::removeTrack(const std::string &id, size_t index)
 {
     Entry *entry = findMutable(id);

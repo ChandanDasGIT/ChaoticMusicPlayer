@@ -93,6 +93,9 @@ public:
     Q_INVOKABLE void loadHome();
     Q_INVOKABLE void openCollection(const QString &browseId, const QString &title);
     Q_INVOKABLE void closeCollection();
+    // A playlist / album's songs without opening it (e.g. dropped on the
+    // Queue): collectionFetched(browseId, songs) once they arrive.
+    Q_INVOKABLE void fetchCollection(const QString &browseId, const QString &title);
     Q_INVOKABLE void loadLibrary();
 
     Q_INVOKABLE void play(const QVariantMap &song);       // add to the playlist and play now
@@ -109,6 +112,7 @@ signals:
     void suggestionsChanged();
     void homeChanged();
     void collectionChanged();
+    void collectionFetched(const QString &browseId, const QVariantList &songs);
     void libraryChanged();
     void savedChanged();
     void notice(const QString &text);

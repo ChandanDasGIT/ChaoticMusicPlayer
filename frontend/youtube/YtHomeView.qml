@@ -97,6 +97,15 @@ Item {
                                 onTapped: YouTubeController.openCollection(card.modelData.browseId, card.modelData.title)
                             }
 
+                            // Hold and drag the whole playlist onto the Queue or the player
+                            // (its songs are fetched on drop).
+                            DragSource {
+                                payload: function() {
+                                    return { browseId: card.modelData.browseId, title: card.modelData.title,
+                                             subtitle: card.modelData.subtitle || "", cover: card.modelData.thumbnail || "" }
+                                }
+                            }
+
                             YtThumbnail {
                                 id: art
                                 width: 140

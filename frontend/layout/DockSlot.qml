@@ -96,7 +96,7 @@ Item {
             anchors.fill: parent
             contentWidth: width
             contentHeight: height
-            interactive: slot.swipeEnabled && slot.swipeAnywhere
+            interactive: slot.swipeEnabled && slot.swipeAnywhere && !SongDrag.active
             flickableDirection: Flickable.HorizontalFlick
             boundsBehavior: Flickable.DragOverBounds
             boundsMovement: Flickable.StopAtBounds
@@ -114,7 +114,7 @@ Item {
                 property bool swiping: false
                 property real total: 0
 
-                enabled: slot.swipeEnabled
+                enabled: slot.swipeEnabled && !SongDrag.active
                 acceptedDevices: PointerDevice.TouchPad
                 target: null
                 onWheel: (event) => {
@@ -150,7 +150,7 @@ Item {
             DragHandler {
                 id: swipeDrag
 
-                enabled: slot.swipeEnabled && !slot.swipeAnywhere
+                enabled: slot.swipeEnabled && !slot.swipeAnywhere && !SongDrag.active
                 grabPermissions: PointerHandler.TakeOverForbidden // rows' own swipes and presses win
                 target: null
                 xAxis.enabled: true

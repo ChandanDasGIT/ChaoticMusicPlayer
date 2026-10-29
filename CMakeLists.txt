@@ -123,6 +123,9 @@ set_source_files_properties(frontend/Theme.qml PROPERTIES
 set_source_files_properties(frontend/Util.qml PROPERTIES
     QT_QML_SINGLETON_TYPE TRUE
 )
+set_source_files_properties(frontend/dragdrop/SongDrag.qml PROPERTIES
+    QT_QML_SINGLETON_TYPE TRUE
+)
 
 qt_add_qml_module(ChaoticMusicPlayer
     URI ChaoticMusicPlayer
@@ -181,6 +184,10 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/dialogs/ConfirmDialog.qml
         frontend/dialogs/FolderPicker.qml
         frontend/dialogs/NameDialog.qml
+        frontend/dragdrop/DragCard.qml
+        frontend/dragdrop/DragSource.qml
+        frontend/dragdrop/DropHint.qml
+        frontend/dragdrop/SongDrag.qml
         frontend/dropzone/DropOverlay.qml
         frontend/layout/AppShortcuts.qml
         frontend/layout/DockSlot.qml

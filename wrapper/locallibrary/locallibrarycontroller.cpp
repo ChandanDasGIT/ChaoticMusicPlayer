@@ -411,6 +411,20 @@ QVariantList LocalLibraryController::items(bool inDetail, int index) const
     return out;
 }
 
+QVariantList LocalLibraryController::albumItems(const QString &key) const
+{
+    std::vector<Track> tracks;
+    const std::string wanted = key.toStdString();
+    for (const Track &t : m_tracks)
+        if (albumKey(t) == wanted)
+            tracks.push_back(t);
+    std::sort(tracks.begin(), tracks.end(), byAlbumOrder);
+    QVariantList out;
+    for (const Track &t : tracks)
+        out.append(QVariantMap{{QStringLiteral("path"), QString::fromStdString(t.path)}});
+    return out;
+}
+
 QVariantList LocalLibraryController::drives() const
 {
     QVariantList out;

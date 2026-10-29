@@ -98,6 +98,9 @@ public:
     // Queue, or the playlist played from; nothing playing: the Queue's top). A
     // song already there is moved instead of added twice.
     void playNext(const std::vector<::Track> &tracks);
+    // Puts `tracks` (in this order) at `row` of the Queue (dropped there); a song
+    // already in the Queue is moved instead. Returns how many were added.
+    int insertTracks(const std::vector<::Track> &tracks, int row);
     // Plays `tracks` (a named playlist) from `startIndex`, without touching the Queue.
     void playFromList(std::vector<::Track> tracks, int startIndex);
     // Resuming the last session: the song is loaded paused at `positionMs`.

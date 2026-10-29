@@ -71,6 +71,9 @@ public:
     Q_INVOKABLE void moveInViewed(int from, int to); // manual reordering
     Q_INVOKABLE void addToPlaylist(const QString &id, const QVariantList &items);
     Q_INVOKABLE void addToQueue(const QVariantList &items);
+    // Songs dropped at `row` of playlist `id` ("" = the Queue); songs already
+    // there move to that spot. row -1 = the end.
+    Q_INVOKABLE void insertItems(const QString &id, const QVariantList &items, int row);
     // Right after the playing song ([{ path }] or YouTube song maps).
     Q_INVOKABLE void playNext(const QVariantList &items);
     // M3U / M3U8 files (path or file:// URL). Import reads the songs in the
