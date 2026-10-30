@@ -36,7 +36,7 @@ void NotificationController::send(const QString &title, const QString &subtitle,
                                                        QStringLiteral("/org/freedesktop/Notifications"),
                                                        QStringLiteral("org.freedesktop.Notifications"),
                                                        QStringLiteral("Notify"));
-    call << QStringLiteral("ChaoticMusicPlayer") << m_lastId << QGuiApplication::desktopFileName() << title
+    call << QStringLiteral("Tuned Chaos") << m_lastId << QGuiApplication::desktopFileName() << title
          << plain(subtitle) << QStringList() << hints << ShownMs;
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher *w) {

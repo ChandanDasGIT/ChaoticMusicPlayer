@@ -59,7 +59,7 @@ PlayerController::PlayerController(QObject *parent)
     };
 
     m_resolver = std::make_unique<StreamResolver>();
-    m_player = std::make_unique<Player>("ChaoticMusicPlayer", std::move(callbacks), m_resolver.get());
+    m_player = std::make_unique<Player>("Tuned Chaos", std::move(callbacks), m_resolver.get());
     applyVolume();
 
     m_probePool.setMaxThreadCount(1);

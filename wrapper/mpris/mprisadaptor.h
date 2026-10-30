@@ -57,7 +57,7 @@ public:
     bool canSetFullscreen() const { return false; }
     bool fullscreen() const { return false; }
     bool hasTrackList() const { return false; }
-    QString identity() const { return QStringLiteral("ChaoticMusicPlayer"); }
+    QString identity() const { return QStringLiteral("Tuned Chaos"); }
     QString desktopEntry() const { return QGuiApplication::desktopFileName(); }
     // OpenUri is not supported, so both lists are empty (as the spec asks).
     QStringList supportedUriSchemes() const { return {}; }

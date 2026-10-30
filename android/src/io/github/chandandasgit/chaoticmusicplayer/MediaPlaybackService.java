@@ -98,7 +98,7 @@ public class MediaPlaybackService extends Service {
         manager.createNotificationChannel(
             new NotificationChannel(CHANNEL, "Playback", NotificationManager.IMPORTANCE_LOW));
 
-        m_session = new MediaSessionCompat(this, "ChaoticMusicPlayer");
+        m_session = new MediaSessionCompat(this, "Tuned Chaos");
         m_session.setCallback(new MediaSessionCompat.Callback() {
             @Override public void onPlay() { nativeAction(PLAY); }
             @Override public void onPause() { nativeAction(PAUSE); }

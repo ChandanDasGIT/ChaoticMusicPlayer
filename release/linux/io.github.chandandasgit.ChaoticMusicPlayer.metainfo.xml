@@ -2,7 +2,7 @@
 <!-- What software centers (GNOME Software, KDE Discover, Flathub) show about the app. -->
 <component type="desktop-application">
   <id>io.github.chandandasgit.ChaoticMusicPlayer</id>
-  <name>ChaoticMusicPlayer</name>
+  <name>Tuned Chaos</name>
   <summary>Play your music library, playlists and YouTube Music</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>

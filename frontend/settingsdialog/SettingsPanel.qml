@@ -1313,7 +1313,7 @@ Rectangle {
                         title: qsTr("About")
 
                         SettingsCard {
-                            title: qsTr("ChaoticMusicPlayer")
+                            title: qsTr("Tuned Chaos")
 
                             Label {
                                 Layout.fillWidth: true

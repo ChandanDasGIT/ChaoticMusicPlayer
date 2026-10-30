@@ -157,7 +157,7 @@ ApplicationWindow {
     minimumWidth: 360
     minimumHeight: 480
     visible: true
-    title: "ChaoticMusicPlayer"
+    title: "Tuned Chaos"
     color: Theme.background
 
     // Background playing: closing only hides the window while a song is loaded

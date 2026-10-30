@@ -38,7 +38,7 @@ command -v update-desktop-database >/dev/null && update-desktop-database -q "$ap
 mkdir -p "$bin"
 ln -sf "$target/AppRun" "$bin/ChaoticMusicPlayer"
 
-echo "ChaoticMusicPlayer is installed."
+echo "Tuned Chaos is installed."
 echo "  Program : $target"
 echo "  Command : $bin/ChaoticMusicPlayer"
 echo "  Menu    : $apps/$id.desktop"
