@@ -16,7 +16,15 @@ Menu {
             Util.openMenus += open ? 1 : -1
         }
     }
-    onAboutToShow: setCountedOpen(true)
+    onAboutToShow: {
+        setCountedOpen(true)
+        // Phones: closing hands focus back, and a search box getting it reopens the keyboard.
+        if (Theme.touchOnly) {
+            const focused = Overlay.overlay.Window.activeFocusItem
+            if (focused && "cursorPosition" in focused)
+                focused.focus = false
+        }
+    }
     onAboutToHide: setCountedOpen(false)
     Component.onDestruction: setCountedOpen(false)
 
