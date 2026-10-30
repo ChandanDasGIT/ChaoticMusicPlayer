@@ -214,6 +214,8 @@ elseif(CMP_PLATFORM STREQUAL "android")
         QT_ANDROID_PACKAGE_NAME io.github.chandandasgit.tunedchaos
         QT_ANDROID_MIN_SDK_VERSION 28    # Android 9 (Qt 6.11's minimum)
         QT_ANDROID_TARGET_SDK_VERSION 35 # Android 15
+        QT_ANDROID_COMPILE_SDK_VERSION 36 # (androidx.core 1.17 needs it)
+        QT_ANDROID_SDK_BUILD_TOOLS_REVISION 36.0.0
         QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
         QT_ANDROID_VERSION_CODE 1
     )

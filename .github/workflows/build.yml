@@ -155,6 +155,89 @@ jobs:
           name: TunedChaos-windows-x64-setup
           path: installer/*.exe
 
+  # The Android app for phones (arm64 APK). Signed with the release key (GitHub
+  # secrets); where there are none (pull requests), left unsigned.
+  android:
+    name: Android
+    runs-on: ubuntu-24.04
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+      NDK_VERSION: 27.2.12479018
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Android SDK parts
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;$NDK_VERSION" > /dev/null
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      # Qt 6.10 as for Windows (aqtinstall can't read 6.11's layout yet), with
+      # the desktop Qt its build tools run from
+      - name: Qt for Android
+        run: |
+          pip install -q aqtinstall
+          aqt install-qt linux android 6.10.3 android_arm64_v8a --autodesktop -O "$RUNNER_TEMP/Qt"
+          echo "QT_HOST_PATH=$RUNNER_TEMP/Qt/6.10.3/gcc_64" >> "$GITHUB_ENV"
+          echo "QT_ANDROID_ARM64=$RUNNER_TEMP/Qt/6.10.3/android_arm64_v8a" >> "$GITHUB_ENV"
+      - name: vcpkg (at the baseline in release/vcpkg.json)
+        run: |
+          baseline=$(python3 -c "import json; print(json.load(open('release/vcpkg.json'))['builtin-baseline'])")
+          git clone --filter=tree:0 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout "$baseline"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+      - name: Built libraries from earlier runs
+        id: libraries
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-android-arm64-${{ hashFiles('release/vcpkg.json') }}
+          restore-keys: vcpkg-android-arm64-
+      - name: Configure (vcpkg builds the libraries here)
+        run: cmake --preset android-arm64
+      # Kept even if our build fails below, so the next run doesn't rebuild them
+      - name: Keep the built libraries
+        if: always() && steps.libraries.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-android-arm64-${{ hashFiles('release/vcpkg.json') }}
+      - name: Build the APK
+        run: cmake --build --preset android-arm64 --target apk
+      - name: Sign the APK
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          version=$(sed -n 's/^project(TunedChaos VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          unsigned=build/android-arm64/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          mkdir -p apk
+          if [ -z "$KEYSTORE" ]; then
+              cp "$unsigned" "apk/TunedChaos-$version-arm64-unsigned.apk"
+              exit 0
+          fi
+          keystore="$RUNNER_TEMP/release.jks"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$KEYSTORE" | base64 -d > "$keystore"
+          "$tools/zipalign" -f -p 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$keystore" --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+              --out "apk/TunedChaos-$version-arm64.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" verify --print-certs "apk/TunedChaos-$version-arm64.apk" | grep -m2 "SHA-256\|DN"
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TunedChaos-android-arm64
+          path: apk/*.apk
+
   # The Linux packages (AppImage, tarball), built on Ubuntu 24.04 so they run
   # on systems that new or newer (release/linux/make-packages.sh)
   linux-packages:
