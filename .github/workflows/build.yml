@@ -75,7 +75,7 @@ jobs:
       - name: Build
         env:
           VCPKG_ROOT: ${{ env.CMP_VCPKG_DIR }}
-        run: cmake --build --preset windows-release
+        run: cmake --build --preset windows-release -- -k 0 # (all errors at once, not just the first)
       - name: Portable folder (app, Qt, libraries, yt-dlp)
         shell: bash
         run: |
@@ -123,7 +123,7 @@ jobs:
       - name: Configure
         run: cmake --preset linux-release -DCMAKE_PREFIX_PATH="${{ env.QT_ROOT_DIR }}"
       - name: Build
-        run: cmake --build --preset linux-release
+        run: cmake --build --preset linux-release -- -k 0
       - name: AppImage and tarball
         env:
           QMAKE: ${{ env.QT_ROOT_DIR }}/bin/qmake

@@ -289,6 +289,7 @@ void Decoder::convert(const uint8_t *const *input, int inputSamples, std::vector
     const size_t oldSize = out.size();
     out.resize(oldSize + size_t(maxOut) * OutputChannels);
     uint8_t *dst = reinterpret_cast<uint8_t *>(out.data() + oldSize);
-    const int got = swr_convert(m_swr, &dst, maxOut, input, inputSamples);
+    // (FFmpeg 7+ takes "const uint8_t *const *", older versions "const uint8_t **")
+    const int got = swr_convert(m_swr, &dst, maxOut, const_cast<const uint8_t **>(input), inputSamples);
     out.resize(oldSize + size_t(std::max(got, 0)) * OutputChannels);
 }

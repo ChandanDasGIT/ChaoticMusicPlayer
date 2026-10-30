@@ -36,7 +36,7 @@ int64_t nowSeconds()
 int64_t stampSeconds(int64_t modified)
 {
     const auto time = fs::file_time_type(fs::file_time_type::duration(modified));
-    const auto system = std::chrono::file_clock::to_sys(time);
+    const auto system = std::chrono::clock_cast<std::chrono::system_clock>(time); // (standard; to_sys isn't on MSVC)
     return std::chrono::duration_cast<std::chrono::seconds>(system.time_since_epoch()).count();
 }
 
