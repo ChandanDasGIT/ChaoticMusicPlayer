@@ -1,0 +1,335 @@
+This is the architecture of Tuned Chaos
+
+The three layers: frontend/ (QML) talks to wrapper/ (Qt C++), and wrapper/ talks to backend/ (plain C++).
+Left out: build/ and dependencies/ (generated, not part of the code).
+"its implementation" means the .cpp of the .h above it. (TunedChaosMap.pdf shows how the parts connect.)
+
+TunedChaos/
+├── .github/                                                  // GitHub settings
+│   └── workflows/                                            // what GitHub runs by itself
+│       └── build.yml                                         // on a pushed v* tag: builds and tests all platforms, then publishes the release
+├── android/                                                  // Android-only parts of the app: manifest, Gradle build, launcher icons, Java and Python code
+│   ├── gradle/                                               // Gradle settings
+│   │   └── wrapper/                                          // which Gradle to use
+│   │       └── gradle-wrapper.properties                     // pins Gradle 9.3.1, so any Qt version builds the same way
+│   ├── res/                                                  // Android resources
+│   │   ├── mipmap-hdpi/                                      // launcher icon, 72 px
+│   │   │   └── ic_launcher.png                               // the icon at that size
+│   │   ├── mipmap-mdpi/                                      // launcher icon, 48 px
+│   │   │   └── ic_launcher.png                               // the icon at that size
+│   │   ├── mipmap-xhdpi/                                     // launcher icon, 96 px
+│   │   │   └── ic_launcher.png                               // the icon at that size
+│   │   ├── mipmap-xxhdpi/                                    // launcher icon, 144 px
+│   │   │   └── ic_launcher.png                               // the icon at that size
+│   │   └── mipmap-xxxhdpi/                                   // launcher icon, 192 px
+│   │       └── ic_launcher.png                               // the icon at that size
+│   ├── src/                                                  // code that only runs on Android
+│   │   ├── io/                                               // (Java package folders)
+│   │   │   └── github/                                       // (Java package folders)
+│   │   │       └── chandandasgit/                            // (Java package folders)
+│   │   │           └── tunedchaos/                           // the Java side of the app
+│   │   │               ├── MediaPlaybackService.java         // media notification, lock screen and headset buttons; keeps sound playing in the background
+│   │   │               └── YtDlpRunner.java                  // lets C++ run yt-dlp in the app's Python
+│   │   └── main/                                             // (Chaquopy looks for Python here)
+│   │       └── python/                                       // Python code inside the APK
+│   │           └── ytdlp_bridge.py                           // runs yt-dlp in-process, with the same arguments and results as the desktop program
+│   ├── AndroidManifest.xml                                   // the app for Android: package name, permissions, activity, background playback service
+│   └── build.gradle                                          // Gradle build: Qt's template plus Chaquopy (Python and yt-dlp inside the APK)
+├── backend/                                                  // pure C++20 engine, no Qt at all: audio, library, lyrics, playlists, YouTube, storage
+│   ├── audioengine/                                          // playing sound: decode, equalize, buffer, output
+│   │   ├── audiooutput/                                      // sends audio to the sound system (one .cpp per platform)
+│   │   │   ├── audiooutput.h                                 // the common interface: open, start, stop, list the devices
+│   │   │   ├── audiooutput_linux.cpp                         // Linux version, through PipeWire
+│   │   │   └── audiooutput_miniaudio.cpp                     // Windows and Android version, through miniaudio (WASAPI / AAudio)
+│   │   ├── decoder/                                          // turns files and streams into raw audio
+│   │   │   ├── decoder.h                                     // opens a file or URL with FFmpeg and gives float samples; also reports format details
+│   │   │   └── decoder.cpp                                   // its implementation
+│   │   ├── equalizer/                                        // the 10-band equalizer
+│   │   │   ├── equalizer.h                                   // one peaking filter per octave, 31 Hz to 16 kHz
+│   │   │   └── equalizer.cpp                                 // its implementation
+│   │   ├── player/                                           // the playback engine
+│   │   │   ├── player.h                                      // decoder thread filling a ring buffer: play, pause, seek, gapless, crossfades, ReplayGain
+│   │   │   └── player.cpp                                    // its implementation
+│   │   ├── ringbuffer/                                       // hand-over between threads
+│   │   │   └── ringbuffer.h                                  // lock-free buffer from the decoder thread to the realtime audio thread
+│   │   └── spectrum/                                         // the numbers behind the visualizer
+│   │       ├── spectrum.h                                    // frequency analysis of what is playing
+│   │       └── spectrum.cpp                                  // its implementation
+│   ├── history/                                              // what you listened to
+│   │   └── listeninghistory/                                 // the listening history
+│   │       ├── listeninghistory.h                            // records every song listened to long enough, kept in a local text file
+│   │       └── listeninghistory.cpp                          // its implementation
+│   ├── library/                                              // your local music
+│   │   ├── coverfinder/                                      // finding missing covers
+│   │   │   ├── coverfinder.h                                 // asks every enabled online source and keeps the largest image
+│   │   │   └── coverfinder.cpp                               // its implementation
+│   │   ├── metadata/                                         // reading song information
+│   │   │   ├── metadata.h                                    // reads tags, cover and ReplayGain with TagLib; builds the track details
+│   │   │   └── metadata.cpp                                  // its implementation
+│   │   ├── musiclibrary/                                     // the library index
+│   │   │   ├── musiclibrary.h                                // every audio file in your music folders, with tags, kept in an index file
+│   │   │   └── musiclibrary.cpp                              // its implementation
+│   │   ├── scanner/                                          // finding music files
+│   │   │   ├── scanner.h                                     // walks folders and reads tags on a worker thread
+│   │   │   └── scanner.cpp                                   // its implementation
+│   │   ├── tageditor/                                        // changing tags
+│   │   │   ├── tageditor.h                                   // writes tags with TagLib, safely: copy first, then swap
+│   │   │   └── tageditor.cpp                                 // its implementation
+│   │   └── track/                                            // the basic data type
+│   │       └── track.h                                       // one song: path, title, artist, album, length...
+│   ├── lyrics/                                               // finding and showing lyrics
+│   │   ├── lrcparser/                                        // reading lyric files
+│   │   │   ├── lrcparser.h                                   // parses timed LRC or plain lyrics into lines
+│   │   │   └── lrcparser.cpp                                 // its implementation
+│   │   ├── lyricsprovider/                                   // getting lyrics
+│   │   │   ├── lyricsprovider.h                              // tries sources in order: .lrc file, tags, online; keeps a cache
+│   │   │   └── lyricsprovider.cpp                            // its implementation
+│   │   └── transliterator/                                   // lyrics in English letters
+│   │       ├── transliterator.h                              // writes Hindi and other scripts in English letters, without translating (ICU)
+│   │       └── transliterator.cpp                            // its implementation
+│   ├── network/                                              // internet access
+│   │   └── httpclient/                                       // web requests
+│   │       ├── httpclient.h                                  // blocking GET and POST through libcurl; also finds Android's certificates
+│   │       └── httpclient.cpp                                // its implementation
+│   ├── playlist/                                             // lists of songs
+│   │   ├── m3u/                                              // playlist files of other players
+│   │   │   ├── m3u.h                                         // reads and writes M3U / M3U8
+│   │   │   └── m3u.cpp                                       // its implementation
+│   │   ├── playlist/                                         // the list itself
+│   │   │   ├── playlist.h                                    // ordered songs, sorting, the current track, shuffle and repeat
+│   │   │   └── playlist.cpp                                  // its implementation
+│   │   ├── playlistlibrary/                                  // your named playlists
+│   │   │   ├── playlistlibrary.h                             // each playlist is one file in a folder; local and YouTube songs can mix
+│   │   │   └── playlistlibrary.cpp                           // its implementation
+│   │   ├── playliststore/                                    // saving lists
+│   │   │   ├── playliststore.h                               // saves and loads a list as tab-separated text, safely (temp file, then rename)
+│   │   │   └── playliststore.cpp                             // its implementation
+│   │   └── smartplaylist/                                    // lists that fill themselves
+│   │       ├── smartplaylist.h                               // rules such as "played more than 10 times", and the starter playlists
+│   │       └── smartplaylist.cpp                             // its implementation
+│   ├── settings/                                             // user settings on disk
+│   │   └── settings/                                         // the settings file
+│   │       ├── settings.h                                    // a simple key=value file
+│   │       └── settings.cpp                                  // its implementation
+│   ├── storage/                                              // shared file format helpers
+│   │   └── tsv/                                              // tab-separated files
+│   │       └── tsv.h                                         // helpers for the app's tab-separated files
+│   ├── system/                                               // talking to the operating system
+│   │   └── process/                                          // running other programs (one .cpp per platform)
+│   │       ├── process.h                                     // the common interface: run a program without a shell and collect its output
+│   │       ├── process_android.cpp                           // Android version: programs can't start there, so a runner calls yt-dlp in Python
+│   │       ├── process_posix.cpp                             // Linux version: posix_spawn and pipes
+│   │       └── process_windows.cpp                           // Windows version: CreateProcess and pipes
+│   └── youtube/                                              // YouTube Music
+│       ├── linklibrary/                                      // the Saved tab
+│       │   ├── linklibrary.h                                 // your own list of saved YouTube songs, no account needed
+│       │   └── linklibrary.cpp                               // its implementation
+│       ├── streamresolver/                                   // getting the audio address
+│       │   ├── streamresolver.h                              // turns "ytmusic:<id>" into a real stream address through yt-dlp, with a cache
+│       │   └── streamresolver.cpp                            // its implementation
+│       ├── ytdlp/                                            // using yt-dlp
+│       │   ├── ytdlp.h                                       // calls yt-dlp for stream addresses and your own library
+│       │   └── ytdlp.cpp                                     // its implementation
+│       ├── ytmatcher/                                        // matching songs
+│       │   ├── ytmatcher.h                                   // decides whether a YouTube song is the same as a local track
+│       │   └── ytmatcher.cpp                                 // its implementation
+│       ├── ytmetadatastore/                                  // remembering lookups
+│       │   ├── ytmetadatastore.h                             // disk cache of YouTube lookups for local files
+│       │   └── ytmetadatastore.cpp                           // its implementation
+│       └── ytmusicclient/                                    // the web API
+│           ├── ytmusicclient.h                               // search, home shelves, albums, artists; song, collection and shelf types
+│           └── ytmusicclient.cpp                             // its implementation
+├── EducationPurpose/                                         // this explanation of the project
+│   ├── architecture.txt                                      // this file: the project tree, one line per file
+│   └── TunedChaosMap.pdf                                     // diagrams: how backend, wrapper and frontend connect, and how it runs on three platforms
+├── frontend/                                                 // everything you see: QML screens, controls, style and the icon font
+│   ├── controls/                                             // reusable pieces of interface
+│   │   ├── ControlButton.qml                                 // round icon button
+│   │   ├── FadeLabel.qml                                     // label that fades to new text
+│   │   ├── ListPopulate.qml                                  // rows fade and rise in when a list fills
+│   │   ├── PillButton.qml                                    // stadium-shaped button with icon and / or text
+│   │   ├── PlayingBars.qml                                   // three bouncing "now playing" bars
+│   │   ├── SeekBar.qml                                       // seek bar drawn as a flowing wave
+│   │   ├── ThemedMenu.qml                                    // the app's menu look; also keeps Back and the phone keyboard behaving
+│   │   ├── ThemedSlider.qml                                  // rounded slider
+│   │   ├── Toast.qml                                         // message that slides up and fades away
+│   │   ├── TransportControls.qml                             // previous / play / next and the shuffle, repeat, lyrics toggles
+│   │   └── VolumeSlider.qml                                  // mute, volume, equalizer and sleep timer buttons
+│   ├── detailsdialog/                                        // the track details window
+│   │   └── TrackDetailsDialog.qml                            // tags, audio properties, YouTube info, and the tag editor
+│   ├── dialogs/                                              // general dialogs
+│   │   ├── ConfirmDialog.qml                                 // "are you sure?"
+│   │   ├── FolderPicker.qml                                  // the app's own folder chooser
+│   │   └── NameDialog.qml                                    // asks for a name (new playlist, rename)
+│   ├── dragdrop/                                             // dragging songs inside the app
+│   │   ├── DragCard.qml                                      // the card that follows the pointer
+│   │   ├── DragSource.qml                                    // press, hold and drag: starts a drag
+│   │   ├── DropHint.qml                                      // a place to drop dragged songs
+│   │   └── SongDrag.qml                                      // singleton: what is being dragged and where it goes
+│   ├── dropzone/                                             // files dropped from outside the app
+│   │   └── DropOverlay.qml                                   // accepts files and folders dropped anywhere on the window
+│   ├── fonts/                                                // fonts built into the app
+│   │   └── fa-solid-900.ttf                                  // Font Awesome icon font
+│   ├── home/                                                 // the Home panel
+│   │   ├── HomePanel.qml                                     // greeting, Your Mix, recently played, history, stats, smart playlists
+│   │   ├── HomeSongRow.qml                                   // one song on Home
+│   │   └── SmartPlaylistDialog.qml                           // making or changing a smart playlist
+│   ├── layout/                                               // how the window is put together
+│   │   ├── AppShortcuts.qml                                  // all keyboard shortcuts, and Esc / Android Back
+│   │   ├── DockSlot.qml                                      // a dockable column that slides open
+│   │   └── NavBar.qml                                        // the bottom bar: YouTube, Queue, Home, Library, Settings
+│   ├── library/                                              // the Library panel
+│   │   ├── LibraryAddAllMenu.qml                             // "Add all": to the Queue, a playlist or a new playlist
+│   │   ├── LibraryFolderRow.qml                              // one folder in the Folders tab
+│   │   ├── LibraryPanel.qml                                  // Songs, Albums, Artists and Folders tabs
+│   │   ├── LibrarySongMenu.qml                               // the three-dots menu of a library song
+│   │   └── LibrarySongRow.qml                                // one library song
+│   ├── lyrics/                                               // the lyrics view
+│   │   └── LyricsView.qml                                    // synced and static lyrics
+│   ├── nowplaying/                                           // the player
+│   │   ├── AlbumArt.qml                                      // the big cover with shadow and crossfade
+│   │   ├── MiniPlayer.qml                                    // compact player over the panels
+│   │   ├── NowPlayingPanel.qml                               // the main player: cover, track info, controls
+│   │   ├── QualityChip.qml                                   // the "44.1 kHz · FLAC" pill
+│   │   └── Visualizer.qml                                    // spectrum under the volume bar
+│   ├── playlist/                                             // the Queue panel
+│   │   ├── PlaylistContextMenu.qml                           // the menu of a Queue row
+│   │   ├── PlaylistHeader.qml                                // column headers: sort and resize
+│   │   ├── PlaylistPanel.qml                                 // the Queue or a playlist: header and track list
+│   │   └── PlaylistRow.qml                                   // one row: grab handle, cover, columns, swipe to delete
+│   ├── playlists/                                            // shared playlist parts
+│   │   └── AddToPlaylistMenu.qml                             // the "Add to playlist" submenu
+│   ├── settingsdialog/                                       // the Settings panel
+│   │   ├── SettingsPanel.qml                                 // all settings pages, with search
+│   │   ├── SettingsRow.qml                                   // one setting: text and control
+│   │   └── SettingsSwitch.qml                                // on / off switch
+│   ├── style/                                                // the app's own Qt control style (ChaoticStyle)
+│   │   └── ToolTip.qml                                       // the app's tooltip (hidden on phones)
+│   ├── youtube/                                              // the YouTube Music panel
+│   │   ├── YouTubePanel.qml                                  // Home, Search, Library and Saved tabs
+│   │   ├── YtArtistView.qml                                  // an artist's page
+│   │   ├── YtCard.qml                                        // a card on a shelf
+│   │   ├── YtCollectionView.qml                              // an opened album or playlist
+│   │   ├── YtHomeView.qml                                    // the Home tab
+│   │   ├── YtLibraryView.qml                                 // the Library tab: your liked songs
+│   │   ├── YtSavedLinksView.qml                              // the Saved tab
+│   │   ├── YtSearchView.qml                                  // the Search tab
+│   │   ├── YtShelf.qml                                       // a sideways-scrolling row of cards
+│   │   ├── YtSongMenu.qml                                    // the three-dots menu of a YouTube song
+│   │   ├── YtStatus.qml                                      // loading, error and empty messages
+│   │   ├── YtThumbnail.qml                                   // artwork with a colored placeholder
+│   │   └── YtTrackRow.qml                                    // one YouTube song
+│   ├── Icon.qml                                              // an icon from the Font Awesome font, by name
+│   ├── Theme.qml                                             // the look: dark / light colors, fonts, sizes, animation timing, touchOnly
+│   └── Util.qml                                              // small helpers: time format, cover addresses, count of open menus
+├── release/                                                  // packaging and releasing for every platform
+│   ├── linux/                                                // Linux packages
+│   │   ├── flatpak/                                          // the Flatpak
+│   │   │   └── io.github.chandandasgit.TunedChaos.yml        // Flatpak build recipe (KDE runtime)
+│   │   ├── install-app.sh                                    // inside the tarball: installs for your user, no root
+│   │   ├── io.github.chandandasgit.TunedChaos.desktop        // the app menu entry
+│   │   ├── io.github.chandandasgit.TunedChaos.metainfo.xml   // what software centers show about the app
+│   │   ├── make-packages.sh                                  // makes the AppImage and the tarball
+│   │   └── uninstall-app.sh                                  // removes what install-app.sh installed; your data stays
+│   ├── windows/                                              // Windows packages
+│   │   ├── tunedchaos.ico                                    // the Windows icon, 16 to 256 px
+│   │   ├── TunedChaos.iss                                    // the Inno Setup installer script
+│   │   ├── TunedChaos.manifest                               // Windows settings for the .exe: UTF-8 text, sharp at any scaling, long paths
+│   │   └── TunedChaos.rc                                     // puts the icon inside the .exe
+│   ├── README.md                                             // how the code stays cross-platform, the packages, and how to publish a release
+│   └── vcpkg.json                                            // libraries for the Windows and Android builds (Linux uses the system's)
+├── resources/                                                // the icon, and pictures for the README
+│   ├── icons/                                                // the app's icon
+│   │   └── tunedchaos.svg                                    // the icon, the source for all the others
+│   └── screenshots/                                          // pictures for the README (a made-up demo library)
+│       ├── desktop.png                                       // Queue and player on a wide window
+│       ├── library.png                                       // the Library at phone size
+│       ├── lyrics.png                                        // synced lyrics
+│       └── player.png                                        // the player at phone size
+├── scripts/                                                  // helper scripts for developing on this computer
+│   ├── install-desktop.sh                                    // adds your own build to the app menu
+│   ├── shot-build.sh                                         // builds the screenshot test harness
+│   ├── shot-run.sh                                           // runs it safely, with its own folders and no network
+│   └── uninstall-desktop.sh                                  // removes it again
+├── wrapper/                                                  // Qt C++ layer between QML and the backend: controllers, models and per-platform services
+│   ├── albumart/                                             // covers for QML
+│   │   ├── albumartprovider.h                                // serves covers to QML as image://albumart/...
+│   │   ├── albumartprovider.cpp                              // its implementation
+│   │   ├── covercontroller.h                                 // finds covers for songs without one (CoverController)
+│   │   ├── covercontroller.cpp                               // its implementation
+│   │   ├── coverpalette.h                                    // background color from the playing cover (CoverPalette)
+│   │   └── coverpalette.cpp                                  // its implementation
+│   ├── files/                                                // paths for QML
+│   │   ├── files.h                                           // the app's folders, drives and path handling, the same on every platform (Files)
+│   │   └── files.cpp                                         // its implementation
+│   ├── history/                                              // listening history for QML
+│   │   ├── historycontroller.h                               // watches what plays, records it, gives stats and Your Mix (HistoryController)
+│   │   └── historycontroller.cpp                             // its implementation
+│   ├── library/                                              // dropped files
+│   │   ├── librarycontroller.h                               // turns dropped files and folders into Queue entries (LibraryController)
+│   │   └── librarycontroller.cpp                             // its implementation
+│   ├── locallibrary/                                         // the Library panel's data
+│   │   ├── librarysongsmodel.h                               // list model of library songs
+│   │   ├── librarysongsmodel.cpp                             // its implementation
+│   │   ├── locallibrarycontroller.h                          // songs, albums, artists and folders for QML (LocalLibraryController)
+│   │   └── locallibrarycontroller.cpp                        // its implementation
+│   ├── lyrics/                                               // lyrics for QML
+│   │   ├── lyricscontroller.h                                // fetches lyrics of the playing song, follows the current line (LyricsController)
+│   │   └── lyricscontroller.cpp                              // its implementation
+│   ├── mpris/                                                // Linux media controls
+│   │   ├── mprisadaptor.h                                    // MPRIS on D-Bus: media keys, desktop panels, playerctl
+│   │   └── mprisadaptor.cpp                                  // its implementation
+│   ├── notifications/                                        // song-change notifications (one .cpp per platform)
+│   │   ├── notificationcontroller.h                          // the common part: decides when to notify
+│   │   ├── notificationcontroller.cpp                        // its shared implementation
+│   │   ├── notificationcontroller_android.cpp                // Android: nothing extra, the media notification shows the song
+│   │   ├── notificationcontroller_linux.cpp                  // Linux: the desktop's notification service over D-Bus
+│   │   └── notificationcontroller_windows.cpp                // Windows: a toast
+│   ├── player/                                               // playback for QML
+│   │   ├── playercontroller.h                                // the backend Player for QML: state, position, volume, devices (PlayerController)
+│   │   └── playercontroller.cpp                              // its implementation
+│   ├── playlist/                                             // the Queue for QML
+│   │   ├── playlistcontroller.h                              // the Queue: sorting, saving, what plays next (PlaylistController)
+│   │   ├── playlistcontroller.cpp                            // its implementation
+│   │   ├── playlistmodel.h                                   // list model of a backend Playlist
+│   │   └── playlistmodel.cpp                                 // its implementation
+│   ├── playlists/                                            // named playlists for QML
+│   │   ├── playlistscontroller.h                             // your playlists next to the Queue (PlaylistsController)
+│   │   └── playlistscontroller.cpp                           // its implementation
+│   ├── session/                                              // resume where you left off
+│   │   ├── sessioncontroller.h                               // remembers the song and position, reopens them paused (SessionController)
+│   │   └── sessioncontroller.cpp                             // its implementation
+│   ├── settings/                                             // settings for QML
+│   │   ├── settingscontroller.h                              // every user setting, saved shortly after a change (SettingsController)
+│   │   └── settingscontroller.cpp                            // its implementation
+│   ├── singleinstance/                                       // one copy at a time
+│   │   ├── singleinstance.h                                  // a second launch brings the first copy forward
+│   │   └── singleinstance.cpp                                // its implementation
+│   ├── sleeptimer/                                           // the sleep timer
+│   │   ├── sleeptimercontroller.h                            // pauses after a while, or at the end of the song (SleepTimerController)
+│   │   └── sleeptimercontroller.cpp                          // its implementation
+│   ├── smartplaylists/                                       // smart playlists for QML
+│   │   ├── smartplaylistscontroller.h                        // fills smart playlists from library and history (SmartPlaylistsController)
+│   │   └── smartplaylistscontroller.cpp                      // its implementation
+│   ├── systemmedia/                                          // the system's media controls (one .cpp per platform)
+│   │   ├── systemmedia.h                                     // the common interface: keys, lock screen, now playing
+│   │   ├── systemmedia_android.cpp                           // Android: MediaPlaybackService; also asks for permissions at start
+│   │   ├── systemmedia_linux.cpp                             // Linux: MPRIS (wrapper/mpris)
+│   │   └── systemmedia_windows.cpp                           // Windows: System Media Transport Controls
+│   ├── visualizer/                                           // the visualizer's data
+│   │   ├── visualizercontroller.h                            // frequency bands at about 60 fps (VisualizerController)
+│   │   └── visualizercontroller.cpp                          // its implementation
+│   └── youtube/                                              // YouTube Music for QML
+│       ├── youtubecontroller.h                               // everything the YouTube panel shows and does (YouTubeController)
+│       ├── youtubecontroller.cpp                             // its implementation
+│       ├── ytdlpmanager.h                                    // picks the newest working yt-dlp and keeps it up to date
+│       ├── ytdlpmanager.cpp                                  // its implementation
+│       ├── ytmetadatacontroller.h                            // looks up local songs on YouTube in the background (YtMetadataController)
+│       └── ytmetadatacontroller.cpp                          // its implementation
+├── .gitignore                                                // what git leaves out: build output, dependencies, personal files
+├── CMakeLists.txt                                            // the build: picks the platform (CMP_PLATFORM), its source files, its libraries, and the app version
+├── CMakePresets.json                                         // ready-made build setups: linux, windows, android
+├── LICENSE                                                   // the GNU GPL v3 license
+├── main.cpp                                                  // start of the program: creates every controller in order, connects them, loads Main.qml
+├── Main.qml                                                  // the window: layout (wide / half / compact), panels, drawers, Back / Esc, dialogs, full screen on phones
+└── README.md                                                 // what the app does, how to install and build it, where it keeps data

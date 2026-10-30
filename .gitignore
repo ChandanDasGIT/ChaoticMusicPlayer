@@ -4,7 +4,6 @@ build/
 # Personal / local files
 .claude/settings.local.json
 claude input.txt
-images
 
 # Editors
 *.user
