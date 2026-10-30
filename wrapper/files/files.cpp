@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <QStorageInfo>
 
 namespace {
@@ -65,6 +66,41 @@ QVariantList Files::crumbs(const QUrl &folder) const
             break;
     }
     return out;
+}
+
+namespace {
+
+QString ownFolder(QStandardPaths::StandardLocation desktop, QStandardPaths::StandardLocation android)
+{
+#if defined(Q_OS_ANDROID)
+    Q_UNUSED(desktop)
+    return QStandardPaths::writableLocation(android);
+#else
+    Q_UNUSED(android)
+    return QStandardPaths::writableLocation(desktop) + QStringLiteral("/ChaoticMusicPlayer");
+#endif
+}
+
+} // namespace
+
+QString Files::configDir()
+{
+    return ownFolder(QStandardPaths::GenericConfigLocation, QStandardPaths::AppConfigLocation);
+}
+
+QString Files::dataDir()
+{
+    return ownFolder(QStandardPaths::GenericDataLocation, QStandardPaths::AppDataLocation);
+}
+
+QString Files::cacheDir()
+{
+    return ownFolder(QStandardPaths::GenericCacheLocation, QStandardPaths::CacheLocation);
+}
+
+QString Files::appFolder(const QString &kind) const
+{
+    return kind == QLatin1String("config") ? configDir() : kind == QLatin1String("cache") ? cacheDir() : dataDir();
 }
 
 QVariantList Files::drives() const

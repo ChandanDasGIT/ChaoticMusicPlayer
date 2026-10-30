@@ -1,4 +1,6 @@
 // Windows: the System Media Transport Controls (the overlay media keys and the
+
+#include "wrapper/files/files.h"
 // volume flyout show, with title, artist, cover and play / pause / next /
 // previous), through C++/WinRT.
 #include "wrapper/systemmedia/systemmedia.h"
@@ -171,8 +173,7 @@ SystemMedia::SystemMedia(PlayerController *player, PlaylistController *playlist,
                 const std::vector<unsigned char> data = CoverController::coverBytes(source.toStdString());
                 if (data.empty())
                     return;
-                const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                                    + QStringLiteral("/ChaoticMusicPlayer");
+                const QString dir = Files::cacheDir();
                 QDir().mkpath(dir);
                 const QString file = dir + QStringLiteral("/media-controls-cover");
                 QFile out(file);

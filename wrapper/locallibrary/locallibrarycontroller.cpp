@@ -1,5 +1,6 @@
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
 #include "backend/library/musiclibrary/musiclibrary.h"
 #include "backend/library/tageditor/tageditor.h"
@@ -123,8 +124,8 @@ LocalLibraryController::LocalLibraryController(PlaylistController *queue, Playli
     , m_ytMetadata(ytMetadata)
     , m_settings(settings)
     , m_library(std::make_shared<MusicLibrary>(
-          (QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-           + QStringLiteral("/ChaoticMusicPlayer/library.tsv"))
+          (Files::dataDir()
+           + QStringLiteral("/library.tsv"))
               .toStdString()))
     , m_cancel(std::make_shared<std::atomic<bool>>(false))
     , m_songs(std::make_unique<LibrarySongsModel>())

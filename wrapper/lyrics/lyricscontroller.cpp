@@ -1,5 +1,6 @@
 #include "wrapper/lyrics/lyricscontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
 #include "backend/lyrics/lyricsprovider/lyricsprovider.h"
 #include "wrapper/player/playercontroller.h"
@@ -39,8 +40,8 @@ LyricsController::LyricsController(PlayerController *player, PlaylistController 
     Q_ASSERT(!s_instance);
     s_instance = this;
 
-    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                             + QStringLiteral("/ChaoticMusicPlayer/lyrics");
+    const QString cacheDir = Files::cacheDir()
+                             + QStringLiteral("/lyrics");
     m_provider = std::make_shared<LyricsProvider>(cacheDir.toStdString());
     m_pool.setMaxThreadCount(1);
 

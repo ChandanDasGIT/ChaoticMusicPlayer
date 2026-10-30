@@ -31,4 +31,14 @@ public:
     // disks and USB sticks (/mnt, /media); Windows: every drive; Android: the
     // phone's storage and SD cards.
     Q_INVOKABLE QVariantList drives() const;
+
+    // The app's own folders: its settings, its data (library, playlists,
+    // history) and its cache. Desktop: the system's config / data / cache folder
+    // + "/ChaoticMusicPlayer" (~/.config/ChaoticMusicPlayer...; Windows: AppData);
+    // Android: the app's private storage. Every file of the app goes in these.
+    static QString configDir();
+    static QString dataDir();
+    static QString cacheDir();
+    // For QML: "config", "data" or "cache"
+    Q_INVOKABLE QString appFolder(const QString &kind) const;
 };

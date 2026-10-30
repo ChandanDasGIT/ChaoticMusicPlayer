@@ -1,5 +1,6 @@
 #include "wrapper/albumart/covercontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/coverfinder/coverfinder.h"
 #include "backend/library/metadata/metadata.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
@@ -15,7 +16,7 @@ namespace {
 std::string cacheDir()
 {
     static const std::string dir =
-        (QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/ChaoticMusicPlayer/covers"))
+        (Files::cacheDir() + QStringLiteral("/covers"))
             .toStdString();
     return dir;
 }

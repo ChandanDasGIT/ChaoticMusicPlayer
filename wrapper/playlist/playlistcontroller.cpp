@@ -1,5 +1,6 @@
 #include "wrapper/playlist/playlistcontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/playlist/playliststore/playliststore.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 #include "wrapper/player/playercontroller.h"
@@ -38,10 +39,10 @@ PlaylistController::PlaylistController(PlayerController *player, SettingsControl
     s_instance = this;
     QJSEngine::setObjectOwnership(m_model.get(), QJSEngine::CppOwnership);
 
-    m_storePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                  + QStringLiteral("/ChaoticMusicPlayer/playlist.tsv");
-    m_titledStorePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                         + QStringLiteral("/ChaoticMusicPlayer/playing-list.tsv");
+    m_storePath = Files::dataDir()
+                  + QStringLiteral("/playlist.tsv");
+    m_titledStorePath = Files::dataDir()
+                         + QStringLiteral("/playing-list.tsv");
 
     // Restore the last session (before QML exists, so no model signals are needed).
     m_playlist.sort(toBackend(m_settings->sortColumn()), m_settings->sortDescending());

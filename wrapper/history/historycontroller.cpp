@@ -1,5 +1,6 @@
 #include "wrapper/history/historycontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
 #include "wrapper/player/playercontroller.h"
@@ -84,8 +85,8 @@ HistoryController::HistoryController(PlayerController *player, PlaylistControlle
     , m_library(library)
     , m_settings(settings)
     , m_history(std::make_unique<ListeningHistory>(
-          (QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-           + QStringLiteral("/ChaoticMusicPlayer/history.tsv"))
+          (Files::dataDir()
+           + QStringLiteral("/history.tsv"))
               .toStdString()))
 {
     Q_ASSERT(!s_instance);

@@ -1,5 +1,6 @@
 #include "wrapper/youtube/youtubecontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/track/track.h"
 #include "backend/youtube/linklibrary/linklibrary.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
@@ -106,8 +107,8 @@ YouTubeController::YouTubeController(PlaylistController *playlist, SettingsContr
     s_instance = this;
     m_pool.setMaxThreadCount(3);
 
-    const QString file = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                         + QStringLiteral("/ChaoticMusicPlayer/savedlinks.tsv");
+    const QString file = Files::dataDir()
+                         + QStringLiteral("/savedlinks.tsv");
     m_links = std::make_unique<LinkLibrary>(file.toStdString());
     m_links->load();
 

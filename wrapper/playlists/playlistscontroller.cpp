@@ -1,5 +1,6 @@
 #include "wrapper/playlists/playlistscontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/playlist/m3u/m3u.h"
 #include "backend/playlist/playlistlibrary/playlistlibrary.h"
 #include "wrapper/player/playercontroller.h"
@@ -27,8 +28,8 @@ PlaylistsController::PlaylistsController(PlaylistController *queue, PlayerContro
     QJSEngine::setObjectOwnership(m_viewModel.get(), QJSEngine::CppOwnership);
     m_view.sort(Playlist::SortColumn::Custom, false);
 
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-                        + QStringLiteral("/ChaoticMusicPlayer/playlists");
+    const QString dir = Files::dataDir()
+                        + QStringLiteral("/playlists");
     m_library = std::make_unique<PlaylistLibrary>(dir.toStdString());
     m_pool.setMaxThreadCount(1);
     m_library->load();

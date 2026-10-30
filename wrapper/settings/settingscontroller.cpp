@@ -1,5 +1,6 @@
 #include "wrapper/settings/settingscontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/storage/tsv/tsv.h"
 
 #include <QDir>
@@ -92,8 +93,8 @@ const QList<QPair<QString, QString>> LyricsSourceNames = {
 
 std::string settingsFile()
 {
-    return (QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
-            + QStringLiteral("/ChaoticMusicPlayer/settings.conf")).toStdString();
+    return (Files::configDir()
+            + QStringLiteral("/settings.conf")).toStdString();
 }
 
 qreal clampScale(qreal scale)

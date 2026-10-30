@@ -1,5 +1,6 @@
 #include "wrapper/youtube/ytmetadatacontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
 #include "backend/library/track/track.h"
 #include "backend/youtube/ytmatcher/ytmatcher.h"
@@ -30,8 +31,8 @@ YtMetadataController::YtMetadataController(PlaylistController *playlist, PlayerC
     Q_ASSERT(!s_instance);
     s_instance = this;
 
-    const QString file = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                         + QStringLiteral("/ChaoticMusicPlayer/ytmeta.tsv");
+    const QString file = Files::cacheDir()
+                         + QStringLiteral("/ytmeta.tsv");
     m_store = std::make_unique<YtMetadataStore>(file.toStdString());
     m_store->load();
 

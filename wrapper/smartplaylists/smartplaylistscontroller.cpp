@@ -1,5 +1,6 @@
 #include "wrapper/smartplaylists/smartplaylistscontroller.h"
 
+#include "wrapper/files/files.h"
 #include "backend/youtube/streamresolver/streamresolver.h"
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
@@ -27,8 +28,8 @@ SmartPlaylistsController::SmartPlaylistsController(HistoryController *history, L
     , m_library(library)
     , m_queue(queue)
     , m_store(std::make_unique<SmartPlaylistStore>(
-          (QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-           + QStringLiteral("/ChaoticMusicPlayer/smartplaylists.json"))
+          (Files::dataDir()
+           + QStringLiteral("/smartplaylists.json"))
               .toStdString()))
 {
     Q_ASSERT(!s_instance);

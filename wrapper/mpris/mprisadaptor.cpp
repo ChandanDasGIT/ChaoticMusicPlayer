@@ -1,5 +1,6 @@
 #include "wrapper/mpris/mprisadaptor.h"
 
+#include "wrapper/files/files.h"
 #include "backend/library/metadata/metadata.h"
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
@@ -364,8 +365,7 @@ void MprisPlayerInterface::updateArt()
         return;
 
     const bool png = data.size() > 4 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G';
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation)
-                        + QStringLiteral("/ChaoticMusicPlayer");
+    const QString dir = Files::cacheDir();
     QDir().mkpath(dir);
     const QString file = dir + QStringLiteral("/cover-%1.%2")
                                    .arg(qHash(source), 0, 16)

@@ -1324,16 +1324,16 @@ Rectangle {
 
                             Repeater {
                                 model: [
-                                    { name: qsTr("Settings"), base: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) },
-                                    { name: qsTr("Queue, playlists, library"), base: StandardPaths.writableLocation(StandardPaths.GenericDataLocation) },
-                                    { name: qsTr("Covers, lyrics, YouTube matches"), base: StandardPaths.writableLocation(StandardPaths.GenericCacheLocation) }
+                                    { name: qsTr("Settings"), kind: "config" },
+                                    { name: qsTr("Queue, playlists, library"), kind: "data" },
+                                    { name: qsTr("Covers, lyrics, YouTube matches"), kind: "cache" }
                                 ]
 
                                 delegate: SettingsRow {
                                     id: dataRow
 
                                     required property var modelData
-                                    readonly property url folder: Files.child(modelData.base, "ChaoticMusicPlayer")
+                                    readonly property url folder: Files.toUrl(Files.appFolder(modelData.kind))
 
                                     Layout.fillWidth: true
                                     title: modelData.name

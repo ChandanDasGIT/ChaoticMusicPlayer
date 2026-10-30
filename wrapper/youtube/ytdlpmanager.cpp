@@ -1,5 +1,6 @@
 #include "wrapper/youtube/ytdlpmanager.h"
 
+#include "wrapper/files/files.h"
 #include "backend/network/httpclient/httpclient.h"
 #include "backend/youtube/ytdlp/ytdlp.h"
 
@@ -30,8 +31,8 @@ const QString ProgramName = QStringLiteral("yt-dlp");
 // The app's own copy (it may update this one)
 QString managedPath()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-           + QStringLiteral("/ChaoticMusicPlayer/yt-dlp/") + ProgramName;
+    return Files::dataDir()
+           + QStringLiteral("/yt-dlp/") + ProgramName;
 }
 
 // A copy shipped next to the app (Windows packages, AppImage)
