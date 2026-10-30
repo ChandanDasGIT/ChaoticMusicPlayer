@@ -71,7 +71,8 @@ android {
 
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = legacyPackaging.toBoolean()
+            // (Qt 6.11 writes legacyPackaging; Qt 6.10, which CI uses, doesn't)
+            useLegacyPackaging = (project.findProperty('legacyPackaging') ?: 'false').toBoolean()
         }
     }
 
