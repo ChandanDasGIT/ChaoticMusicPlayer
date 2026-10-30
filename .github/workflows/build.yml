@@ -281,7 +281,8 @@ jobs:
           name: TunedChaos-linux-x86_64
           path: |
             dist/*.AppImage
-            dist/*.tar.gz
+            dist/*.tar.xz
+            dist/SHA256SUMS.txt
 
   # The Flatpak, in Flathub's own build container (release/linux/flatpak)
   flatpak:
