@@ -6,7 +6,7 @@
 class QLocalServer;
 
 // Keeps one running copy of the app per user. A second launch connects to the
-// first copy's local socket ($XDG_RUNTIME_DIR/ChaoticMusicPlayer.sock), which
+// first copy's local socket ($XDG_RUNTIME_DIR/TunedChaos.sock), which
 // then emits activationRequested() to bring its window forward.
 class SingleInstance : public QObject
 {

@@ -13,7 +13,7 @@ class QQmlEngine;
 class Settings;
 
 // Persistent user settings (`SettingsController` singleton), stored in
-// ~/.config/ChaoticMusicPlayer/settings.conf. Changes are saved shortly after
+// ~/.config/TunedChaos/settings.conf. Changes are saved shortly after
 // they happen (debounced) and on exit.
 class SettingsController : public QObject
 {

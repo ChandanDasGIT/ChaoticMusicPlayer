@@ -33,7 +33,7 @@ void SingleInstance::stop()
 bool SingleInstance::start()
 {
     m_socketPath = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)
-                   + QStringLiteral("/ChaoticMusicPlayer.sock");
+                   + QStringLiteral("/TunedChaos.sock");
 
     // Someone already listening? Ask them to come forward and step aside.
     QLocalSocket socket;

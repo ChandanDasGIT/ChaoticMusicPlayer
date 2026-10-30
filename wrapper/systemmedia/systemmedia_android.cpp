@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr const char *ServiceClass = "io/github/chandandasgit/chaoticmusicplayer/MediaPlaybackService";
+constexpr const char *ServiceClass = "io/github/chandandasgit/tunedchaos/MediaPlaybackService";
 
 QPointer<SystemMedia> g_instance; // the one the buttons reach
 PlayerController *g_player = nullptr;

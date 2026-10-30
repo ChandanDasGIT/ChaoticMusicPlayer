@@ -1,4 +1,4 @@
-package io.github.chandandasgit.chaoticmusicplayer;
+package io.github.chandandasgit.tunedchaos;
 
 import android.Manifest;
 import android.app.Activity;
@@ -38,7 +38,7 @@ public class MediaPlaybackService extends Service {
 
     private static final String CHANNEL = "playback";
     private static final int NOTIFICATION = 1;
-    private static final String ACTION = "io.github.chandandasgit.chaoticmusicplayer.ACTION";
+    private static final String ACTION = "io.github.chandandasgit.tunedchaos.ACTION";
 
     // What plays (set from C++, any thread)
     private static String s_title = "", s_artist = "", s_album = "", s_cover = "";

@@ -13,7 +13,7 @@ class PlaylistController;
 
 // MPRIS 2 (https://specifications.freedesktop.org/mpris-spec/latest/):
 // lets desktop media controls, the lock screen, media keys and playerctl see
-// and control the player. Registers as org.mpris.MediaPlayer2.chaoticmusicplayer
+// and control the player. Registers as org.mpris.MediaPlayer2.tunedchaos
 // on the session bus; the two interfaces below are exported on its object.
 class MprisAdaptor : public QObject
 {

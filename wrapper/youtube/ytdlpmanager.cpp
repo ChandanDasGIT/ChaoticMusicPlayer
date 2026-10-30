@@ -210,7 +210,7 @@ YtDlpManager::YtDlpManager(QObject *parent)
             env->SetObjectArrayElement(array, jsize(i), arg.object());
         }
         const QJniObject reply = QJniObject::callStaticObjectMethod(
-            "io/github/chandandasgit/chaoticmusicplayer/YtDlpRunner", "run",
+            "io/github/chandandasgit/tunedchaos/YtDlpRunner", "run",
             "(Landroid/content/Context;[Ljava/lang/String;)[Ljava/lang/String;",
             QNativeInterface::QAndroidApplication::context().object(), array);
         env->DeleteLocalRef(array);

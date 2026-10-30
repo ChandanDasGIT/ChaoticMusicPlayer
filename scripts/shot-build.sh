@@ -791,10 +791,10 @@ hook = '''    // ---- screenshot harness
 assert s.count("    const int result = app.exec();") == 1
 pathlib.Path("build/shot/shotmain.cpp").write_text(s.replace("    const int result = app.exec();", hook))
 PY
-OBJ=build/CMakeFiles/ChaoticMusicPlayer.dir
+OBJ=build/CMakeFiles/TunedChaos.dir
 objs=$(find $OBJ -name '*.o' ! -name 'main.cpp.o')
-version=$(sed -n 's/^project(ChaoticMusicPlayer VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
-g++ -std=c++20 -fPIC -I. -Ibuild/ChaoticMusicPlayer_autogen/include -DAPP_VERSION="\"$version\"" \
+version=$(sed -n 's/^project(TunedChaos VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+g++ -std=c++20 -fPIC -I. -Ibuild/TunedChaos_autogen/include -DAPP_VERSION="\"$version\"" \
   $(pkg-config --cflags Qt6Gui Qt6Qml Qt6Quick Qt6QuickControls2 Qt6DBus Qt6Network Qt6Test) \
   build/shot/shotmain.cpp $objs build/qml/ChaoticStyle/libchaoticstyleplugin.a build/libchaoticstyle.a build/libbackend.a \
   $(pkg-config --libs Qt6Quick Qt6Qml Qt6Gui Qt6DBus Qt6Network Qt6QuickControls2 Qt6Test taglib libavformat libavcodec libavutil libswresample libpipewire-0.3 libcurl icu-uc icu-i18n) \

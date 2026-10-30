@@ -1,4 +1,4 @@
-package io.github.chandandasgit.chaoticmusicplayer;
+package io.github.chandandasgit.tunedchaos;
 
 import android.content.Context;
 

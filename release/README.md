@@ -1,4 +1,4 @@
-# Releasing ChaoticMusicPlayer
+# Releasing Tuned Chaos
 
 Everything about packaging and releasing lives in this folder. Three things
 can't: the GitHub workflows (`.github/workflows/`, where GitHub reads them),
@@ -43,14 +43,14 @@ forbids downloads at runtime (Flathub).
 
 ## Linux packages (`release/linux/`)
 
-- `io.github.chandandasgit.ChaoticMusicPlayer.desktop` / `.metainfo.xml`: the
+- `io.github.chandandasgit.TunedChaos.desktop` / `.metainfo.xml`: the
   app's launcher entry and what software centers show; every package uses
   them (the app id is also the app's desktop name).
 - `make-packages.sh <build> <output>`: the AppImage and the tarball. Both hold
   the app with Qt, its libraries and yt-dlp (linuxdeploy). They run on systems
   as new as the one that built them, so CI builds them on Ubuntu 24.04.
 - `install-app.sh` / `uninstall-app.sh`: inside the tarball; installs for the
-  user in `~/.local/opt/ChaoticMusicPlayer` with a launcher entry.
+  user in `~/.local/opt/TunedChaos` with a launcher entry.
 - `flatpak/`: the Flatpak manifest (KDE runtime). Built in CI with Flathub's
   own tools; for Flathub, see the notes at its top.
 
@@ -61,5 +61,5 @@ Linux:
 ```sh
 cmake --preset linux-release
 cmake --build --preset linux-release
-./build/linux-release/ChaoticMusicPlayer
+./build/linux-release/TunedChaos
 ```

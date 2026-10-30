@@ -15,7 +15,7 @@
 
 namespace {
 
-const QString ServiceName = QStringLiteral("org.mpris.MediaPlayer2.chaoticmusicplayer");
+const QString ServiceName = QStringLiteral("org.mpris.MediaPlayer2.tunedchaos");
 const QString ObjectPath = QStringLiteral("/org/mpris/MediaPlayer2");
 const QString PlayerInterfaceName = QStringLiteral("org.mpris.MediaPlayer2.Player");
 
@@ -293,7 +293,7 @@ QDBusObjectPath MprisPlayerInterface::trackId() const
     const QString source = m_player->source();
     if (source.isEmpty())
         return QDBusObjectPath(QStringLiteral("/org/mpris/MediaPlayer2/TrackList/NoTrack"));
-    return QDBusObjectPath(QStringLiteral("/org/chaoticmusicplayer/track/t%1").arg(qHash(source)));
+    return QDBusObjectPath(QStringLiteral("/org/tunedchaos/track/t%1").arg(qHash(source)));
 }
 
 QVariantMap MprisPlayerInterface::snapshot() const
@@ -338,7 +338,7 @@ void MprisPlayerInterface::update()
 }
 
 // MPRIS wants an image URL, so the current cover is written to
-// ~/.cache/ChaoticMusicPlayer/. Each track gets its own file name so clients
+// ~/.cache/TunedChaos/. Each track gets its own file name so clients
 // that cache by URL refresh; the previous file is removed.
 void MprisPlayerInterface::updateArt()
 {

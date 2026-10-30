@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- What software centers (GNOME Software, KDE Discover, Flathub) show about the app. -->
 <component type="desktop-application">
-  <id>io.github.chandandasgit.ChaoticMusicPlayer</id>
+  <id>io.github.chandandasgit.TunedChaos</id>
   <name>Tuned Chaos</name>
   <summary>Play your music library, playlists and YouTube Music</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -23,7 +23,7 @@
       <li>Gapless playback or fades, a 10-band equalizer, ReplayGain and a sleep timer</li>
     </ul>
   </description>
-  <launchable type="desktop-id">io.github.chandandasgit.ChaoticMusicPlayer.desktop</launchable>
+  <launchable type="desktop-id">io.github.chandandasgit.TunedChaos.desktop</launchable>
   <url type="homepage">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
   <url type="bugtracker">https://github.com/ChandanDasGIT/ChaoticMusicPlayer/issues</url>
   <url type="vcs-browser">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
@@ -39,7 +39,7 @@
     <keyword>lyrics</keyword>
   </keywords>
   <provides>
-    <binary>ChaoticMusicPlayer</binary>
+    <binary>TunedChaos</binary>
   </provides>
   <requires>
     <display_length compare="ge">360</display_length>

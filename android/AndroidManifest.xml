@@ -3,7 +3,7 @@
      the network (YouTube Music, covers, lyrics), notifications, and playing on
      in the background through MediaPlaybackService (lock-screen controls). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.github.chandandasgit.chaoticmusicplayer"
+    package="io.github.chandandasgit.tunedchaos"
     android:installLocation="auto"
     android:versionCode="-- %%INSERT_VERSION_CODE%% --"
     android:versionName="-- %%INSERT_VERSION_NAME%% --">
@@ -53,7 +53,7 @@
 
         <!-- Keeps the app playing in the background, with the media notification -->
         <service
-            android:name="io.github.chandandasgit.chaoticmusicplayer.MediaPlaybackService"
+            android:name="io.github.chandandasgit.tunedchaos.MediaPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

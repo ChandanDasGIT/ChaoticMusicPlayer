@@ -1,4 +1,4 @@
-# ChaoticMusicPlayer
+# Tuned Chaos
 
 A music player for Linux with a Qt 6 / QML interface and a pure C++ backend
 (FFmpeg for decoding, PipeWire for output, TagLib for tags). It plays your
@@ -165,7 +165,7 @@ sudo pacman -S base-devel cmake ninja qt6-base qt6-declarative ffmpeg pipewire t
 ```sh
 cmake --preset linux-release
 cmake --build --preset linux-release
-./build/linux-release/ChaoticMusicPlayer
+./build/linux-release/TunedChaos
 ```
 
 Packaging and releases (Windows, Android and Linux packages) are described in
@@ -179,9 +179,12 @@ removes it again.
 
 | What | Where |
 | --- | --- |
-| Settings (equalizer and recent searches too) | `~/.config/ChaoticMusicPlayer/settings.conf` |
-| Queue, playlists, smart playlists, listening history, library index, what was playing | `~/.local/share/ChaoticMusicPlayer/` |
-| Found covers, lyrics and YouTube Music matches | `~/.cache/ChaoticMusicPlayer/` |
+| Settings (equalizer and recent searches too) | `~/.config/TunedChaos/settings.conf` |
+| Queue, playlists, smart playlists, listening history, library index, what was playing | `~/.local/share/TunedChaos/` |
+| Found covers, lyrics and YouTube Music matches | `~/.cache/TunedChaos/` |
+
+(Data from before the app was renamed, in the `ChaoticMusicPlayer` folders,
+is moved to these the first time it starts.)
 
 Everything stays on your computer. Your music files are only changed when you
 save tags in the tag editor.

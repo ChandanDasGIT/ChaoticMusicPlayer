@@ -47,7 +47,7 @@ void NotificationController::send(const QString &title, const QString &subtitle,
         toast.Tag(L"song"); // each one replaces the one before
         toast.Group(L"song");
         toast.ExpirationTime(winrt::clock::now() + std::chrono::seconds(10));
-        ToastNotificationManager::CreateToastNotifier(L"ChandanDas.ChaoticMusicPlayer").Show(toast);
+        ToastNotificationManager::CreateToastNotifier(L"ChandanDas.TunedChaos").Show(toast);
     } catch (...) {
         // No registered app id (portable ZIP) or notifications off: nothing to show
     }

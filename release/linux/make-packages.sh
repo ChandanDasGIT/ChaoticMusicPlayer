@@ -1,7 +1,7 @@
 #!/bin/bash
 # Makes the Linux packages from a release build:
-#   ChaoticMusicPlayer-<version>-x86_64.AppImage
-#   ChaoticMusicPlayer-<version>-linux-x86_64.tar.xz  (install-app.sh / uninstall-app.sh inside)
+#   TunedChaos-<version>-x86_64.AppImage
+#   TunedChaos-<version>-linux-x86_64.tar.xz  (install-app.sh / uninstall-app.sh inside)
 #   SHA256SUMS.txt
 # Both hold the app with Qt and the libraries it needs, and yt-dlp's standalone
 # build. They run on systems as new as the one that built them (glibc), so
@@ -17,8 +17,8 @@ mkdir -p "$2"
 out="$(cd "$2" && pwd)"
 here="$(cd "$(dirname "$0")" && pwd)"
 project="$(cd "$here/../.." && pwd)"
-id=io.github.chandandasgit.ChaoticMusicPlayer
-version=$(sed -n 's/^project(ChaoticMusicPlayer VERSION \([0-9.]*\).*/\1/p' "$project/CMakeLists.txt")
+id=io.github.chandandasgit.TunedChaos
+version=$(sed -n 's/^project(TunedChaos VERSION \([0-9.]*\).*/\1/p' "$project/CMakeLists.txt")
 
 export ARCH=x86_64
 export APPIMAGE_EXTRACT_AND_RUN=1 # the tools are AppImages too; no FUSE needed
@@ -51,7 +51,7 @@ rm -rf "$appdir"
 DESTDIR="$appdir" cmake --install "$build" --prefix /usr
 desktop="$appdir/usr/share/applications/$id.desktop"
 icon="$appdir/usr/share/icons/hicolor/scalable/apps/$id.svg"
-for f in "$appdir/usr/bin/ChaoticMusicPlayer" "$desktop" "$icon"; do
+for f in "$appdir/usr/bin/TunedChaos" "$desktop" "$icon"; do
     [ -e "$f" ] || { echo "Missing after install: $f" >&2; exit 1; }
 done
 
@@ -84,7 +84,7 @@ done
 export EXTRA_QT_PLUGINS="$extra"
 
 linuxdeploy-x86_64.AppImage --appdir "$appdir" --plugin qt \
-    --executable "$appdir/usr/bin/ChaoticMusicPlayer" --desktop-file "$desktop" --icon-file "$icon"
+    --executable "$appdir/usr/bin/TunedChaos" --desktop-file "$desktop" --icon-file "$icon"
 
 # Wayland's OpenGL plugin: linuxdeploy doesn't pick it up, and without it the
 # app can't draw under Wayland
@@ -147,16 +147,16 @@ export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="$HERE/usr/plugins"
 export QML_IMPORT_PATH="$HERE/usr/qml"
 export QML2_IMPORT_PATH="$HERE/usr/qml"
-exec "$HERE/usr/bin/ChaoticMusicPlayer" "$@"
+exec "$HERE/usr/bin/TunedChaos" "$@"
 EOF
 chmod +x "$appdir/AppRun"
 
 # ------------------------------------------------------------------ the AppImage
-appImage="ChaoticMusicPlayer-$version-x86_64.AppImage"
+appImage="TunedChaos-$version-x86_64.AppImage"
 appimagetool-x86_64.AppImage --no-appstream "$appdir" "$out/$appImage"
 
 # ------------------------------------------------------------------ the tarball: the same files, with the install scripts
-name="ChaoticMusicPlayer-$version-linux-x86_64"
+name="TunedChaos-$version-linux-x86_64"
 stage="$out/$name"
 rm -rf "$stage"
 mkdir -p "$stage"

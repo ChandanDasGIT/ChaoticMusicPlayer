@@ -1,15 +1,15 @@
-# Flatpak build of ChaoticMusicPlayer (KDE runtime: Qt 6.10; FFmpeg, PipeWire,
+# Flatpak build of TunedChaos (KDE runtime: Qt 6.10; FFmpeg, PipeWire,
 # ICU and curl come with the runtime). Every download is pinned by checksum.
 #
 # For Flathub later: the app's source below becomes its git repository at a
 # release tag, and -DCMP_YTDLP_SELF_UPDATE=OFF goes into its config-opts
 # (Flathub updates yt-dlp through the x-checker-data below and forbids apps
 # downloading code at runtime).
-id: io.github.chandandasgit.ChaoticMusicPlayer
+id: io.github.chandandasgit.TunedChaos
 runtime: org.kde.Platform
 runtime-version: '6.10'
 sdk: org.kde.Sdk
-command: ChaoticMusicPlayer
+command: TunedChaos
 finish-args:
   - --share=ipc
   - --socket=wayland
@@ -22,7 +22,7 @@ finish-args:
   - --filesystem=/media                   # other disks and USB sticks
   - --filesystem=/run/media
   - --filesystem=/mnt
-  - --own-name=org.mpris.MediaPlayer2.chaoticmusicplayer  # media controls
+  - --own-name=org.mpris.MediaPlayer2.tunedchaos  # media controls
   - --talk-name=org.freedesktop.Notifications             # song-change notifications
 
 modules:
@@ -68,7 +68,7 @@ modules:
           version-query: .tag_name
           url-query: '.assets[] | select(.name=="yt-dlp") | .browser_download_url'
 
-  - name: chaoticmusicplayer
+  - name: tunedchaos
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release

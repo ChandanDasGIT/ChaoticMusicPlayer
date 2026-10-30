@@ -8,12 +8,12 @@
 # Usage: SHOT_ENV=/path/to/env [SHOT_* options] scripts/shot-run.sh
 set -e
 cd "$(dirname "$0")/.."
-if pgrep -x ChaoticMusicPl >/dev/null || playerctl -l 2>/dev/null | grep -q chaoticmusicplayer; then
-    echo "ABORT: ChaoticMusicPlayer is running" >&2
+if pgrep -x TunedChaos >/dev/null || playerctl -l 2>/dev/null | grep -q tunedchaos; then
+    echo "ABORT: TunedChaos is running" >&2
     exit 1
 fi
 T="${SHOT_ENV:-$PWD/build/shot/env}"
-mkdir -p "$T"/{config/ChaoticMusicPlayer,data/ChaoticMusicPlayer,cache,run}
+mkdir -p "$T"/{config/TunedChaos,data/TunedChaos,cache,run}
 chmod 700 "$T/run"
 export XDG_RUNTIME_DIR="$T/run" PIPEWIRE_RUNTIME_DIR="/run/user/$(id -u)" \
        XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_CACHE_HOME="$T/cache" \

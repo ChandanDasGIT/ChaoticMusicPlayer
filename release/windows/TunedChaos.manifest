@@ -2,7 +2,7 @@
 <!-- UTF-8 as the app's text encoding (Windows 10 1903+), so file names in any
      language work through std::string paths; DPI awareness for sharp text. -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity type="win32" name="ChaoticMusicPlayer" version="1.0.0.0"/>
+  <assemblyIdentity type="win32" name="TunedChaos" version="1.0.0.0"/>
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(ChaoticMusicPlayer VERSION 0.1.0 LANGUAGES CXX)
+project(TunedChaos VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -174,7 +174,7 @@ qt_add_qml_module(chaoticstyle
 # ---------------------------------------------------------------------------
 # Application: wrapper + frontend QML module
 # ---------------------------------------------------------------------------
-qt_add_executable(ChaoticMusicPlayer
+qt_add_executable(TunedChaos
     main.cpp
     # Not QML types, so not part of the QML module below
     wrapper/session/sessioncontroller.cpp
@@ -186,32 +186,32 @@ qt_add_executable(ChaoticMusicPlayer
 
 # The platform's parts (see CMP_PLATFORM above)
 if(CMP_PLATFORM STREQUAL "linux")
-    target_sources(ChaoticMusicPlayer PRIVATE
+    target_sources(TunedChaos PRIVATE
         wrapper/mpris/mprisadaptor.cpp
         wrapper/mpris/mprisadaptor.h
         wrapper/notifications/notificationcontroller_linux.cpp
         wrapper/systemmedia/systemmedia_linux.cpp
     )
 elseif(CMP_PLATFORM STREQUAL "windows")
-    target_sources(ChaoticMusicPlayer PRIVATE
+    target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_windows.cpp
         wrapper/systemmedia/systemmedia_windows.cpp
         # Icon, and the manifest: UTF-8 as the text encoding (see release/README.md)
-        release/windows/ChaoticMusicPlayer.rc
-        release/windows/ChaoticMusicPlayer.manifest
+        release/windows/TunedChaos.rc
+        release/windows/TunedChaos.manifest
     )
-    set_target_properties(ChaoticMusicPlayer PROPERTIES WIN32_EXECUTABLE TRUE) # no console window
-    target_link_libraries(ChaoticMusicPlayer PRIVATE windowsapp) # C++/WinRT: media controls, toasts
+    set_target_properties(TunedChaos PROPERTIES WIN32_EXECUTABLE TRUE) # no console window
+    target_link_libraries(TunedChaos PRIVATE windowsapp) # C++/WinRT: media controls, toasts
 elseif(CMP_PLATFORM STREQUAL "android")
-    target_sources(ChaoticMusicPlayer PRIVATE
+    target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_android.cpp
         wrapper/systemmedia/systemmedia_android.cpp
     )
     # The APK: android/ holds its manifest, Gradle build (with Python and
     # yt-dlp: Chaquopy), Java parts and icon
-    set_target_properties(ChaoticMusicPlayer PROPERTIES
+    set_target_properties(TunedChaos PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android
-        QT_ANDROID_PACKAGE_NAME io.github.chandandasgit.chaoticmusicplayer
+        QT_ANDROID_PACKAGE_NAME io.github.chandandasgit.tunedchaos
         QT_ANDROID_MIN_SDK_VERSION 28    # Android 9 (Qt 6.11's minimum)
         QT_ANDROID_TARGET_SDK_VERSION 35 # Android 15
         QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
@@ -229,12 +229,12 @@ set_source_files_properties(frontend/dragdrop/SongDrag.qml PROPERTIES
     QT_QML_SINGLETON_TYPE TRUE
 )
 
-qt_add_qml_module(ChaoticMusicPlayer
-    URI ChaoticMusicPlayer
+qt_add_qml_module(TunedChaos
+    URI TunedChaos
     VERSION 1.0
     # Keep the module's build output out of the way of the executable,
     # which has the same name.
-    OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/ChaoticMusicPlayer
+    OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/TunedChaos
     SOURCES
         wrapper/albumart/albumartprovider.cpp
         wrapper/albumart/albumartprovider.h
@@ -342,12 +342,12 @@ qt_add_qml_module(ChaoticMusicPlayer
         frontend/playlists/AddToPlaylistMenu.qml
     RESOURCES
         frontend/fonts/fa-solid-900.ttf
-        resources/icons/chaoticmusicplayer.svg
+        resources/icons/tunedchaos.svg
 )
 
 # Wrapper folders are include paths so the generated QML type registration
 # can find the headers of QML_ELEMENT classes.
-target_include_directories(ChaoticMusicPlayer PRIVATE
+target_include_directories(TunedChaos PRIVATE
     ${CMAKE_SOURCE_DIR}
     wrapper/albumart
     wrapper/files
@@ -365,29 +365,29 @@ target_include_directories(ChaoticMusicPlayer PRIVATE
     wrapper/youtube
 )
 
-target_compile_options(ChaoticMusicPlayer PRIVATE ${CMP_WARNINGS})
+target_compile_options(TunedChaos PRIVATE ${CMP_WARNINGS})
 
 # Linux install (Flatpak, distribution packages): the app, its launcher entry,
 # icon and metainfo, named by the app id (release/linux).
 if(CMP_PLATFORM STREQUAL "linux")
     include(GNUInstallDirs)
-    set(CMP_APP_ID io.github.chandandasgit.ChaoticMusicPlayer)
-    install(TARGETS ChaoticMusicPlayer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    set(CMP_APP_ID io.github.chandandasgit.TunedChaos)
+    install(TARGETS TunedChaos RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES release/linux/${CMP_APP_ID}.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES release/linux/${CMP_APP_ID}.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
-    install(FILES resources/icons/chaoticmusicplayer.svg
+    install(FILES resources/icons/tunedchaos.svg
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps RENAME ${CMP_APP_ID}.svg)
 endif()
 
 # yt-dlp updates itself (wrapper/youtube/ytdlpmanager.h). Off for builds whose
 # store updates yt-dlp and forbids downloads at runtime (Flathub).
 option(CMP_YTDLP_SELF_UPDATE "Let the app download yt-dlp updates" ON)
-target_compile_definitions(ChaoticMusicPlayer PRIVATE CMP_YTDLP_SELF_UPDATE=$<BOOL:${CMP_YTDLP_SELF_UPDATE}>)
+target_compile_definitions(TunedChaos PRIVATE CMP_YTDLP_SELF_UPDATE=$<BOOL:${CMP_YTDLP_SELF_UPDATE}>)
 
 # Shown in Settings > About (QCoreApplication::applicationVersion).
-target_compile_definitions(ChaoticMusicPlayer PRIVATE APP_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(TunedChaos PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
-target_link_libraries(ChaoticMusicPlayer PRIVATE
+target_link_libraries(TunedChaos PRIVATE
     backend
     Qt6::Quick
     Qt6::QuickControls2

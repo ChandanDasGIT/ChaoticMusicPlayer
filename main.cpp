@@ -1,6 +1,7 @@
 #include "wrapper/albumart/albumartprovider.h"
 #include "wrapper/albumart/covercontroller.h"
 #include "wrapper/albumart/coverpalette.h"
+#include "wrapper/files/files.h"
 #include "wrapper/history/historycontroller.h"
 #include "wrapper/library/librarycontroller.h"
 #include "wrapper/locallibrary/locallibrarycontroller.h"
@@ -31,7 +32,6 @@
 
 #ifdef Q_OS_ANDROID
 #include "backend/network/httpclient/httpclient.h"
-#include "wrapper/files/files.h"
 
 #include <QDir>
 #include <QFile>
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 #ifdef Q_OS_WIN
     // Windows' app id: groups the taskbar button, and lets toasts show (the
     // installer's Start menu shortcut carries the same one)
-    SetCurrentProcessExplicitAppUserModelID(L"ChandanDas.ChaoticMusicPlayer");
+    SetCurrentProcessExplicitAppUserModelID(L"ChandanDas.TunedChaos");
 
     // The app brings its own Qt plugins and QML modules. Other programs set
     // these for themselves, sometimes for every program, and they would send
@@ -58,6 +58,9 @@ int main(int argc, char *argv[])
                              "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_QUICK_CONTROLS_STYLE"})
         qunsetenv(name);
 #endif
+
+    // The app's folders from before its rename move to the new names first
+    Files::moveOldFolders();
 
     // Interface size (Settings > Appearance): Qt scales the whole UI by it. It
     // must be set before the app starts, so a change applies after a restart.
@@ -68,13 +71,13 @@ int main(int argc, char *argv[])
         qputenv("QT_SCALE_FACTOR", QByteArray::number(interfaceScale));
 
     QGuiApplication app(argc, argv);
-    QGuiApplication::setApplicationName("ChaoticMusicPlayer");
+    QGuiApplication::setApplicationName("TunedChaos");
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION)); // from CMake (project version)
-    QGuiApplication::setOrganizationName("ChaoticMusicPlayer");
+    QGuiApplication::setOrganizationName("TunedChaos");
     // The app id: its desktop file's name (release/linux), for the window, media controls and notifications
-    QGuiApplication::setDesktopFileName(QStringLiteral("io.github.chandandasgit.ChaoticMusicPlayer"));
+    QGuiApplication::setDesktopFileName(QStringLiteral("io.github.chandandasgit.TunedChaos"));
     // Window / task bar icon (the launcher uses the installed copy, see scripts/install-desktop.sh).
-    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/ChaoticMusicPlayer/resources/icons/chaoticmusicplayer.svg")));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/TunedChaos/resources/icons/tunedchaos.svg")));
 
 #ifdef Q_OS_ANDROID
     // Streams (FFmpeg's OpenSSL) check the server's certificate, but OpenSSL
@@ -102,7 +105,7 @@ int main(int argc, char *argv[])
 
     // Icon font (Font Awesome 6 Free Solid), used by frontend/Icon.qml.
     if (QFontDatabase::addApplicationFont(
-            ":/qt/qml/ChaoticMusicPlayer/frontend/fonts/fa-solid-900.ttf") < 0)
+            ":/qt/qml/TunedChaos/frontend/fonts/fa-solid-900.ttf") < 0)
         qWarning("Failed to load icon font fa-solid-900.ttf");
 
     // Controllers must exist before QML asks for the singletons.
@@ -175,7 +178,7 @@ int main(int argc, char *argv[])
         &engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, [] { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
-    engine.loadFromModule("ChaoticMusicPlayer", "Main");
+    engine.loadFromModule("TunedChaos", "Main");
 
     const auto raiseWindow = [&engine] {
         if (engine.rootObjects().isEmpty())

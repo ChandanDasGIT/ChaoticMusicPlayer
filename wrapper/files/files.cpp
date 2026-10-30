@@ -77,7 +77,7 @@ QString ownFolder(QStandardPaths::StandardLocation desktop, QStandardPaths::Stan
     return QStandardPaths::writableLocation(android);
 #else
     Q_UNUSED(android)
-    return QStandardPaths::writableLocation(desktop) + QStringLiteral("/ChaoticMusicPlayer");
+    return QStandardPaths::writableLocation(desktop) + QStringLiteral("/TunedChaos");
 #endif
 }
 
@@ -96,6 +96,21 @@ QString Files::dataDir()
 QString Files::cacheDir()
 {
     return ownFolder(QStandardPaths::GenericCacheLocation, QStandardPaths::CacheLocation);
+}
+
+void Files::moveOldFolders()
+{
+#if !defined(Q_OS_ANDROID)
+    for (const auto location : {QStandardPaths::GenericConfigLocation, QStandardPaths::GenericDataLocation,
+                                QStandardPaths::GenericCacheLocation}) {
+        const QString base = QStandardPaths::writableLocation(location);
+        const QString oldFolder = base + QStringLiteral("/ChaoticMusicPlayer");
+        const QString newFolder = base + QStringLiteral("/TunedChaos");
+        // (Windows: config and data are one folder, moved the first time)
+        if (QFileInfo(oldFolder).isDir() && !QFileInfo::exists(newFolder))
+            QDir().rename(oldFolder, newFolder); // failing, the app starts fresh; nothing is lost
+    }
+#endif
 }
 
 QString Files::appFolder(const QString &kind) const
