@@ -92,7 +92,27 @@ jobs:
           printf '[Paths]\nPrefix = .\nPlugins = .\nQmlImports = qml\n' > "$dist/qt.conf"
           curl -sSLo "$dist/yt-dlp.exe" https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
           cp LICENSE "$dist"/
+      # The packaged app must start on a real Windows: run it from the folder
+      # for a while with Qt's plugin log (offline: requests go to a dead proxy).
+      # Fails if it quits early; the log shows why.
+      - name: Start-up test
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "startup.log"
+          $env:QT_FORCE_STDERR_LOGGING = "1"
+          $env:QT_DEBUG_PLUGINS = "1"
+          $env:HTTP_PROXY = "http://127.0.0.1:9"
+          $env:HTTPS_PROXY = "http://127.0.0.1:9"
+          Get-ChildItem dist/ChaoticMusicPlayer/platforms
+          $app = Start-Process dist/ChaoticMusicPlayer/ChaoticMusicPlayer.exe -PassThru -RedirectStandardError $log
+          Start-Sleep -Seconds 20
+          $exited = $app.HasExited
+          if (-not $exited) { Stop-Process -Id $app.Id -Force }
+          Get-Content $log -TotalCount 60
+          if ($exited) { Write-Error "The app quit at start (exit code $($app.ExitCode))"; exit 1 }
+          Write-Output "The app was still running after 20 seconds"
       - name: Upload the ZIP
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ChaoticMusicPlayer-windows-x64
