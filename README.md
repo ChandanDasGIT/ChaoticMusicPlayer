@@ -5,6 +5,19 @@ pure C++ backend (FFmpeg for decoding, TagLib for tags; PipeWire for output on
 Linux, miniaudio on Windows and Android). It plays your local music and can also
 browse and play YouTube Music.
 
+## Screenshots
+
+![The Queue and the player](resources/screenshots/desktop.png)
+
+![Synced lyrics](resources/screenshots/lyrics.png)
+
+<p>
+  <img src="resources/screenshots/library.png" alt="The Library at phone size" width="280">
+  <img src="resources/screenshots/player.png" alt="The player at phone size" width="280">
+</p>
+
+(The songs and covers shown are made up for these pictures.)
+
 ## Install
 
 Download a package from the
