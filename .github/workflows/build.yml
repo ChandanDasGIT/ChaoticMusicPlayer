@@ -1,6 +1,6 @@
-# Builds the app on every push and pull request, so a change that breaks a
-# platform shows up at once. (More platforms join as they are added; releases
-# have their own workflow.)
+# Builds and tests every package on each push and pull request, so a change
+# that breaks a platform shows up at once. Pushing a tag like v1.0.0 also
+# publishes them as a GitHub release (see the last job, and release/README.md).
 name: Build
 
 on:
@@ -303,3 +303,44 @@ jobs:
           bundle: TunedChaos-x86_64.flatpak
           manifest-path: release/linux/flatpak/io.github.chandandasgit.TunedChaos.yml
           cache-key: flatpak-builder-${{ hashFiles('release/linux/flatpak/*.yml') }}
+
+  # A tag like v1.0.0: once everything above passed, the packages become a
+  # release. A tag with a dash (v1.0.0-test1) makes a pre-release.
+  publish:
+    name: Publish the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows, android, linux-packages, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the release
+    steps:
+      - uses: actions/checkout@v5
+      - name: The tag matches the app's version
+        run: |
+          version=$(sed -n 's/^project(TunedChaos VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "${tag%%-*}" != "$version" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in CMakeLists.txt"
+              exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Gather the packages
+        run: |
+          mkdir release-files
+          (cd artifacts/TunedChaos-windows-x64 && zip -qr "$GITHUB_WORKSPACE/release-files/TunedChaos-$version-windows-x64-portable.zip" TunedChaos)
+          find artifacts -type f \( -name "TunedChaos-$version-setup-x64.exe" -o -name "TunedChaos-$version-arm64.apk" \
+              -o -name '*.AppImage' -o -name '*.tar.xz' -o -name '*.flatpak' \) -exec cp -t release-files {} +
+          ls -la release-files
+          # All six, or no release (a signed APK among them: unsigned ones are named differently)
+          [ "$(ls release-files | wc -l)" -eq 6 ]
+          (cd release-files && sha256sum -- * > SHA256SUMS.txt)
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Tuned Chaos ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: release-files/*

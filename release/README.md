@@ -33,12 +33,12 @@ Settings > YouTube Music shows the version and has an "Update yt-dlp" button.
 Build with `-DCMP_YTDLP_SELF_UPDATE=OFF` where the store updates yt-dlp and
 forbids downloads at runtime (Flathub).
 
-## Packages (filled in step by step)
+## Packages
 
 | Platform | Packages |
 | --- | --- |
 | Linux | tarball with `install-app.sh` / `uninstall-app.sh`, AppImage, Flatpak |
-| Windows | portable ZIP, installer EXE (NSIS), MSI |
+| Windows | portable ZIP, installer EXE (Inno Setup) |
 | Android | APK |
 
 ## Linux packages (`release/linux/`)
@@ -53,6 +53,26 @@ forbids downloads at runtime (Flathub).
   user in `~/.local/opt/TunedChaos` with a launcher entry.
 - `flatpak/`: the Flatpak manifest (KDE runtime). Built in CI with Flathub's
   own tools; for Flathub, see the notes at its top.
+
+## Publishing a release
+
+Push a version tag: GitHub builds and tests everything, then publishes all six
+packages and `SHA256SUMS.txt` by itself (`publish`, the last job of
+`.github/workflows/build.yml`). Nothing is built on your computer, and a failed
+build or test publishes nothing.
+
+```sh
+git tag v0.1.0-test1
+git push origin master v0.1.0-test1
+```
+
+- A tag with a dash (`v0.1.0-test1`) makes a pre-release; without one
+  (`v1.0.0`) a normal release.
+- The tag's number must match `project(... VERSION ...)` in `CMakeLists.txt`.
+  For a new version, change it there first, and raise
+  `QT_ANDROID_VERSION_CODE` too (Android only updates to a higher code).
+- To remove a test release and its tag:
+  `gh release delete v0.1.0-test1 --cleanup-tag`
 
 ## Building locally
 
