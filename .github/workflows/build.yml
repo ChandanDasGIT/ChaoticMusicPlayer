@@ -38,7 +38,7 @@ jobs:
       - name: Microsoft's compiler
         uses: ilammy/msvc-dev-cmd@v1
       # Qt 6.10: the installer behind this action (aqtinstall 3.3) can't read Qt
-      # 6.11's download layout yet. The app needs Qt 6.8+; move to 6.11 here
+      # 6.11's download layout yet. The app needs Qt 6.10+; move to 6.11 here
       # once aqtinstall supports it.
       - name: Qt
         uses: jurplel/install-qt-action@v4

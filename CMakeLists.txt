@@ -33,8 +33,8 @@ set(CMP_QT_COMPONENTS Quick QuickControls2 Network)
 if(CMP_PLATFORM STREQUAL "linux")
     list(APPEND CMP_QT_COMPONENTS DBus) # media controls (MPRIS), notifications
 endif()
-find_package(Qt6 6.8 REQUIRED COMPONENTS ${CMP_QT_COMPONENTS})
-qt_standard_project_setup(REQUIRES 6.8)
+find_package(Qt6 6.10 REQUIRED COMPONENTS ${CMP_QT_COMPONENTS})
+qt_standard_project_setup(REQUIRES 6.10) # the oldest Qt built and tested (CI)
 
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED)

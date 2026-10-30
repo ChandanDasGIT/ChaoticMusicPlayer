@@ -139,7 +139,7 @@ The list is also in Settings → Keyboard shortcuts.
 ## Requirements
 
 - A C++20 compiler, CMake 3.21+ and pkg-config
-- Qt 6.8+ (Quick, QuickControls2, DBus, Network)
+- Qt 6.10+ (Quick, QuickControls2, Network; DBus on Linux)
 - FFmpeg (libavformat, libavcodec, libavutil, libswresample)
 - PipeWire (libpipewire-0.3)
 - TagLib 2

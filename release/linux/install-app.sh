@@ -1,6 +1,8 @@
 #!/bin/bash
 # Installs ChaoticMusicPlayer for your user (no administrator rights needed):
-#   the app in ~/.local/opt/ChaoticMusicPlayer, a launcher entry and its icon.
+#   the app in ~/.local/opt/ChaoticMusicPlayer, the ChaoticMusicPlayer command
+#   in ~/.local/bin, a launcher entry and its icon. (Not in ~/.local/share/
+#   ChaoticMusicPlayer: that holds your library and playlists.)
 # Run it from the unpacked folder: ./install-app.sh. Running it again updates
 # the app. Remove it with ./uninstall-app.sh (your music, settings and library stay).
 set -euo pipefail
@@ -9,6 +11,7 @@ id=io.github.chandandasgit.ChaoticMusicPlayer
 here="$(cd "$(dirname "$0")" && pwd)"
 target="$HOME/.local/opt/ChaoticMusicPlayer"
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
+bin="$HOME/.local/bin"
 apps="$data/applications"
 icons="$data/icons/hicolor/scalable/apps"
 
@@ -31,5 +34,15 @@ chmod 644 "$apps/$id.desktop"
 install -m644 "$target/usr/share/icons/hicolor/scalable/apps/$id.svg" "$icons/$id.svg"
 command -v update-desktop-database >/dev/null && update-desktop-database -q "$apps" || true
 
-echo "ChaoticMusicPlayer is installed in $target"
-echo "Start it from your app launcher, or run: \"$target/AppRun\""
+# The ChaoticMusicPlayer command
+mkdir -p "$bin"
+ln -sf "$target/AppRun" "$bin/ChaoticMusicPlayer"
+
+echo "ChaoticMusicPlayer is installed."
+echo "  Program : $target"
+echo "  Command : $bin/ChaoticMusicPlayer"
+echo "  Menu    : $apps/$id.desktop"
+case ":$PATH:" in
+    *":$bin:"*) ;;
+    *) echo "Note: $bin is not on your PATH, so the ChaoticMusicPlayer command works only once you add it." ;;
+esac

@@ -10,3 +10,6 @@ images
 *.user
 .vscode/
 .idea/
+
+# Libraries built by vcpkg for each platform (release/vcpkg.json lists them)
+dependencies/

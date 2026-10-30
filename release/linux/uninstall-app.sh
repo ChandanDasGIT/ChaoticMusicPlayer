@@ -7,7 +7,7 @@ id=io.github.chandandasgit.ChaoticMusicPlayer
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
 target="$HOME/.local/opt/ChaoticMusicPlayer"
 
-for file in "$data/applications/$id.desktop" "$data/icons/hicolor/scalable/apps/$id.svg" "$target"; do
+for file in "$data/applications/$id.desktop" "$data/icons/hicolor/scalable/apps/$id.svg" "$HOME/.local/bin/ChaoticMusicPlayer" "$target"; do
     if [ -e "$file" ]; then
         rm -rf -- "$file"
         echo "Removed $file"
