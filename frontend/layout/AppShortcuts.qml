@@ -63,6 +63,8 @@ Item {
     // Only when nothing else wants Esc: open drawers and dialogs close on it
     // themselves, and a text field being typed in gets it first.
     AppShortcut { sequence: "Escape"; enabled: root.escapeEnabled && !root.typing; onActivated: root.escapePressed() }
+    // Android's back button does the same (unhandled, it leaves the app as usual)
+    AppShortcut { sequence: "Back"; enabled: root.escapeEnabled; onActivated: root.escapePressed() }
     AppShortcut { sequence: "Ctrl+Q"; onActivated: root.quit() }
 
     component AppShortcut: Shortcut {

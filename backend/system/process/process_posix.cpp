@@ -1,4 +1,4 @@
-// POSIX (Linux, Android): fork / exec, with the output read through pipes.
+// Linux: posix_spawn, with the output read through pipes.
 #include "backend/system/process/process.h"
 
 #include <chrono>

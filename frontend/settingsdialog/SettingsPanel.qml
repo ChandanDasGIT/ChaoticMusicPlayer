@@ -307,6 +307,7 @@ Rectangle {
 
                             SettingsRow {
                                 Layout.fillWidth: true
+                                visible: Qt.platform.os !== "android" // (Android keeps playing by itself)
                                 title: qsTr("Keep playing after closing the window")
                                 description: qsTr("Closing hides the window; open the app again to bring it back. Quit with the power button or Ctrl+Q.")
 
@@ -318,6 +319,7 @@ Rectangle {
                         }
 
                         SettingsCard {
+                            visible: Qt.platform.os !== "android" // (Android: the media notification shows the song)
                             title: qsTr("Notifications")
 
                             SettingsRow {
@@ -689,14 +691,17 @@ Rectangle {
                                 }
                             }
 
+                            // (Not on Android: the system's display size does this, and an app can't restart itself)
                             SettingsRow {
                                 Layout.fillWidth: true
+                                visible: Qt.platform.os !== "android"
                                 title: qsTr("Interface size")
                                 description: qsTr("Makes everything bigger or smaller: text, buttons, panels. Takes effect when the app starts again.")
                             }
 
                             Flow {
                                 Layout.fillWidth: true
+                                visible: Qt.platform.os !== "android"
                                 spacing: 6
 
                                 Repeater {
@@ -716,7 +721,8 @@ Rectangle {
                             // Shown once the chosen size differs from the one in use
                             RowLayout {
                                 Layout.fillWidth: true
-                                visible: Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
+                                visible: Qt.platform.os !== "android"
+                                         && Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
                                 spacing: Theme.spacing
 
                                 Label {
@@ -1109,6 +1115,7 @@ Rectangle {
                         title: qsTr("YouTube Music")
 
                         SettingsCard {
+                            visible: Qt.platform.os !== "android" // (yt-dlp can't read a phone browser's session)
                             title: qsTr("Your account")
 
                             SettingsRow {

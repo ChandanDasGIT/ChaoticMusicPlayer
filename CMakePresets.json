@@ -35,6 +35,43 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             }
+        },
+        {
+            "name": "android-base",
+            "hidden": true,
+            "generator": "Ninja",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/release",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/dependencies",
+                "QT_HOST_PATH": "$env{QT_HOST_PATH}",
+                "ANDROID_SDK_ROOT": "$env{ANDROID_SDK_ROOT}",
+                "ANDROID_NDK_ROOT": "$env{ANDROID_NDK_ROOT}"
+            },
+            "environment": {
+                "ANDROID_NDK_HOME": "$env{ANDROID_NDK_ROOT}"
+            }
+        },
+        {
+            "name": "android-arm64",
+            "displayName": "Android phones (arm64; Qt from QT_ANDROID_ARM64)",
+            "inherits": "android-base",
+            "binaryDir": "${sourceDir}/build/android-arm64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "arm64-android",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{QT_ANDROID_ARM64}/lib/cmake/Qt6/qt.toolchain.cmake"
+            }
+        },
+        {
+            "name": "android-x86_64",
+            "displayName": "Android emulator (x86_64; Qt from QT_ANDROID_X86_64)",
+            "inherits": "android-base",
+            "binaryDir": "${sourceDir}/build/android-x86_64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-android",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{QT_ANDROID_X86_64}/lib/cmake/Qt6/qt.toolchain.cmake"
+            }
         }
     ],
     "buildPresets": [
@@ -49,6 +86,14 @@
         {
             "name": "windows-release",
             "configurePreset": "windows-release"
+        },
+        {
+            "name": "android-arm64",
+            "configurePreset": "android-arm64"
+        },
+        {
+            "name": "android-x86_64",
+            "configurePreset": "android-x86_64"
         }
     ]
 }

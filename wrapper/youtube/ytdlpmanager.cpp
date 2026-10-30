@@ -16,6 +16,13 @@
 #include <QSysInfo>
 #include <QThreadPool>
 
+#ifdef Q_OS_ANDROID
+#include "backend/system/process/process.h"
+
+#include <QJniEnvironment>
+#include <QJniObject>
+#endif
+
 #ifndef CMP_YTDLP_SELF_UPDATE
 #define CMP_YTDLP_SELF_UPDATE 1
 #endif
@@ -51,7 +58,9 @@ QString assetName()
     if (cpu == QLatin1String("i386"))
         return QStringLiteral("yt-dlp_x86.exe");
     return QStringLiteral("yt-dlp.exe");
-#elif defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#elif defined(Q_OS_ANDROID)
+    return QStringLiteral("yt-dlp"); // the pure Python release: runs in the app's Python
+#elif defined(Q_OS_LINUX)
     if (cpu == QLatin1String("x86_64"))
         return QStringLiteral("yt-dlp_linux");
     if (cpu == QLatin1String("arm64"))
@@ -77,7 +86,11 @@ Outcome pickCopy()
     const QList<QPair<QString, QString>> candidates = {
         {managedPath(), QStringLiteral("app")},
         {bundledPath(), QStringLiteral("bundled")},
+#ifdef Q_OS_ANDROID
+        {QStringLiteral("yt-dlp"), QStringLiteral("bundled")}, // the one in the app's Python
+#else
         {QStringLiteral("yt-dlp"), QStringLiteral("system")},
+#endif
     };
     for (const auto &[program, source] : candidates) {
         if (source != QLatin1String("system") && !QFile::exists(program))
@@ -181,6 +194,36 @@ Outcome work(bool checkOnline)
 YtDlpManager::YtDlpManager(QObject *parent)
     : QObject(parent)
 {
+#ifdef Q_OS_ANDROID
+    // Android can't start programs: yt-dlp runs in the app's Python
+    // (android/src/main/python/ytdlp_bridge.py, through YtDlpRunner.java).
+    setProcessRunner([](const std::vector<std::string> &args, int) {
+        ProcessResult result;
+        QJniEnvironment env;
+        jobjectArray array = env->NewObjectArray(jsize(args.size()), env->FindClass("java/lang/String"), nullptr);
+        for (size_t i = 0; i < args.size(); ++i) {
+            const QJniObject arg = QJniObject::fromString(QString::fromStdString(args[i]));
+            env->SetObjectArrayElement(array, jsize(i), arg.object());
+        }
+        const QJniObject reply = QJniObject::callStaticObjectMethod(
+            "io/github/chandandasgit/chaoticmusicplayer/YtDlpRunner", "run",
+            "(Landroid/content/Context;[Ljava/lang/String;)[Ljava/lang/String;",
+            QNativeInterface::QAndroidApplication::context().object(), array);
+        env->DeleteLocalRef(array);
+        if (env.checkAndClearExceptions() || !reply.isValid())
+            return result; // not started
+        const auto parts = reply.object<jobjectArray>();
+        const auto part = [&](jsize i) {
+            const QJniObject text(env->GetObjectArrayElement(parts, i));
+            return text.toString().toStdString();
+        };
+        result.started = true;
+        result.exitCode = std::stoi(part(0));
+        result.out = part(1);
+        result.err = part(2);
+        return result;
+    });
+#endif
 }
 
 YtDlpManager::~YtDlpManager()

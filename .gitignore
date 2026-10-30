@@ -13,3 +13,6 @@ images
 
 # Libraries built by vcpkg for each platform (release/vcpkg.json lists them)
 dependencies/
+
+# Per-machine CMake presets (local paths)
+CMakeUserPresets.json

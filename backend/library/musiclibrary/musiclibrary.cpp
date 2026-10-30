@@ -36,7 +36,10 @@ int64_t nowSeconds()
 int64_t stampSeconds(int64_t modified)
 {
     const auto time = fs::file_time_type(fs::file_time_type::duration(modified));
-    const auto system = std::chrono::clock_cast<std::chrono::system_clock>(time); // (standard; to_sys isn't on MSVC)
+    // Shifted by the clocks' difference now (clock_cast isn't in every C++
+    // library: not in Android's; to_sys not in MSVC's)
+    const auto system = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+        time - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
     return std::chrono::duration_cast<std::chrono::seconds>(system.time_since_epoch()).count();
 }
 

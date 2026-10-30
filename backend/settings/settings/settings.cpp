@@ -2,6 +2,8 @@
 
 #include <charconv>
 #include <fstream>
+#include <locale>
+#include <sstream>
 #include <system_error>
 
 namespace fs = std::filesystem;
@@ -75,9 +77,12 @@ int Settings::intValue(const std::string &key, int fallback) const
 double Settings::doubleValue(const std::string &key, double fallback) const
 {
     const std::string s = value(key);
+    // (A stream in the "C" locale: Android's C++ library has no from_chars for double)
+    std::istringstream in(s);
+    in.imbue(std::locale::classic());
     double result = 0;
-    const auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), result);
-    return ec == std::errc() && ptr == s.data() + s.size() && !s.empty() ? result : fallback;
+    in >> result;
+    return !s.empty() && !in.fail() && in.peek() == std::char_traits<char>::eof() ? result : fallback;
 }
 
 bool Settings::boolValue(const std::string &key, bool fallback) const

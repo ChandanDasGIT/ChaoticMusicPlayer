@@ -142,7 +142,7 @@ elseif(CMP_PLATFORM STREQUAL "windows")
 elseif(CMP_PLATFORM STREQUAL "android")
     target_sources(backend PRIVATE
         backend/audioengine/audiooutput/audiooutput_miniaudio.cpp
-        backend/system/process/process_posix.cpp
+        backend/system/process/process_android.cpp
     )
 endif()
 
@@ -202,6 +202,21 @@ elseif(CMP_PLATFORM STREQUAL "windows")
     )
     set_target_properties(ChaoticMusicPlayer PROPERTIES WIN32_EXECUTABLE TRUE) # no console window
     target_link_libraries(ChaoticMusicPlayer PRIVATE windowsapp) # C++/WinRT: media controls, toasts
+elseif(CMP_PLATFORM STREQUAL "android")
+    target_sources(ChaoticMusicPlayer PRIVATE
+        wrapper/notifications/notificationcontroller_android.cpp
+        wrapper/systemmedia/systemmedia_android.cpp
+    )
+    # The APK: android/ holds its manifest, Gradle build (with Python and
+    # yt-dlp: Chaquopy), Java parts and icon
+    set_target_properties(ChaoticMusicPlayer PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android
+        QT_ANDROID_PACKAGE_NAME io.github.chandandasgit.chaoticmusicplayer
+        QT_ANDROID_MIN_SDK_VERSION 28    # Android 9 (Qt 6.11's minimum)
+        QT_ANDROID_TARGET_SDK_VERSION 35 # Android 15
+        QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
+        QT_ANDROID_VERSION_CODE 1
+    )
 endif()
 
 set_source_files_properties(frontend/Theme.qml PROPERTIES
