@@ -82,7 +82,14 @@ jobs:
           dist=dist/ChaoticMusicPlayer
           mkdir -p "$dist"
           cp build/windows-release/ChaoticMusicPlayer.exe build/windows-release/*.dll "$dist"/
-          windeployqt --release --qmldir . --no-translations "$dist/ChaoticMusicPlayer.exe"
+          windeployqt --release --qmldir . --no-translations --no-compiler-runtime "$dist/ChaoticMusicPlayer.exe"
+          # Not for users: QML debugging plugins; Windows' own ICU (copied from this
+          # build machine's system folder; every Windows 10 / 11 has its own)
+          rm -rf "$dist/qmltooling" "$dist/icuuc.dll" "$dist/icuin.dll"
+          # Microsoft's C++ runtime next to the app: nothing to install first
+          cp "$(cygpath -u "$VCToolsRedistDir")"/x64/Microsoft.VC*.CRT/*.dll "$dist"/
+          # Qt's plugins and QML modules: only these, next to the app
+          printf '[Paths]\nPrefix = .\nPlugins = .\nQmlImports = qml\n' > "$dist/qt.conf"
           curl -sSLo "$dist/yt-dlp.exe" https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
           cp LICENSE "$dist"/
       - name: Upload the ZIP

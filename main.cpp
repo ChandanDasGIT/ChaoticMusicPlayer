@@ -50,6 +50,13 @@ int main(int argc, char *argv[])
     // Windows' app id: groups the taskbar button, and lets toasts show (the
     // installer's Start menu shortcut carries the same one)
     SetCurrentProcessExplicitAppUserModelID(L"ChandanDas.ChaoticMusicPlayer");
+
+    // The app brings its own Qt plugins and QML modules. Other programs set
+    // these for themselves, sometimes for every program, and they would send
+    // this one to an incompatible Qt ("no Qt platform plugin could be initialized").
+    for (const char *name : {"QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QT_QPA_PLATFORM",
+                             "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_QUICK_CONTROLS_STYLE"})
+        qunsetenv(name);
 #endif
 
     // Interface size (Settings > Appearance): Qt scales the whole UI by it. It
