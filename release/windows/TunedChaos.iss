@@ -1,6 +1,6 @@
 ; The Windows installer (Inno Setup 6): TunedChaos-<version>-setup-x64.exe.
 ; Built in CI from the same folder as the portable ZIP:
-;   iscc /DAppVersion=0.1.0 /DSourceDir=<full path of dist\TunedChaos> /DOutputDir=<full path> release\windows\TunedChaos.iss
+;   iscc /DAppVersion=1.0 /DSourceDir=<full path of dist\TunedChaos> /DOutputDir=<full path> release\windows\TunedChaos.iss
 ; (Relative paths are read from this file's folder.)
 ; Installs for the current user (no administrator prompt) into
 ; %LOCALAPPDATA%\Programs\TunedChaos, with a Start menu entry carrying the

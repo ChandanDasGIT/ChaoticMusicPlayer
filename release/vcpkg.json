@@ -1,7 +1,7 @@
 {
     "$comment": "Libraries for the Windows and Android builds (vcpkg manifest; Linux uses the system's). The presets point vcpkg here (VCPKG_MANIFEST_DIR). FFmpeg's HTTPS: Windows' own (schannel) on Windows, OpenSSL elsewhere.",
     "name": "tunedchaos",
-    "version-string": "0.1.0",
+    "version-string": "1.0",
     "builtin-baseline": "4ffa44a9f37d433fe44364432e71775edeab3461",
     "dependencies": [
         {

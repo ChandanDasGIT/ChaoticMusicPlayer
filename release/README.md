@@ -64,17 +64,17 @@ build or test publishes nothing.
 
 ```sh
 git push origin master
-git tag v0.1.0-test1
-git push origin v0.1.0-test1
+git tag v1.0
+git push origin v1.0
 ```
 
-- A tag with a dash (`v0.1.0-test1`) makes a pre-release; without one
-  (`v1.0.0`) a normal release.
+- A tag with a dash (`v1.1-test1`) makes a pre-release; without one (`v1.1`)
+  a normal release.
 - The tag's number must match `project(... VERSION ...)` in `CMakeLists.txt`.
   For a new version, change it there first, and raise
   `QT_ANDROID_VERSION_CODE` too (Android only updates to a higher code).
 - To remove a test release and its tag:
-  `gh release delete v0.1.0-test1 --cleanup-tag`
+  `gh release delete v1.1-test1 --cleanup-tag`
 - To check a build without releasing: Actions > Build > Run workflow.
 
 ## Building locally

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(TunedChaos VERSION 0.1.0 LANGUAGES CXX)
+project(TunedChaos VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -217,7 +217,7 @@ elseif(CMP_PLATFORM STREQUAL "android")
         QT_ANDROID_COMPILE_SDK_VERSION 36 # (androidx.core 1.17 needs it)
         QT_ANDROID_SDK_BUILD_TOOLS_REVISION 36.0.0
         QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
-        QT_ANDROID_VERSION_CODE 1
+        QT_ANDROID_VERSION_CODE 2
     )
 endif()
 
