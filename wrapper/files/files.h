@@ -28,9 +28,11 @@ public:
     // The path bar: the root, then each folder down to this one: [{ name, url }]
     Q_INVOKABLE QVariantList crumbs(const QUrl &folder) const;
     // Places beyond home for the folder picker: [{ name, url }]. Linux: other
-    // disks and USB sticks (/mnt, /media); Windows: every drive; Android: the
-    // phone's storage and SD cards.
+    // disks and USB sticks (/mnt, /media); Windows: every drive; Android: SD cards.
     Q_INVOKABLE QVariantList drives() const;
+    // Where browsing starts: the home folder; on Android the phone's storage
+    // (the app's own "home" there is its private folder)
+    Q_INVOKABLE QString homeFolder() const;
 
     // The app's own folders: its settings, its data (library, playlists,
     // history) and its cache. Desktop: the system's config / data / cache folder

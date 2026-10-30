@@ -103,11 +103,20 @@ QString Files::appFolder(const QString &kind) const
     return kind == QLatin1String("config") ? configDir() : kind == QLatin1String("cache") ? cacheDir() : dataDir();
 }
 
+QString Files::homeFolder() const
+{
+#if defined(Q_OS_ANDROID)
+    return QStringLiteral("/storage/emulated/0");
+#else
+    return QDir::homePath();
+#endif
+}
+
 QVariantList Files::drives() const
 {
     QVariantList out;
 #if defined(Q_OS_ANDROID)
-    out.append(place(tr("Phone storage"), QStringLiteral("/storage/emulated/0")));
+    // (the phone's own storage is homeFolder(), listed first already)
     for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
         const QString root = volume.rootPath();
         if (volume.isValid() && volume.isReady() && root.startsWith(QStringLiteral("/storage/"))

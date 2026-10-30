@@ -93,7 +93,7 @@ Outcome pickCopy()
 #endif
     };
     for (const auto &[program, source] : candidates) {
-        if (source != QLatin1String("system") && !QFile::exists(program))
+        if (program.contains(QLatin1Char('/')) && !QFile::exists(program)) // (a path that isn't there)
             continue;
         const auto version = YtDlp::versionOf(program.toStdString());
         if (!version)
@@ -171,7 +171,11 @@ Outcome work(bool checkOnline)
     const QJsonObject release = QJsonDocument::fromJson(QByteArray::fromStdString(response.body)).object();
     const QString latest = release.value(QStringLiteral("tag_name")).toString();
     if (!response.ok() || latest.isEmpty()) {
-        best.status = QObject::tr("Couldn't check for updates (offline?).");
+        // (why, too: an offline computer and a refused connection need different help)
+        const QString why = !response.error.empty() ? QString::fromStdString(response.error)
+                            : response.status ? QStringLiteral("HTTP %1").arg(response.status) : QString();
+        best.status = why.isEmpty() ? QObject::tr("Couldn't check for updates (offline?).")
+                                    : QObject::tr("Couldn't check for updates: %1").arg(why);
         return best;
     }
     if (!best.program.isEmpty() && !YtDlp::olderThan(best.version.toStdString(), latest.toStdString())) {
@@ -210,8 +214,10 @@ YtDlpManager::YtDlpManager(QObject *parent)
             "(Landroid/content/Context;[Ljava/lang/String;)[Ljava/lang/String;",
             QNativeInterface::QAndroidApplication::context().object(), array);
         env->DeleteLocalRef(array);
-        if (env.checkAndClearExceptions() || !reply.isValid())
+        if (env.checkAndClearExceptions() || !reply.isValid()) {
+            qWarning("yt-dlp couldn't run in the app's Python (see the Java exception above)");
             return result; // not started
+        }
         const auto parts = reply.object<jobjectArray>();
         const auto part = [&](jsize i) {
             const QJniObject text(env->GetObjectArrayElement(parts, i));
@@ -221,6 +227,9 @@ YtDlpManager::YtDlpManager(QObject *parent)
         result.exitCode = std::stoi(part(0));
         result.out = part(1);
         result.err = part(2);
+        if (result.exitCode != 0) // (else nobody sees why: Android has no terminal)
+            qWarning("yt-dlp (%s) failed with %d: %s", args.size() > 1 ? args[1].c_str() : "",
+                     result.exitCode, result.err.substr(0, 600).c_str());
         return result;
     });
 #endif

@@ -19,7 +19,14 @@ Popup {
     property string acceptText: qsTr("Use this folder")
     property url folder: home
 
-    readonly property url home: StandardPaths.writableLocation(StandardPaths.HomeLocation)
+    readonly property url home: Files.toUrl(Files.homeFolder())
+    readonly property bool narrow: width < 480 // places in a row above the folders, not beside them
+    // Home (on Android: the phone's storage), Music, Downloads; then the drives
+    readonly property var places: [
+        { icon: "home", name: Qt.platform.os === "android" ? qsTr("Phone") : qsTr("Home"), url: home },
+        { icon: "music", name: qsTr("Music"), url: StandardPaths.writableLocation(StandardPaths.MusicLocation) },
+        { icon: "download", name: qsTr("Downloads"), url: StandardPaths.writableLocation(StandardPaths.DownloadLocation) }
+    ]
 
     property var onPicked: null // the function pick() was given
     property var drives: []     // mounted drives, read when opened
@@ -152,19 +159,17 @@ Popup {
                 Layout.maximumWidth: 160
                 Layout.fillWidth: false
                 Layout.fillHeight: true
-                visible: root.width >= 480
+                visible: !root.narrow
                 spacing: 2
 
-                Place { iconName: "home"; label: qsTr("Home"); target: root.home }
-                Place {
-                    iconName: "music"
-                    label: qsTr("Music")
-                    target: StandardPaths.writableLocation(StandardPaths.MusicLocation)
-                }
-                Place {
-                    iconName: "download"
-                    label: qsTr("Downloads")
-                    target: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+                Repeater {
+                    model: root.places
+                    delegate: Place {
+                        required property var modelData
+                        iconName: modelData.icon
+                        label: modelData.name
+                        target: modelData.url
+                    }
                 }
 
                 Label {
@@ -219,6 +224,28 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: Theme.spacing
+
+                // Narrow (phones): the places as a row of buttons
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 34
+                    visible: root.narrow
+                    orientation: ListView.Horizontal
+                    spacing: 6
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    model: root.places.concat(root.drives.map((d) => ({ icon: "drive", name: d.name, url: d.url })))
+
+                    delegate: PillButton {
+                        required property var modelData
+                        iconName: modelData.icon
+                        iconSize: 11
+                        text: modelData.name
+                        implicitHeight: 32
+                        active: Files.toPath(root.folder) === Files.toPath(modelData.url)
+                        onClicked: root.folder = modelData.url
+                    }
+                }
 
                 // Path bar: up, then each part of the path (click to go there)
                 RowLayout {

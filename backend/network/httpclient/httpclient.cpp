@@ -6,7 +6,38 @@
 #include <memory>
 #include <mutex>
 
+#ifdef __ANDROID__
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#endif
+
 namespace {
+
+#ifdef __ANDROID__
+// Android's trusted certificates, as one PEM text (read once). The bundled
+// OpenSSL can't use Android's certificate folder directly: its files are named
+// by an older hash than OpenSSL 3 looks them up by.
+const std::string &androidCertificates()
+{
+    static const std::string pem = [] {
+        std::string all;
+        // (Android 14+ keeps the updatable ones in Conscrypt's module)
+        for (const char *dir : {"/apex/com.android.conscrypt/cacerts", "/system/etc/security/cacerts"}) {
+            std::error_code ec;
+            for (const auto &entry : std::filesystem::directory_iterator(dir, ec)) {
+                std::ifstream in(entry.path(), std::ios::binary);
+                all.append(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+                all += '\n';
+            }
+            if (!all.empty())
+                break;
+        }
+        return all;
+    }();
+    return pem;
+}
+#endif
 
 void ensureInitialized()
 {
@@ -45,6 +76,12 @@ HttpResponse perform(const std::string &url, const std::string *postBody,
     curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, timeoutMs);
     curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, std::min(timeoutMs, 5000L));
     curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L); // required for use from threads
+#ifdef __ANDROID__
+    // Android's trusted certificates (see androidCertificates)
+    const std::string &certificates = androidCertificates();
+    curl_blob blob{const_cast<char *>(certificates.data()), certificates.size(), CURL_BLOB_NOCOPY};
+    curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+#endif
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, &appendBody);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, &response.body);
     if (headerList)
