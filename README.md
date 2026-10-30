@@ -1,8 +1,31 @@
 # Tuned Chaos
 
-A music player for Linux with a Qt 6 / QML interface and a pure C++ backend
-(FFmpeg for decoding, PipeWire for output, TagLib for tags). It plays your
-local music and can also browse and play YouTube Music.
+A music player for Linux, Windows and Android with a Qt 6 / QML interface and a
+pure C++ backend (FFmpeg for decoding, TagLib for tags; PipeWire for output on
+Linux, miniaudio on Windows and Android). It plays your local music and can also
+browse and play YouTube Music.
+
+## Install
+
+Download a package from the
+[Releases page](https://github.com/ChandanDasGIT/TunedChaos/releases). Each one
+brings what it needs; you don't install Qt or anything else yourself.
+
+| Platform | Package | How |
+| --- | --- | --- |
+| Windows | `...-setup-x64.exe` | Run it. Installs for your user, no administrator rights needed |
+| Windows | `...-windows-x64-portable.zip` | Extract the whole ZIP, then run `TunedChaos.exe` |
+| Android | `...-arm64.apk` | Open it on your phone and allow installing from that app |
+| Linux | `...-x86_64.AppImage` | Make it executable (below), then run it |
+| Linux | `...-linux-x86_64.tar.xz` | Unpack it, then run `./install-app.sh` (no root needed; `./uninstall-app.sh` removes it) |
+| Linux | `TunedChaos-x86_64.flatpak` | `flatpak install --user TunedChaos-x86_64.flatpak` (fetches the KDE runtime from Flathub if you don't have it) |
+
+Downloads don't keep Linux's "executable" permission, so an AppImage needs it
+set once, with its Properties dialog or:
+
+```sh
+chmod +x TunedChaos-*.AppImage
+```
 
 ## Features
 
@@ -136,7 +159,7 @@ local music and can also browse and play YouTube Music.
 
 The list is also in Settings → Keyboard shortcuts.
 
-## Requirements
+## Requirements (to build it yourself)
 
 - A C++20 compiler, CMake 3.21+ and pkg-config
 - Qt 6.10+ (Quick, QuickControls2, Network; DBus on Linux)
