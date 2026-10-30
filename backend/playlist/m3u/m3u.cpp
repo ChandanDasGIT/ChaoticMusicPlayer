@@ -209,7 +209,7 @@ bool M3u::write(const fs::path &file, const std::vector<Track> &tracks)
             }
             const fs::path path = fs::path(track.path).lexically_normal();
             const fs::path relative = path.lexically_relative(folder);
-            const bool inside = !relative.empty() && relative.native().rfind("..", 0) != 0;
+            const bool inside = !relative.empty() && relative.generic_string().rfind("..", 0) != 0;
             out << (inside ? relative.string() : path.string()) << '\n';
         }
         if (!out)
