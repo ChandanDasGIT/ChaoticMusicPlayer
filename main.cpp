@@ -29,11 +29,21 @@
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
+#ifdef Q_OS_WIN
+#include <shobjidl_core.h> // SetCurrentProcessExplicitAppUserModelID
+#endif
+
 // The app's controls style (frontend/style), linked in statically.
 Q_IMPORT_QML_PLUGIN(ChaoticStylePlugin)
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_OS_WIN
+    // Windows' app id: groups the taskbar button, and lets toasts show (the
+    // installer's Start menu shortcut carries the same one)
+    SetCurrentProcessExplicitAppUserModelID(L"ChandanDas.ChaoticMusicPlayer");
+#endif
+
     // Interface size (Settings > Appearance): Qt scales the whole UI by it. It
     // must be set before the app starts, so a change applies after a restart.
     // A QT_SCALE_FACTOR set by the user wins.

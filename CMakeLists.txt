@@ -201,6 +201,7 @@ elseif(CMP_PLATFORM STREQUAL "windows")
         release/windows/ChaoticMusicPlayer.manifest
     )
     set_target_properties(ChaoticMusicPlayer PROPERTIES WIN32_EXECUTABLE TRUE) # no console window
+    target_link_libraries(ChaoticMusicPlayer PRIVATE windowsapp) # C++/WinRT: media controls, toasts
 endif()
 
 set_source_files_properties(frontend/Theme.qml PROPERTIES
