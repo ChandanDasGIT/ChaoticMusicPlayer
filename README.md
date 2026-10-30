@@ -27,7 +27,7 @@ local music and can also browse and play YouTube Music.
 - **Queue**: your own list. Add songs with *Add to queue* or *Play next* in
   the song menus, by dragging songs, albums, folders or YouTube playlists onto
   it (dropped at the spot you choose), or by dropping files and folders on the
-  window. Sort by any column, press and hold a song to move it, swipe to
+  window. Sort by any column, drag a song by its handle to move it, swipe to
   delete.
 - **Playlists**: named playlists that play without touching the Queue;
   import and export them as M3U / M3U8 (or drop an `.m3u` file on the window).

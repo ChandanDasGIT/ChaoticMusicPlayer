@@ -8,6 +8,18 @@ import QtQuick.Controls
 Menu {
     id: root
 
+    // Counted while open, so Esc / Back only closes the menu (Main's goBack waits).
+    property bool countedOpen: false
+    function setCountedOpen(open) {
+        if (open !== countedOpen) {
+            countedOpen = open
+            Util.openMenus += open ? 1 : -1
+        }
+    }
+    onAboutToShow: setCountedOpen(true)
+    onAboutToHide: setCountedOpen(false)
+    Component.onDestruction: setCountedOpen(false)
+
     padding: 4
 
     enter: Transition {

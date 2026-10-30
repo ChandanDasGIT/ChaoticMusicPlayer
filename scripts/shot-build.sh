@@ -150,7 +150,7 @@ hook = '''    // ---- screenshot harness
         QTimer::singleShot(2000, [&, findItems, window] {
             for (QQuickItem *row : findItems("PlaylistRow"))
                 if (row->isVisible() && row->property("index").toInt() == qEnvironmentVariableIntValue("SHOT_DRAG_ROW"))
-                    holdPos = row->mapToScene(QPointF(150, row->height() / 2)).toPoint(); // on the title
+                    holdPos = row->mapToScene(QPointF(qEnvironmentVariableIsSet("SHOT_DRAG_X") ? qEnvironmentVariableIntValue("SHOT_DRAG_X") : 150, row->height() / 2)).toPoint(); // on the title (or SHOT_DRAG_X: 18 = the handle)
             std::printf("hold at %d,%d (queue has %d)\\n", holdPos.x(), holdPos.y(), playlist.count());
             QTest::mouseMove(window(), holdPos);
         });
@@ -196,7 +196,8 @@ hook = '''    // ---- screenshot harness
             std::fflush(stdout);
         });
     }
-    if (qEnvironmentVariableIsSet("SHOT_CLICK_ICON")) { // hover + click the first visible PillButton with that icon
+    if (qEnvironmentVariableIsSet("SHOT_CLICK_ICON")) { // hover + click the first visible PillButton with that icon (at SHOT_CLICK_MS)
+        const int clickAt = qEnvironmentVariableIsSet("SHOT_CLICK_MS") ? qEnvironmentVariableIntValue("SHOT_CLICK_MS") : 2000;
         static QPointF clickPos;
         const auto send = [&](QEvent::Type type, QPointF p, Qt::MouseButtons buttons) {
             auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
@@ -204,7 +205,7 @@ hook = '''    // ---- screenshot harness
                           buttons, Qt::NoModifier);
             QCoreApplication::sendEvent(window, &e);
         };
-        QTimer::singleShot(2000, [&, send] {
+        QTimer::singleShot(clickAt, [&, send] {
             std::function<void(QQuickItem *)> walk = [&](QQuickItem *item) {
                 if (!item->isVisible() || !clickPos.isNull())
                     return;
@@ -218,9 +219,9 @@ hook = '''    // ---- screenshot harness
             std::printf("click icon at %.0f,%.0f pinned=%d\\n", clickPos.x(), clickPos.y(), int(settings.playlistPinned()));
             send(QEvent::MouseMove, clickPos, Qt::NoButton);
         });
-        QTimer::singleShot(2300, [send] { send(QEvent::MouseButtonPress, clickPos, Qt::LeftButton); });
-        QTimer::singleShot(2350, [send] { send(QEvent::MouseButtonRelease, clickPos, Qt::NoButton); });
-        QTimer::singleShot(2600, [&] { std::printf("after click pinned=%d\\n", int(settings.playlistPinned())); });
+        QTimer::singleShot(clickAt + 300, [send] { send(QEvent::MouseButtonPress, clickPos, Qt::LeftButton); });
+        QTimer::singleShot(clickAt + 350, [send] { send(QEvent::MouseButtonRelease, clickPos, Qt::NoButton); });
+        QTimer::singleShot(clickAt + 600, [&] { std::printf("after click pinned=%d\\n", int(settings.playlistPinned())); });
     }
     if (qEnvironmentVariableIsSet("SHOT_SCREEN_W")) // pretend the screen is this wide (picks the layout)
         engine.rootObjects().constFirst()->setProperty("screenWidthOverride", qEnvironmentVariableIntValue("SHOT_SCREEN_W"));

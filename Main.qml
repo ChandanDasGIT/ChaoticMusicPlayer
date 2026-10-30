@@ -160,6 +160,19 @@ ApplicationWindow {
     title: "Tuned Chaos"
     color: Theme.background
 
+    // Phones: the app fills the whole screen, its background behind the status
+    // and navigation bars. Everything else keeps clear of them with these
+    // margins (0 on the desktop).
+    flags: Theme.touchOnly ? Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint : Qt.Window
+    topPadding: 0
+    bottomPadding: 0
+    leftPadding: 0
+    rightPadding: 0
+    readonly property real safeTop: contentItem.SafeArea.margins.top
+    readonly property real safeBottom: contentItem.SafeArea.margins.bottom
+    readonly property real safeLeft: contentItem.SafeArea.margins.left
+    readonly property real safeRight: contentItem.SafeArea.margins.right
+
     // Background playing: closing only hides the window while a song is loaded
     // (launching the app again or the desktop's media controls bring it back).
     // Quitting closes the windows too, so a real quit is flagged first.
@@ -306,7 +319,7 @@ ApplicationWindow {
     AppShortcuts {
         dialogOpen: detailsDialog.visible || nameDialog.visible || confirmDialog.visible
                     || folderPicker.visible
-        escapeEnabled: !dialogOpen && window.canGoBack
+        escapeEnabled: !dialogOpen && Util.openMenus === 0 && window.canGoBack
         onEscapePressed: window.goBack()
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
@@ -344,7 +357,9 @@ ApplicationWindow {
         onColumnsChanged: [playlistSlot, playerSlot, rightSlot].forEach((slot) => slot.equalize())
 
         anchors.fill: parent
-        anchors.margins: Theme.cardGap
+        anchors.topMargin: Theme.cardGap + window.safeTop
+        anchors.leftMargin: Theme.cardGap + window.safeLeft
+        anchors.rightMargin: Theme.cardGap + window.safeRight
         // Room for the navigation bar and the floating mini player under the columns.
         // The gap above the mini player grows with it, so the columns shrink and
         // grow smoothly as it slides in and out.
@@ -591,8 +606,8 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: navBar.top
-        anchors.leftMargin: Theme.cardGap
-        anchors.rightMargin: Theme.cardGap
+        anchors.leftMargin: Theme.cardGap + window.safeLeft
+        anchors.rightMargin: Theme.cardGap + window.safeRight
         anchors.bottomMargin: Theme.cardGap
         height: implicitHeight
         radius: Theme.radiusCard
@@ -612,10 +627,13 @@ ApplicationWindow {
     NavBar {
         id: navBar
         objectName: "navBar"
+        readonly property real room: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
+
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.cardGap
+        anchors.bottomMargin: Theme.cardGap + window.safeBottom
         anchors.horizontalCenter: parent.horizontalCenter
-        width: window.compact ? parent.width - 2 * Theme.cardGap : Math.min(parent.width - 2 * Theme.cardGap, 560)
+        anchors.horizontalCenterOffset: (window.safeLeft - window.safeRight) / 2
+        width: window.compact ? room : Math.min(room, 560)
         height: implicitHeight
         z: 5
         homeOpen: window.homeDocked || homeSheet.shown
@@ -649,6 +667,10 @@ ApplicationWindow {
         width: window.width
         height: window.drawerHeight
         padding: 0
+        topPadding: 0 // (DrawerCard keeps clear of the system bars)
+        bottomPadding: 0
+        leftPadding: 0
+        rightPadding: 0
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
@@ -685,6 +707,10 @@ ApplicationWindow {
         width: window.width
         height: window.drawerHeight
         padding: 0
+        topPadding: 0 // (DrawerCard keeps clear of the system bars)
+        bottomPadding: 0
+        leftPadding: 0
+        rightPadding: 0
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
@@ -723,6 +749,10 @@ ApplicationWindow {
         width: window.width
         height: window.drawerHeight
         padding: 0
+        topPadding: 0 // (DrawerCard keeps clear of the system bars)
+        bottomPadding: 0
+        leftPadding: 0
+        rightPadding: 0
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
@@ -762,10 +792,10 @@ ApplicationWindow {
             id: settingsSheet
             property bool shown: false
             property real down: shown ? 0 : 1 // as for settingsCard
-            x: Theme.cardGap
-            width: parent.width - 2 * Theme.cardGap
-            height: parent.height - 2 * Theme.cardGap
-            y: Theme.cardGap + down * (parent.height - Theme.cardGap)
+            x: Theme.cardGap + window.safeLeft
+            width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
+            height: parent.height - 2 * Theme.cardGap - window.safeTop
+            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop)
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
@@ -785,10 +815,10 @@ ApplicationWindow {
             id: homeSheet
             property bool shown: false
             property real down: shown ? 0 : 1 // as for settingsCard
-            x: Theme.cardGap
-            width: parent.width - 2 * Theme.cardGap
-            height: parent.height - 2 * Theme.cardGap
-            y: Theme.cardGap + down * (parent.height - Theme.cardGap)
+            x: Theme.cardGap + window.safeLeft
+            width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
+            height: parent.height - 2 * Theme.cardGap - window.safeTop
+            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop)
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
@@ -857,6 +887,9 @@ ApplicationWindow {
 
         anchors.fill: parent
         anchors.margins: Theme.cardGap
+        anchors.topMargin: Theme.cardGap + window.safeTop
+        anchors.leftMargin: Theme.cardGap + window.safeLeft
+        anchors.rightMargin: Theme.cardGap + window.safeRight
         radius: Theme.radiusCard
         color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
         scale: 0.96 + 0.04 * drawer.position
@@ -936,6 +969,7 @@ ApplicationWindow {
 
     Toast {
         id: toast
+        bottomOffset: Theme.padding * 1.5 + window.safeBottom
     }
 
     // The app's folder chooser (Library: add folder; Settings: exclude folder)

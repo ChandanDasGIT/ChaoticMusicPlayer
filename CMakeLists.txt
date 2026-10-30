@@ -313,6 +313,7 @@ qt_add_qml_module(TunedChaos
         frontend/home/SmartPlaylistDialog.qml
         frontend/library/LibraryFolderRow.qml
         frontend/library/LibraryPanel.qml
+        frontend/library/LibraryAddAllMenu.qml
         frontend/library/LibrarySongMenu.qml
         frontend/library/LibrarySongRow.qml
         frontend/lyrics/LyricsView.qml

@@ -3,6 +3,8 @@ import QtQuick
 
 // Small helpers shared by the views: time / count formatting and cover addresses.
 QtObject {
+    property int openMenus: 0 // menus open now (controls/ThemedMenu.qml)
+
     // "m:ss" or "h:mm:ss"
     function formatTime(ms) {
         let s = Math.floor(Math.max(0, ms) / 1000)

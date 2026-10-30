@@ -32,7 +32,7 @@ Rectangle {
 
     // Column geometry shared by header and rows. Title takes the remaining space;
     // Artist - Album gives way on narrow screens so the title stays readable.
-    readonly property real indicatorWidth: 44
+    readonly property real indicatorWidth: 70 // grab handle + cover
     readonly property real availableWidth: width - 8 - 12 // scrollbar + rounded-row insets
     readonly property real trackWidth: SettingsController.trackWidth
     readonly property real durationWidth: SettingsController.durationWidth

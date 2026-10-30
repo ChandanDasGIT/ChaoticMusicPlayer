@@ -827,6 +827,7 @@ Rectangle {
         }
         TapHandler {
             acceptedButtons: Qt.RightButton
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad // (a finger's tap would count as this too)
             onTapped: smartDialog.edit(smart.playlist)
         }
         DragSource {

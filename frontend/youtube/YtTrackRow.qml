@@ -144,12 +144,13 @@ Rectangle {
 
         Row {
             spacing: 2
-            opacity: root.showButtons ? 1 : 0
+            opacity: root.showButtons || Theme.touchOnly ? 1 : 0
             visible: opacity > 0
 
             Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
 
             PillButton {
+                visible: root.showButtons
                 iconName: "plus"
                 iconSize: 12
                 implicitWidth: 32

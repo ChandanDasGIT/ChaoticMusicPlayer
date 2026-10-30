@@ -47,6 +47,10 @@ Rectangle {
     }
 
     color: Theme.panelShade // softens the cover tint behind it
+
+    LibraryAddAllMenu {
+        id: addAllMenu
+    }
     radius: Theme.radiusCard
     border.color: Theme.border
 
@@ -509,11 +513,14 @@ Rectangle {
                     }
 
                     PillButton {
-                        iconName: "plus"
+                        id: addAllButton
+                        iconName: "chevronDown"
                         iconSize: 11
-                        text: qsTr("Add all to queue")
+                        text: qsTr("Add all")
                         implicitHeight: 32
-                        onClicked: LocalLibraryController.addToQueue(LocalLibraryController.DetailList, -1)
+                        onClicked: addAllMenu.openAt(
+                            addAllButton, LocalLibraryController.items(LocalLibraryController.DetailList, -1),
+                            () => LocalLibraryController.addToQueue(LocalLibraryController.DetailList, -1))
                     }
                 }
 
@@ -621,14 +628,17 @@ Rectangle {
                     }
 
                     PillButton {
+                        id: addFolderButton
                         visible: !parent.parent.atTop
-                        iconName: "plus"
+                        iconName: "chevronDown"
                         iconSize: 11
                         implicitWidth: 34
                         implicitHeight: 34
                         ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Add all to queue")
-                        onClicked: LocalLibraryController.addFolderToQueue()
+                        ToolTip.text: qsTr("Add all (subfolders too)")
+                        onClicked: addAllMenu.openAt(addFolderButton,
+                                                     LocalLibraryController.folderItems(LocalLibraryController.folder),
+                                                     () => LocalLibraryController.addFolderToQueue())
                     }
                 }
 

@@ -4,6 +4,10 @@ import QtQuick
 // The app's look: colors (dark / light), typography, metrics and animation
 // timing. Nothing else: icons are in Icon.qml, helpers in Util.qml.
 QtObject {
+    // No pointer to hover with (phones): what shows on hover elsewhere must
+    // stay visible there
+    readonly property bool touchOnly: Qt.platform.os === "android" || Qt.platform.os === "ios"
+
     // Dark or light colors, from Settings > Appearance: "system" follows the
     // desktop's preference (dark when the desktop doesn't say).
     readonly property bool isDark: SettingsController.themeMode === "system"

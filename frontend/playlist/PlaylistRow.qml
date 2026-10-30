@@ -5,7 +5,8 @@ import QtQuick.Controls
 // Rounded and inset; the playing row is tinted and shows play/pause over its
 // cover. Column widths come from PlaylistPanel so they line up with PlaylistHeader.
 // Swipe left (mouse drag, touch, or two-finger touchpad swipe) to reveal Delete.
-// Press and hold, then drag up / down to move the song. "⋮" opens the menu.
+// The handle at the left moves the song when dragged up / down (so does
+// pressing and holding the row). "⋮" opens the menu.
 Item {
     id: root
 
@@ -21,7 +22,7 @@ Item {
 
     property bool selected: false
     property bool menuOpen: false // this row's menu is open: keep "⋮" shown
-    property real indicatorWidth: 44
+    property real indicatorWidth: 70
     property real titleWidth: 200
     property real artistAlbumWidth: 200
     property real trackWidth: 52
@@ -249,6 +250,7 @@ Item {
 
     TapHandler {
         acceptedButtons: Qt.RightButton
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad // (a finger's tap would count as this too)
         onTapped: {
             root.clicked()
             root.contextMenuRequested()
@@ -260,14 +262,43 @@ Item {
         width: card.width
         height: root.height
 
-        // Cover thumbnail; the playing track shows play/pause on top of it.
+        // Grab handle, then the cover thumbnail; the playing track shows
+        // play/pause on top of it.
         Item {
             width: root.indicatorWidth
             height: parent.height
 
+            Item {
+                id: grip
+                width: 26
+                height: parent.height
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "grip"
+                    size: 12
+                    color: root.reordering ? Theme.accent : Theme.textMuted
+                }
+
+                // The press takes over at once, and keeps the list from scrolling.
+                MouseArea {
+                    anchors.fill: parent
+                    preventStealing: true
+                    cursorShape: root.reordering ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    onPressed: (mouse) => {
+                        root.clicked()
+                        root.startReorder(mapToItem(null, mouse.x, mouse.y))
+                    }
+                    onPositionChanged: (mouse) => root.updateReorder(mapToItem(null, mouse.x, mouse.y))
+                    onReleased: root.endReorder()
+                    onCanceled: root.endReorder()
+                }
+            }
+
             Rectangle {
                 id: thumb
-                anchors.centerIn: parent
+                anchors.left: grip.right
+                anchors.verticalCenter: parent.verticalCenter
                 width: 34
                 height: 34
                 radius: 6

@@ -75,6 +75,7 @@ Rectangle {
 
     TapHandler {
         acceptedButtons: Qt.RightButton
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad // (a finger's tap would count as this too)
         onTapped: {
             menuLoader.active = true
             (menuLoader.item as LibrarySongMenu).popup()
@@ -177,7 +178,7 @@ Rectangle {
             implicitWidth: 32
             implicitHeight: 32
             transparentIdle: true
-            visible: root.showButtons
+            visible: root.showButtons || Theme.touchOnly
             ToolTip.visible: hovered
             ToolTip.text: qsTr("More")
             onClicked: {
