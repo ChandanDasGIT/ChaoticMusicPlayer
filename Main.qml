@@ -263,22 +263,51 @@ ApplicationWindow {
         }
     }
 
+    // Esc / Android's Back: one step back in what is in front (a page inside a
+    // panel first, then the drawer or sheet closes), else the lyrics close.
+    // Wide layouts: Settings, the lyrics, then the right and left panels' pages
+    // (their columns stay open). Nothing to go back from: Back leaves the app.
+    function backTarget() {
+        if (compact) {
+            if (playlistDrawer.opened)
+                return { panel: drawerPlaylist, close: () => playlistDrawer.close() }
+            if (youtubeDrawer.opened)
+                return { panel: drawerYoutube, close: () => youtubeDrawer.close() }
+            if (libraryDrawer.opened)
+                return { panel: drawerLibrary, close: () => libraryDrawer.close() }
+            if (homeSheet.shown)
+                return { panel: sheetHome, close: () => homeSheet.shown = false }
+        }
+        if (settingsShown)
+            return { panel: settingsPanel, close: () => closeSettings() }
+        if (nowPlaying.lyricsOpen)
+            return { panel: null, close: () => nowPlaying.lyricsOpen = false }
+        if (!compact) {
+            const docked = { queue: dockedPlaylist, home: dockedHome, youtube: dockedYoutube, library: dockedLibrary }
+            for (const name of [rightShown, leftShown]) {
+                const panel = docked[name]
+                if (panel && panel.canGoBack)
+                    return { panel: panel, close: null }
+            }
+        }
+        return null
+    }
+    readonly property bool canGoBack: backTarget() !== null
+    function goBack() {
+        const target = backTarget()
+        if (!target)
+            return
+        if (target.panel && target.panel.back())
+            return
+        if (target.close)
+            target.close()
+    }
+
     AppShortcuts {
         dialogOpen: detailsDialog.visible || nameDialog.visible || confirmDialog.visible
                     || folderPicker.visible
-        escapeEnabled: !dialogOpen && (window.settingsShown || homeSheet.shown || nowPlaying.lyricsOpen
-                       && !playlistDrawer.opened && !youtubeDrawer.opened && !libraryDrawer.opened)
-        // Settings: back to its list, then closed; the Home sheet closes; else the lyrics close
-        onEscapePressed: {
-            if (homeSheet.shown) {
-                homeSheet.shown = false
-            } else if (window.settingsShown) {
-                if (!settingsPanel.back())
-                    window.closeSettings()
-            } else {
-                nowPlaying.lyricsOpen = false
-            }
-        }
+        escapeEnabled: !dialogOpen && window.canGoBack
+        onEscapePressed: window.goBack()
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
         onFocusSearch: window.focusSearch()
         onToggleQueue: window.toggleQueue()
@@ -622,7 +651,7 @@ ApplicationWindow {
         padding: 0
         modal: false
         dim: false
-        closePolicy: Popup.CloseOnEscape
+        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact
         background: Item {}
 
@@ -631,6 +660,7 @@ ApplicationWindow {
             transformOrigin: Item.Left
 
             PlaylistPanel {
+                id: drawerPlaylist
                 anchors.fill: parent
                 showCloseButton: true
                 onCloseRequested: playlistDrawer.close()
@@ -657,7 +687,7 @@ ApplicationWindow {
         padding: 0
         modal: false
         dim: false
-        closePolicy: Popup.CloseOnEscape
+        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact && !drawerYoutube.swipeBlocked
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
         onClosed: window.searchOnOpen = false
@@ -695,7 +725,7 @@ ApplicationWindow {
         padding: 0
         modal: false
         dim: false
-        closePolicy: Popup.CloseOnEscape
+        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: window.searchOnOpen = false
@@ -765,6 +795,7 @@ ApplicationWindow {
             Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
 
             HomePanel {
+                id: sheetHome
                 objectName: "homePanel"
                 anchors.fill: parent
                 backdrop: homeSheet.color

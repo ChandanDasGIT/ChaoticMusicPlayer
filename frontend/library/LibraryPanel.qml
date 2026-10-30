@@ -28,6 +28,17 @@ Rectangle {
 
     onTabChanged: LocalLibraryController.closeDetail()
 
+    // Back / Esc: out of the album / artist, or up one folder (false: nothing to go back from).
+    readonly property bool canGoBack: inDetail || (tab === 3 && hasFolders && LocalLibraryController.folder !== "")
+    function back() {
+        if (inDetail)
+            LocalLibraryController.closeDetail()
+        else if (canGoBack)
+            LocalLibraryController.folderUp()
+        else
+            return false
+        return true
+    }
     // Ctrl+F: the Songs tab's search, ready to type.
     function focusSearch() {
         tab = 0

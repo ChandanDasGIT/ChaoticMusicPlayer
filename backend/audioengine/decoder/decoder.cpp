@@ -9,7 +9,13 @@ extern "C" {
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <mutex>
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#include <cstdio>
+#endif
 
 namespace {
 
@@ -18,7 +24,34 @@ constexpr AVRational MillisecondBase{1, 1000};
 void quietLogging()
 {
     static std::once_flag once;
-    std::call_once(once, [] { av_log_set_level(AV_LOG_ERROR); });
+    std::call_once(once, [] {
+        av_log_set_level(AV_LOG_ERROR);
+#ifdef __ANDROID__
+        // Android drops stderr: FFmpeg's errors go to the system log (logcat, tag "FFmpeg")
+        av_log_set_callback([](void *object, int level, const char *format, va_list args) {
+            if (level > av_log_get_level())
+                return;
+            char line[1024];
+            int prefix = 1;
+            av_log_format_line(object, level, format, args, line, sizeof(line), &prefix);
+            __android_log_write(ANDROID_LOG_WARN, "FFmpeg", line);
+        });
+#endif
+    });
+}
+
+// HTTPS on Android: the phone's certificates, saved by main.cpp (OpenSSL finds none itself)
+void addCertificates(AVDictionary **options, const std::string &path)
+{
+#ifdef __ANDROID__
+    if (path.rfind("https", 0) != 0)
+        return;
+    if (const char *certificates = std::getenv("SSL_CERT_FILE"))
+        av_dict_set(options, "ca_file", certificates, 0);
+#else
+    (void)options;
+    (void)path;
+#endif
 }
 
 std::string avErrorString(int error)
@@ -44,7 +77,11 @@ bool Decoder::probe(const std::string &path, AudioInfo &info)
 {
     quietLogging();
     AVFormatContext *format = nullptr;
-    if (avformat_open_input(&format, path.c_str(), nullptr, nullptr) < 0)
+    AVDictionary *options = nullptr;
+    addCertificates(&options, path);
+    const int opened = avformat_open_input(&format, path.c_str(), nullptr, &options);
+    av_dict_free(&options);
+    if (opened < 0)
         return false;
 
     bool ok = false;
@@ -96,6 +133,7 @@ bool Decoder::open(const std::string &path)
         av_dict_set(&options, "reconnect_on_network_error", "1", 0);
         av_dict_set(&options, "reconnect_delay_max", "5", 0);
         av_dict_set(&options, "rw_timeout", "15000000", 0); // microseconds
+        addCertificates(&options, path);
     }
     int err = avformat_open_input(&m_format, path.c_str(), nullptr, &options);
     av_dict_free(&options);

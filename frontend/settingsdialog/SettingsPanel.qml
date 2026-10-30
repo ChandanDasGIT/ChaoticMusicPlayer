@@ -32,8 +32,11 @@ Rectangle {
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") }
     ]
+    // Android has no keyboard to speak of: no Keyboard shortcuts page there
+    readonly property bool android: Qt.platform.os === "android"
+    readonly property int shortcutsPage: 8
     // The categories in groups, like a phone's settings
-    readonly property var groups: [[0, 1, 2], [3, 5, 6], [4, 7], [8, 9]]
+    readonly property var groups: [[0, 1, 2], [3, 5, 6], [4, 7], android ? [9] : [8, 9]]
 
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
@@ -58,6 +61,7 @@ Rectangle {
         page = index
     }
     // Esc: clears the search, else back to the list; false at the list (nothing left to do).
+    readonly property bool canGoBack: searching || page >= 0
     function back() {
         if (searching) {
             searchField.clear()
@@ -73,6 +77,8 @@ Rectangle {
     // ---- Search: every setting (row) of every page, found by its words
     function collect(item, pageIndex, card, out) {
         for (const child of item.children) {
+            if (child.hiddenHere === true) // (not on this platform)
+                continue
             if (child.settingsCard === true) {
                 collect(child, pageIndex, child.title, out)
                 continue
@@ -87,12 +93,15 @@ Rectangle {
         const matches = (s) => words.every((w) => s.toLowerCase().includes(w))
         const out = []
         pages.forEach((p, i) => {
+            if (android && i === shortcutsPage)
+                return
             if (matches(p.name + " " + p.summary))
                 out.push({ page: i, card: "", title: p.name, description: p.summary, item: null })
         })
         const rows = []
         for (let i = 0; i < stack.children.length; ++i)
-            collect(stack.children[i], i, "", rows)
+            if (!(android && i === shortcutsPage))
+                collect(stack.children[i], i, "", rows)
         const titled = rows.filter((r) => matches(r.title + " " + r.card))
         const described = rows.filter((r) => !matches(r.title + " " + r.card)
                                        && matches(r.title + " " + r.card + " " + r.description + " " + pages[r.page].name))
@@ -307,7 +316,8 @@ Rectangle {
 
                             SettingsRow {
                                 Layout.fillWidth: true
-                                visible: Qt.platform.os !== "android" // (Android keeps playing by itself)
+                                readonly property bool hiddenHere: root.android
+                                visible: !hiddenHere // (Android keeps playing by itself)
                                 title: qsTr("Keep playing after closing the window")
                                 description: qsTr("Closing hides the window; open the app again to bring it back. Quit with the power button or Ctrl+Q.")
 
@@ -319,7 +329,8 @@ Rectangle {
                         }
 
                         SettingsCard {
-                            visible: Qt.platform.os !== "android" // (Android: the media notification shows the song)
+                            readonly property bool hiddenHere: root.android
+                            visible: !hiddenHere // (Android: the media notification shows the song)
                             title: qsTr("Notifications")
 
                             SettingsRow {
@@ -694,14 +705,16 @@ Rectangle {
                             // (Not on Android: the system's display size does this, and an app can't restart itself)
                             SettingsRow {
                                 Layout.fillWidth: true
-                                visible: Qt.platform.os !== "android"
+                                readonly property bool hiddenHere: root.android
+                                visible: !hiddenHere
                                 title: qsTr("Interface size")
                                 description: qsTr("Makes everything bigger or smaller: text, buttons, panels. Takes effect when the app starts again.")
                             }
 
                             Flow {
                                 Layout.fillWidth: true
-                                visible: Qt.platform.os !== "android"
+                                readonly property bool hiddenHere: root.android
+                                visible: !hiddenHere
                                 spacing: 6
 
                                 Repeater {
@@ -721,7 +734,8 @@ Rectangle {
                             // Shown once the chosen size differs from the one in use
                             RowLayout {
                                 Layout.fillWidth: true
-                                visible: Qt.platform.os !== "android"
+                                readonly property bool hiddenHere: root.android
+                                visible: !hiddenHere
                                          && Math.abs(SettingsController.interfaceScale - SettingsController.activeInterfaceScale) > 0.01
                                 spacing: Theme.spacing
 
@@ -1115,7 +1129,8 @@ Rectangle {
                         title: qsTr("YouTube Music")
 
                         SettingsCard {
-                            visible: Qt.platform.os !== "android" // (yt-dlp can't read a phone browser's session)
+                            readonly property bool hiddenHere: root.android
+                            visible: !hiddenHere // (yt-dlp can't read a phone browser's session)
                             title: qsTr("Your account")
 
                             SettingsRow {

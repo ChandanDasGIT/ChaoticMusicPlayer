@@ -28,4 +28,9 @@ public:
     static std::string urlEncode(const std::string &value);
 
     static const char *userAgent();
+
+#ifdef __ANDROID__
+    // Android's trusted certificates, as one PEM text (for OpenSSL users other than this client)
+    static const std::string &androidCertificates();
+#endif
 };

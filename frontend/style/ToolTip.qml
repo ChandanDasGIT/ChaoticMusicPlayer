@@ -41,7 +41,13 @@ T.ToolTip {
 
     readonly property Item noInput: Item {} // no area: contains no point
 
+    // Phones: a tap counts as hovering, so tooltips would pop up on every
+    // touch. None there.
+    readonly property bool touchOnly: Qt.platform.os === "android" || Qt.platform.os === "ios"
+    onOpened: if (touchOnly) close()
+
     contentItem: Text {
+        visible: !control.touchOnly
         text: control.text
         font.pixelSize: 12
         color: control.palette.toolTipText
@@ -50,6 +56,7 @@ T.ToolTip {
     }
 
     background: Rectangle {
+        visible: !control.touchOnly
         // Never take the pointer: near the window's top Qt squeezes the tooltip
         // over its control, and a click there must still reach the control.
         onParentChanged: if (parent) parent.containmentMask = control.noInput

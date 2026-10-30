@@ -220,59 +220,69 @@ Item {
         }
     }
 
-    // ---- Footer: back | Synced / Static | source ---------------------------
-    RowLayout {
+    // ---- Footer: back | Synced / Static, the source below ------------------
+    // (The source under the buttons: a long name never pushes them out of a narrow window.)
+    ColumnLayout {
         id: footer
         opacity: root.phase(0.5, 1)
         anchors.bottom: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Theme.spacing
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: 4
 
-        PillButton {
-            iconName: "back"
-            iconSize: 13
-            implicitWidth: 44
-            implicitHeight: 36
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Back to the cover")
-            onClicked: root.closeRequested()
-        }
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: Theme.spacing
 
-        Rectangle {
-            visible: LyricsController.synced
-            implicitWidth: modeRow.implicitWidth + 8
-            implicitHeight: modeRow.implicitHeight + 8
-            radius: height / 2
-            color: Theme.fill
+            PillButton {
+                iconName: "back"
+                iconSize: 13
+                implicitWidth: 44
+                implicitHeight: 36
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Back to the cover")
+                onClicked: root.closeRequested()
+            }
 
-            RowLayout {
-                id: modeRow
-                anchors.centerIn: parent
-                spacing: 2
+            Rectangle {
+                visible: LyricsController.synced
+                implicitWidth: modeRow.implicitWidth + 8
+                implicitHeight: modeRow.implicitHeight + 8
+                radius: height / 2
+                color: Theme.fill
 
-                PillButton {
-                    text: qsTr("Synced")
-                    implicitHeight: 30
-                    transparentIdle: true
-                    active: root.showSynced
-                    onClicked: root.showSynced = true
-                }
+                RowLayout {
+                    id: modeRow
+                    anchors.centerIn: parent
+                    spacing: 2
 
-                PillButton {
-                    text: qsTr("Static")
-                    implicitHeight: 30
-                    transparentIdle: true
-                    active: !root.showSynced
-                    onClicked: root.showSynced = false
+                    PillButton {
+                        text: qsTr("Synced")
+                        implicitHeight: 30
+                        transparentIdle: true
+                        active: root.showSynced
+                        onClicked: root.showSynced = true
+                    }
+
+                    PillButton {
+                        text: qsTr("Static")
+                        implicitHeight: 30
+                        transparentIdle: true
+                        active: !root.showSynced
+                        onClicked: root.showSynced = false
+                    }
                 }
             }
         }
 
         Label {
+            Layout.fillWidth: true
             visible: LyricsController.status === LyricsController.Found
             text: qsTr("from %1").arg(LyricsController.sourceName)
             color: Theme.textMuted
             font.pixelSize: Theme.fontSizeSmall
+            horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
         }
     }
 }

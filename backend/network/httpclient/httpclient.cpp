@@ -18,7 +18,7 @@ namespace {
 // Android's trusted certificates, as one PEM text (read once). The bundled
 // OpenSSL can't use Android's certificate folder directly: its files are named
 // by an older hash than OpenSSL 3 looks them up by.
-const std::string &androidCertificates()
+const std::string &readAndroidCertificates()
 {
     static const std::string pem = [] {
         std::string all;
@@ -77,8 +77,8 @@ HttpResponse perform(const std::string &url, const std::string *postBody,
     curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, std::min(timeoutMs, 5000L));
     curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L); // required for use from threads
 #ifdef __ANDROID__
-    // Android's trusted certificates (see androidCertificates)
-    const std::string &certificates = androidCertificates();
+    // Android's trusted certificates (see readAndroidCertificates)
+    const std::string &certificates = readAndroidCertificates();
     curl_blob blob{const_cast<char *>(certificates.data()), certificates.size(), CURL_BLOB_NOCOPY};
     curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
 #endif
@@ -136,3 +136,10 @@ const char *HttpClient::userAgent()
 {
     return "ChaoticMusicPlayer/0.1 (personal music player for Linux)";
 }
+
+#ifdef __ANDROID__
+const std::string &HttpClient::androidCertificates()
+{
+    return readAndroidCertificates();
+}
+#endif

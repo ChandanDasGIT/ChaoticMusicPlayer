@@ -24,6 +24,17 @@ Rectangle {
         YouTubeController.closeArtist()
         tab = index
     }
+    // Back / Esc: out of the album, then the artist (false: nothing open).
+    readonly property bool canGoBack: overlayOpen
+    function back() {
+        if (YouTubeController.collectionOpen)
+            YouTubeController.closeCollection()
+        else if (YouTubeController.artistOpen)
+            YouTubeController.closeArtist()
+        else
+            return false
+        return true
+    }
     // Ctrl+F: the Search tab, ready to type.
     function focusSearch() {
         showTab(1)

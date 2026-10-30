@@ -17,6 +17,14 @@ Rectangle {
     property bool pinned: false
     property bool showCloseButton: false
     property string page: "" // "": the overview; "history" / "stats": that page instead
+    // Back / Esc: from a page to the overview (false: already there).
+    readonly property bool canGoBack: page !== ""
+    function back() {
+        if (page === "")
+            return false
+        page = ""
+        return true
+    }
 
     signal pinToggled()
     signal closeRequested()

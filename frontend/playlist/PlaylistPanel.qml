@@ -44,6 +44,14 @@ Rectangle {
 
     // The Queue, or the named playlist chosen in the Playlists menu.
     readonly property bool viewingQueue: PlaylistsController.viewedId === ""
+    // Back / Esc: from a playlist to the Queue (false: the Queue already).
+    readonly property bool canGoBack: !viewingQueue
+    function back() {
+        if (viewingQueue)
+            return false
+        PlaylistsController.view("")
+        return true
+    }
     readonly property int shownCount: viewingQueue ? PlaylistController.count : PlaylistsController.viewedCount
 
     signal pinToggled()

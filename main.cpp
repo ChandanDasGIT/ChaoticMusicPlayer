@@ -29,6 +29,14 @@
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
+#ifdef Q_OS_ANDROID
+#include "backend/network/httpclient/httpclient.h"
+#include "wrapper/files/files.h"
+
+#include <QDir>
+#include <QFile>
+#endif
+
 #ifdef Q_OS_WIN
 #include <shobjidl_core.h> // SetCurrentProcessExplicitAppUserModelID
 #endif
@@ -60,6 +68,22 @@ int main(int argc, char *argv[])
     QGuiApplication::setDesktopFileName(QStringLiteral("io.github.chandandasgit.ChaoticMusicPlayer"));
     // Window / task bar icon (the launcher uses the installed copy, see scripts/install-desktop.sh).
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/qt/qml/ChaoticMusicPlayer/resources/icons/chaoticmusicplayer.svg")));
+
+#ifdef Q_OS_ANDROID
+    // Streams (FFmpeg's OpenSSL) check the server's certificate, but OpenSSL
+    // finds none on Android: the phone's, saved as a file the decoder hands
+    // FFmpeg (backend/audioengine/decoder: SSL_CERT_FILE)
+    {
+        const std::string &certificates = HttpClient::androidCertificates();
+        QDir().mkpath(Files::cacheDir());
+        QFile file(Files::cacheDir() + QStringLiteral("/certificates.pem"));
+        if (!certificates.empty() && file.open(QIODevice::WriteOnly | QIODevice::Truncate)
+            && file.write(certificates.data(), qint64(certificates.size())) == qint64(certificates.size())) {
+            file.close();
+            qputenv("SSL_CERT_FILE", QFile::encodeName(file.fileName()));
+        }
+    }
+#endif
 
     // Only one copy per user: a second launch brings the first one forward.
     SingleInstance instance(nullptr);
