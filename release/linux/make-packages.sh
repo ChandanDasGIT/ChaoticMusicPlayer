@@ -86,20 +86,23 @@ export EXTRA_QT_PLUGINS="$extra"
 linuxdeploy-x86_64.AppImage --appdir "$appdir" --plugin qt \
     --executable "$appdir/usr/bin/TunedChaos" --desktop-file "$desktop" --icon-file "$icon"
 
-# Wayland's OpenGL plugin: linuxdeploy doesn't pick it up, and without it the
-# app can't draw under Wayland
-gfx=wayland-graphics-integration-client
-if [ -d "$qtPlugins/$gfx" ]; then
-    mkdir -p "$appdir/usr/plugins/$gfx"
-    for f in "$qtPlugins/$gfx"/*.so; do
+# Wayland's plugins: linuxdeploy doesn't pick them up. Without the shell
+# integration (xdg-shell) Qt can't open a window on Wayland and falls back to
+# X11 (XWayland), where files dropped from Wayland apps don't arrive; without
+# the graphics one it can't draw with OpenGL; the decorations draw title bars
+# where the desktop doesn't.
+for kind in wayland-shell-integration wayland-graphics-integration-client wayland-decoration-client; do
+    [ -d "$qtPlugins/$kind" ] || continue
+    mkdir -p "$appdir/usr/plugins/$kind"
+    for f in "$qtPlugins/$kind"/*.so; do
         [ -e "$f" ] || continue
         case "$f" in
             *-server.so) ;; # (server side: not needed by an app)
-            *) cp -L "$f" "$appdir/usr/plugins/$gfx/" ;;
+            *) cp -L "$f" "$appdir/usr/plugins/$kind/" ;;
         esac
     done
-fi
-for lib in libQt6WaylandClient.so.6 libQt6WaylandEglClientHwIntegration.so.6 libQt6WlShellIntegration.so.6; do
+done
+for lib in libQt6WaylandClient.so.6 libQt6WaylandEglClientHwIntegration.so.6 libQt6WlShellIntegration.so.6 libQt6Svg.so.6; do
     if [ ! -e "$appdir/usr/lib/$lib" ] && [ -e "$qtLibs/$lib" ]; then cp -L "$qtLibs/$lib" "$appdir/usr/lib/"; fi
 done
 
