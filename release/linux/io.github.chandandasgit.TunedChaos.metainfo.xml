@@ -24,9 +24,9 @@
     </ul>
   </description>
   <launchable type="desktop-id">io.github.chandandasgit.TunedChaos.desktop</launchable>
-  <url type="homepage">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
-  <url type="bugtracker">https://github.com/ChandanDasGIT/ChaoticMusicPlayer/issues</url>
-  <url type="vcs-browser">https://github.com/ChandanDasGIT/ChaoticMusicPlayer</url>
+  <url type="homepage">https://github.com/ChandanDasGIT/TunedChaos</url>
+  <url type="bugtracker">https://github.com/ChandanDasGIT/TunedChaos/issues</url>
+  <url type="vcs-browser">https://github.com/ChandanDasGIT/TunedChaos</url>
   <categories>
     <category>AudioVideo</category>
     <category>Audio</category>

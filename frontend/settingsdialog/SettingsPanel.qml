@@ -1337,7 +1337,7 @@ Rectangle {
                                 iconSize: 12
                                 text: qsTr("Source code on GitHub")
                                 implicitHeight: 32
-                                onClicked: Qt.openUrlExternally("https://github.com/ChandanDasGIT/ChaoticMusicPlayer")
+                                onClicked: Qt.openUrlExternally("https://github.com/ChandanDasGIT/TunedChaos")
                             }
                         }
 
