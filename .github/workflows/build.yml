@@ -117,6 +117,43 @@ jobs:
         with:
           name: TunedChaos-windows-x64
           path: dist/
+      # The installer (Inno Setup): the same folder, installed per user
+      - name: Installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $version = (Select-String -Path CMakeLists.txt -Pattern 'project\(TunedChaos VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          & $iscc /Q "/DAppVersion=$version" "/DSourceDir=$PWD\dist\TunedChaos" "/DOutputDir=$PWD\installer" release\windows\TunedChaos.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-ChildItem installer
+      # Installs it silently, starts the installed app, then uninstalls it
+      - name: Installer test
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem installer\*.exe)[0].FullName
+          Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CURRENTUSER", "/NORESTART" -Wait
+          $dir = Join-Path $env:LOCALAPPDATA "Programs\TunedChaos"
+          $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Tuned Chaos.lnk"
+          if (-not (Test-Path "$dir\TunedChaos.exe")) { Write-Error "Not installed in $dir"; exit 1 }
+          if (-not (Test-Path $shortcut)) { Write-Error "No Start menu entry"; exit 1 }
+          $env:HTTP_PROXY = "http://127.0.0.1:9"
+          $env:HTTPS_PROXY = "http://127.0.0.1:9"
+          $app = Start-Process "$dir\TunedChaos.exe" -PassThru
+          Start-Sleep -Seconds 15
+          if ($app.HasExited) { Write-Error "The installed app quit at start (exit code $($app.ExitCode))"; exit 1 }
+          Stop-Process -Id $app.Id -Force
+          Start-Sleep -Seconds 2
+          Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          Start-Sleep -Seconds 3 # (the uninstaller finishes from a copy of itself)
+          if (Test-Path "$dir\TunedChaos.exe") { Write-Error "Still installed after uninstalling"; exit 1 }
+          if (Test-Path $shortcut) { Write-Error "Start menu entry left behind"; exit 1 }
+          Write-Output "Installed, started and uninstalled"
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TunedChaos-windows-x64-setup
+          path: installer/*.exe
 
   # The Linux packages (AppImage, tarball), built on Ubuntu 24.04 so they run
   # on systems that new or newer (release/linux/make-packages.sh)
