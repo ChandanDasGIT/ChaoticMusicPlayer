@@ -5,7 +5,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // One YouTube song: thumbnail, title, artists · duration, and play /
-// add-to-playlist / save buttons that appear on hover. Double-click plays;
+// add-to-playlist / save buttons that appear on hover. Double-click plays
+// (phones: a tap, and only "⋮" and the playing song's pause show);
 // hold and drag to drop it on the Queue or the player.
 // The song that is playing is tinted, shows bouncing bars on its thumbnail,
 // and its play button becomes pause (always visible).
@@ -27,7 +28,7 @@ Rectangle {
     readonly property bool isPlaying: isCurrent && PlayerController.playing
     // Hover buttons stay while the menu is open (the menu takes the hover).
     readonly property bool menuOpen: menuLoader.item !== null && (menuLoader.item as YtSongMenu).visible
-    readonly property bool showButtons: hover.hovered || menuOpen
+    readonly property bool showButtons: !Theme.touchOnly && (hover.hovered || menuOpen)
 
     signal removeRequested()
 
@@ -62,7 +63,9 @@ Rectangle {
     }
 
     TapHandler {
-        onDoubleTapped: root.playOrToggle()
+        // (A quick second tap on a phone doesn't pause what the first one played.)
+        onTapped: if (Theme.touchOnly && tapCount === 1) root.playOrToggle()
+        onDoubleTapped: if (!Theme.touchOnly) root.playOrToggle()
     }
 
     // Hold and drag onto the Queue or the player
