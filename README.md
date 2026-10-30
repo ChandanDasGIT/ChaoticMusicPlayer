@@ -7,13 +7,14 @@ browse and play YouTube Music.
 
 ## Screenshots
 
-![The Queue and the player](resources/screenshots/desktop.png)
-
-![Synced lyrics](resources/screenshots/lyrics.png)
-
 <p>
-  <img src="resources/screenshots/library.png" alt="The Library at phone size" width="280">
-  <img src="resources/screenshots/player.png" alt="The player at phone size" width="280">
+  <img src="resources/screenshots/desktop.png" alt="The Queue and the player" width="49%">
+  <img src="resources/screenshots/lyrics.png" alt="Synced lyrics" width="49%">
+</p>
+<p>
+  <img src="resources/screenshots/player.png" alt="The player at phone size" width="32%">
+  <img src="resources/screenshots/queue.png" alt="The Queue at phone size" width="32%">
+  <img src="resources/screenshots/library.png" alt="The Library at phone size" width="32%">
 </p>
 
 (The songs and covers shown are made up for these pictures.)

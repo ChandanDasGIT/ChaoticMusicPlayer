@@ -245,7 +245,8 @@ TunedChaos/
 │       ├── desktop.png                                       // Queue and player on a wide window
 │       ├── library.png                                       // the Library at phone size
 │       ├── lyrics.png                                        // synced lyrics
-│       └── player.png                                        // the player at phone size
+│       ├── player.png                                        // the player at phone size
+│       └── queue.png                                         // the Queue at phone size
 ├── scripts/                                                  // helper scripts for developing on this computer
 │   ├── install-desktop.sh                                    // adds your own build to the app menu
 │   ├── shot-build.sh                                         // builds the screenshot test harness
