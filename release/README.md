@@ -10,8 +10,8 @@ Android media service, which is app code.
 Code that only works on one platform sits behind a small interface with one
 `.cpp` per platform, picked in `CMakeLists.txt` (`CMP_PLATFORM` is `linux`,
 `windows` or `android`). Everything else is shared, so a new feature needs no
-per-platform work. Every push is built for each platform by
-`.github/workflows/build.yml`, so a change that breaks one shows up at once.
+per-platform work. `.github/workflows/build.yml` builds every platform when a
+version tag is pushed (not on ordinary pushes).
 
 ### Paths
 
@@ -56,14 +56,16 @@ forbids downloads at runtime (Flathub).
 
 ## Publishing a release
 
-Push a version tag: GitHub builds and tests everything, then publishes all six
+Only a pushed version tag starts a build; ordinary pushes don't. GitHub then
+builds and tests everything and publishes all six
 packages and `SHA256SUMS.txt` by itself (`publish`, the last job of
 `.github/workflows/build.yml`). Nothing is built on your computer, and a failed
 build or test publishes nothing.
 
 ```sh
+git push origin master
 git tag v0.1.0-test1
-git push origin master v0.1.0-test1
+git push origin v0.1.0-test1
 ```
 
 - A tag with a dash (`v0.1.0-test1`) makes a pre-release; without one
@@ -73,6 +75,7 @@ git push origin master v0.1.0-test1
   `QT_ANDROID_VERSION_CODE` too (Android only updates to a higher code).
 - To remove a test release and its tag:
   `gh release delete v0.1.0-test1 --cleanup-tag`
+- To check a build without releasing: Actions > Build > Run workflow.
 
 ## Building locally
 
