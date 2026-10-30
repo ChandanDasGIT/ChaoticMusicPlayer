@@ -170,6 +170,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      # Chaquopy installs yt-dlp into the app with the same Python version the
+      # app carries (android/build.gradle: 3.14)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
       - name: Android SDK parts
         run: |
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
