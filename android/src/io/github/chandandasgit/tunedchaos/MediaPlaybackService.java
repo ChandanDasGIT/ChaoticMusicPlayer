@@ -43,22 +43,28 @@ public class MediaPlaybackService extends Service {
     // What plays (set from C++, any thread)
     private static String s_title = "", s_artist = "", s_album = "", s_cover = "";
     private static boolean s_playing = false;
+    private static long s_positionMs = 0, s_durationMs = 0;
     private static MediaPlaybackService s_service;
 
     private MediaSessionCompat m_session;
+    private boolean m_foreground = false;
 
     // A button was pressed (handled in C++)
     private static native void nativeAction(int action);
+    // The notification's seek bar was dragged (handled in C++)
+    private static native void nativeSeek(long positionMs);
 
     // From C++: what plays now. Starts the service when a song is loaded, ends it when none is.
     public static void update(Context context, String title, String artist, String album, String cover,
-                              boolean playing, boolean hasTrack) {
+                              boolean playing, boolean hasTrack, long positionMs, long durationMs) {
         synchronized (MediaPlaybackService.class) {
             s_title = title;
             s_artist = artist;
             s_album = album;
             s_cover = cover;
             s_playing = playing;
+            s_positionMs = positionMs;
+            s_durationMs = durationMs;
         }
         Intent intent = new Intent(context, MediaPlaybackService.class);
         if (hasTrack) {
@@ -105,6 +111,7 @@ public class MediaPlaybackService extends Service {
             @Override public void onSkipToNext() { nativeAction(NEXT); }
             @Override public void onSkipToPrevious() { nativeAction(PREVIOUS); }
             @Override public void onStop() { nativeAction(STOP); }
+            @Override public void onSeekTo(long positionMs) { nativeSeek(positionMs); }
         });
         m_session.setActive(true);
     }
@@ -113,9 +120,13 @@ public class MediaPlaybackService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION.equals(intent.getAction()))
             nativeAction(intent.getIntExtra("action", PLAY));
-        Notification notification = buildNotification();
-        ServiceCompat.startForeground(this, NOTIFICATION, notification,
-            Build.VERSION.SDK_INT >= 29 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0);
+        // Only once: a button's result reaches the notification through update().
+        // Building it here too would show the old position over the new one.
+        if (!m_foreground) {
+            ServiceCompat.startForeground(this, NOTIFICATION, buildNotification(),
+                Build.VERSION.SDK_INT >= 29 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0);
+            m_foreground = true;
+        }
         return START_NOT_STICKY;
     }
 
@@ -141,15 +152,19 @@ public class MediaPlaybackService extends Service {
         return PendingIntent.getService(this, action, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private Notification buildNotification() {
+    // synchronized: called from Android's thread and from C++'s
+    private synchronized Notification buildNotification() {
         String title, artist, album, cover;
         boolean playing;
+        long positionMs, durationMs;
         synchronized (MediaPlaybackService.class) {
             title = s_title;
             artist = s_artist;
             album = s_album;
             cover = s_cover;
             playing = s_playing;
+            positionMs = s_positionMs;
+            durationMs = s_durationMs;
         }
         Bitmap art = cover.isEmpty() ? null : BitmapFactory.decodeFile(cover);
 
@@ -158,13 +173,19 @@ public class MediaPlaybackService extends Service {
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, art)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMs)
             .build());
+        // With a length and a position, Android draws a seek bar and moves it by itself.
+        // (No length, e.g. a live stream: nothing to seek through, so no bar.)
+        long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                       | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                       | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_STOP;
+        if (durationMs > 0)
+            actions |= PlaybackStateCompat.ACTION_SEEK_TO;
         m_session.setPlaybackState(new PlaybackStateCompat.Builder()
-            .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-                        | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_STOP)
+            .setActions(actions)
             .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED,
-                      PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                      durationMs > 0 ? positionMs : PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
             .build());
 
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());

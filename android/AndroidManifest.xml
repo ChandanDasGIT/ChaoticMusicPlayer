@@ -49,6 +49,13 @@
           <meta-data
                 android:name="android.app.arguments"
                 android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
+
+          <!-- Keeps Qt's event loop running in the background. Otherwise it stops once
+               the app is hidden: notification buttons and the next song wait until the
+               app is opened again. -->
+          <meta-data
+                android:name="android.app.background_running"
+                android:value="true" />
         </activity>
 
         <!-- Keeps the app playing in the background, with the media notification -->

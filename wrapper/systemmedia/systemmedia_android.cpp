@@ -56,6 +56,15 @@ void nativeAction(JNIEnv *, jclass, jint action)
     }, Qt::QueuedConnection);
 }
 
+// The notification's seek bar was dragged (Java's thread)
+void nativeSeek(JNIEnv *, jclass, jlong positionMs)
+{
+    QMetaObject::invokeMethod(qApp, [positionMs] {
+        if (g_instance)
+            g_player->seek(positionMs);
+    }, Qt::QueuedConnection);
+}
+
 QJniObject context()
 {
     return QNativeInterface::QAndroidApplication::context();
@@ -78,9 +87,10 @@ SystemMedia::SystemMedia(PlayerController *player, PlaylistController *playlist,
     g_player = player;
     g_playlist = playlist;
 
-    static const JNINativeMethod methods[] = {{"nativeAction", "(I)V", reinterpret_cast<void *>(nativeAction)}};
+    static const JNINativeMethod methods[] = {{"nativeAction", "(I)V", reinterpret_cast<void *>(nativeAction)},
+                                              {"nativeSeek", "(J)V", reinterpret_cast<void *>(nativeSeek)}};
     QJniEnvironment env;
-    env.registerNativeMethods(ServiceClass, methods, 1);
+    env.registerNativeMethods(ServiceClass, methods, 2);
 
     // Reading music and showing the media notification need the user's yes
     QJniObject::callStaticMethod<void>(ServiceClass, "requestPermissions", "(Landroid/content/Context;)V",
@@ -127,17 +137,20 @@ SystemMedia::SystemMedia(PlayerController *player, PlaylistController *playlist,
 
         QJniObject::callStaticMethod<void>(
             ServiceClass, "update",
-            "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V",
+            "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZJJ)V",
             context().object(),
             QJniObject::fromString(track ? QString::fromStdString(track->title) : g_player->title()).object<jstring>(),
             QJniObject::fromString(track ? QString::fromStdString(track->artist) : QString()).object<jstring>(),
             QJniObject::fromString(track ? QString::fromStdString(track->album) : QString()).object<jstring>(),
             QJniObject::fromString(m_impl->coverFile).object<jstring>(),
-            jboolean(g_player->playing()), jboolean(g_player->hasTrack()));
+            jboolean(g_player->playing()), jboolean(g_player->hasTrack()),
+            jlong(g_player->position()), jlong(g_player->duration()));
     });
     auto schedule = [this] { m_impl->updateTimer.start(); };
     connect(player, &PlayerController::stateChanged, this, schedule);
     connect(player, &PlayerController::sourceChanged, this, schedule);
+    connect(player, &PlayerController::durationChanged, this, schedule);
+    connect(player, &PlayerController::seeked, this, schedule);
     connect(playlist, &PlaylistController::currentChanged, this, schedule);
 }
 
@@ -146,8 +159,8 @@ SystemMedia::~SystemMedia()
     // Ends the notification (and the service)
     QJniObject::callStaticMethod<void>(
         ServiceClass, "update",
-        "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V",
+        "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZJJ)V",
         context().object(), QJniObject::fromString(QString()).object<jstring>(),
         QJniObject::fromString(QString()).object<jstring>(), QJniObject::fromString(QString()).object<jstring>(),
-        QJniObject::fromString(QString()).object<jstring>(), jboolean(false), jboolean(false));
+        QJniObject::fromString(QString()).object<jstring>(), jboolean(false), jboolean(false), jlong(0), jlong(0));
 }
