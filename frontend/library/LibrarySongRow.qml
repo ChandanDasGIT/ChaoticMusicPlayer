@@ -62,7 +62,8 @@ Rectangle {
     }
 
     TapHandler {
-        onTapped: root.playOrToggle()
+        // (A quick second tap doesn't pause what the first one played.)
+        onTapped: if (tapCount === 1) root.playOrToggle()
     }
 
     // Hold and drag onto the Queue or the player

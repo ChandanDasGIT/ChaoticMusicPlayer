@@ -32,7 +32,7 @@ Item {
     readonly property real inset: 6
 
     signal clicked()
-    signal activated() // double-click: play this track
+    signal activated() // tapped: play this track
     signal contextMenuRequested() // right-click
     signal menuButtonClicked(real x, real y) // "⋮": open the menu at this point of the row
     signal deleteRequested()      // the revealed Delete button was pressed
@@ -232,9 +232,17 @@ Item {
     TapHandler {
         id: tap
         longPressThreshold: 0.4
-        // An open row closes on tap instead of selecting.
-        onTapped: root.swipeX < 0 ? root.closeSwipe() : root.clicked()
-        onDoubleTapped: if (root.swipeX === 0) root.activated()
+        // An open row closes on tap instead of playing.
+        // (A quick second tap doesn't undo what the first one did.)
+        onTapped: {
+            if (root.swipeX < 0) {
+                root.closeSwipe()
+                return
+            }
+            root.clicked()
+            if (tapCount === 1)
+                root.activated()
+        }
         onLongPressed: {
             root.clicked()
             root.startReorder(tap.point.scenePosition)

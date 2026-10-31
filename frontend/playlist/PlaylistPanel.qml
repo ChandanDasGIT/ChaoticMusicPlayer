@@ -443,7 +443,8 @@ Rectangle {
                     list.currentIndex = row.index
                     list.forceActiveFocus() // so Delete / Enter reach the list
                 }
-                onActivated: root.viewingQueue ? PlaylistController.playIndex(row.index)
+                onActivated: row.isCurrent ? PlayerController.togglePlayPause()
+                           : root.viewingQueue ? PlaylistController.playIndex(row.index)
                                                : PlaylistsController.playViewed(row.index)
                 onContextMenuRequested: contextMenu.openFor(row.index, row.path)
                 // Placed in the list, not the row: the row may scroll away or be removed meanwhile.
