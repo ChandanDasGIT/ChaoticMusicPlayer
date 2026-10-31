@@ -712,41 +712,18 @@ ApplicationWindow {
         onSettingsClicked: window.toggleSettings()
     }
 
-    // Phone size: the drawers end above the mini player and the navigation bar,
-    // which stay usable (so the drawers don't dim the window or close on a tap
-    // outside them: Esc, a swipe or the bar closes them).
+    // Phone size: the panels end above the mini player and the navigation bar.
     readonly property real drawerHeight: navBar.y - (PlayerController.hasTrack ? floatingMini.fullHeight + Theme.cardGap : 0)
 
-    // Phone size: the playlist card slides in from the left, over the player.
-    Drawer {
+    // Phone size: the Queue slides up over the player, like every panel here.
+    SlidePanel {
         id: playlistDrawer
         objectName: "playlistDrawer"
-        edge: Qt.LeftEdge
-        enter: Transition {
-            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
-        }
-        exit: Transition {
-            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
-        }
-        width: window.width
-        height: window.drawerHeight
-        padding: 0
-        topPadding: 0 // (DrawerCard keeps clear of the system bars)
-        bottomPadding: 0
-        leftPadding: 0
-        rightPadding: 0
-        modal: false
-        dim: false
-        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact && !window.panelHidden("queue")
-        clip: true // pulled down, the card goes under the mini player
         onAboutToShow: playlistPull.reset()
-        background: Item {}
 
         DrawerCard {
             drawer: playlistDrawer
             pull: playlistPull.pull
-            transformOrigin: Item.Left
 
             PullToClose {
                 id: playlistPull
@@ -765,38 +742,17 @@ ApplicationWindow {
         }
     }
 
-    // The YouTube Music card, sliding in from the right.
-    Drawer {
+    // The YouTube Music card, sliding up.
+    SlidePanel {
         id: youtubeDrawer
         objectName: "youtubeDrawer"
-        edge: Qt.RightEdge
-        enter: Transition {
-            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
-        }
-        exit: Transition {
-            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
-        }
-        width: window.width
-        height: window.drawerHeight
-        padding: 0
-        topPadding: 0 // (DrawerCard keeps clear of the system bars)
-        bottomPadding: 0
-        leftPadding: 0
-        rightPadding: 0
-        modal: false
-        dim: false
-        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact && !drawerYoutube.swipeBlocked && !window.panelHidden("youtube")
-        clip: true // pulled down, the card goes under the mini player
         onAboutToShow: youtubePull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
         onClosed: window.searchOnOpen = false
-        background: Item {}
 
         DrawerCard {
             drawer: youtubeDrawer
             pull: youtubePull.pull
-            transformOrigin: Item.Right
 
             PullToClose {
                 id: youtubePull
@@ -815,38 +771,17 @@ ApplicationWindow {
         }
     }
 
-    // The local library, sliding in from the right.
-    Drawer {
+    // The local library, sliding up.
+    SlidePanel {
         id: libraryDrawer
         objectName: "libraryDrawer"
-        edge: Qt.RightEdge
-        enter: Transition {
-            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
-        }
-        exit: Transition {
-            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
-        }
-        width: window.width
-        height: window.drawerHeight
-        padding: 0
-        topPadding: 0 // (DrawerCard keeps clear of the system bars)
-        bottomPadding: 0
-        leftPadding: 0
-        rightPadding: 0
-        modal: false
-        dim: false
-        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact && !drawerLibrary.swipeBlocked && !window.panelHidden("library")
-        clip: true // pulled down, the card goes under the mini player
         onAboutToShow: libraryPull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: window.searchOnOpen = false
-        background: Item {}
 
         DrawerCard {
             drawer: libraryDrawer
             pull: libraryPull.pull
-            transformOrigin: Item.Right
 
             PullToClose {
                 id: libraryPull
@@ -980,6 +915,31 @@ ApplicationWindow {
         }
     }
 
+    // Phone size: a panel sliding up from the bottom, ending above the mini player
+    // and the navigation bar (which stay usable). Esc, Back, a drag down or the bar
+    // closes it: nothing around it does.
+    component SlidePanel: Popup {
+        property real position: 0 // 0 closed, 1 open
+
+        x: 0
+        y: 0
+        width: window.width
+        height: window.drawerHeight
+        padding: 0
+        modal: false
+        dim: false
+        focus: true
+        clip: true // the card comes from under the mini player
+        closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
+        background: Item {}
+        enter: Transition {
+            NumberAnimation { property: "position"; to: 1.0; duration: Theme.animPanel; easing.type: Theme.easingPanel }
+        }
+        exit: Transition {
+            NumberAnimation { property: "position"; to: 0.0; duration: Theme.anim; easing.type: Easing.OutCubic }
+        }
+    }
+
     // Phone size: drag a panel down from anywhere to put it away, as DockSlot does
     // sideways. Lists inside scroll first; at their top they let go of a downward
     // drag and this takes it. Its content stays put; the overshoot (`pull`) moves
@@ -1033,10 +993,11 @@ ApplicationWindow {
     // A drawer's panel: an inset rounded card on a solid tinted background that
     // grows slightly and brightens as the drawer opens.
     component DrawerCard: Rectangle {
-        required property Drawer drawer
+        required property SlidePanel drawer
         property real pull: 0 // dragged down (PullToClose)
 
-        transform: Translate { y: pull }
+        transformOrigin: Item.Bottom
+        transform: Translate { y: pull + (1 - drawer.position) * (height + 2 * Theme.cardGap) }
         anchors.fill: parent
         anchors.margins: Theme.cardGap
         anchors.topMargin: Theme.cardGap + window.safeTop
