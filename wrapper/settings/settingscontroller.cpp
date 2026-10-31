@@ -46,6 +46,7 @@ constexpr const char *StartPanelKey = "layout.start";
 constexpr const char *LibrarySortKey = "library.sort";
 constexpr const char *AlbumSortKey = "library.sort.albums";
 constexpr const char *ArtistSortKey = "library.sort.artists";
+constexpr const char *GenreSortKey = "library.sort.genres";
 constexpr const char *FolderSortKey = "library.sort.folders";
 constexpr const char *ResumeKey = "playback.resume";
 constexpr const char *SessionPathKey = "session.path";
@@ -624,6 +625,8 @@ QString SettingsController::albumSort() const { return sortValue(AlbumSortKey, a
 void SettingsController::setAlbumSort(const QString &sort) { setSortValue(AlbumSortKey, albumSorts(), sort); }
 QString SettingsController::artistSort() const { return sortValue(ArtistSortKey, artistSorts()); }
 void SettingsController::setArtistSort(const QString &sort) { setSortValue(ArtistSortKey, artistSorts(), sort); }
+QString SettingsController::genreSort() const { return sortValue(GenreSortKey, artistSorts()); }
+void SettingsController::setGenreSort(const QString &sort) { setSortValue(GenreSortKey, artistSorts(), sort); }
 QString SettingsController::folderSort() const { return sortValue(FolderSortKey, folderSorts()); }
 void SettingsController::setFolderSort(const QString &sort) { setSortValue(FolderSortKey, folderSorts(), sort); }
 

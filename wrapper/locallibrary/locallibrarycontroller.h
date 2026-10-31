@@ -41,13 +41,16 @@ class LocalLibraryController : public QObject
     // Albums / Artists tabs (search and sort applied)
     Q_PROPERTY(QVariantList albums READ albums NOTIFY shownChanged)       // [{ key, album, artist, coverPath, count }]
     Q_PROPERTY(QVariantList artists READ artists NOTIFY shownChanged)     // [{ name, count }]
+    Q_PROPERTY(QVariantList genres READ genres NOTIFY shownChanged)       // [{ name, count }]
+    // Songs in no genre (they aren't in `genres`)
+    Q_PROPERTY(int songsWithoutGenre READ songsWithoutGenre NOTIFY contentsChanged)
     // Albums by when their newest song was added, newest first (as albums, + addedAt)
     Q_PROPERTY(QVariantList recentlyAdded READ recentlyAdded NOTIFY contentsChanged)
     Q_PROPERTY(bool loaded READ loaded NOTIFY contentsChanged)            // index read (startup)
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanChanged)
     Q_PROPERTY(int scanDone READ scanDone NOTIFY scanChanged)
     Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanChanged)
-    // 0 = none, 1 = album, 2 = artist
+    // 0 = none, 1 = album, 2 = artist, 3 = genre
     Q_PROPERTY(int detailKind READ detailKind NOTIFY detailChanged)
     Q_PROPERTY(QString detailTitle READ detailTitle NOTIFY detailChanged)
     Q_PROPERTY(QString detailSubtitle READ detailSubtitle NOTIFY detailChanged)
@@ -74,6 +77,8 @@ public:
     int songCount() const { return int(m_tracks.size()); }
     QVariantList albums() const { return m_shownAlbums; }
     QVariantList artists() const { return m_shownArtists; }
+    QVariantList genres() const { return m_shownGenres; }
+    int songsWithoutGenre() const { return m_songsWithoutGenre; }
     QVariantList recentlyAdded() const { return m_recentlyAdded; }
     bool loaded() const { return m_loaded; }
     bool scanning() const { return m_scanning; }
@@ -99,6 +104,7 @@ public:
 
     Q_INVOKABLE void showAlbum(const QString &key);
     Q_INVOKABLE void showArtist(const QString &name);
+    Q_INVOKABLE void showGenre(const QString &name);
     Q_INVOKABLE void closeDetail();
 
     Q_INVOKABLE void openFolder(const QString &path); // "" = back to the music folders
@@ -166,8 +172,11 @@ private:
     QString m_search;
     QVariantList m_albums;  // the whole library, by name
     QVariantList m_artists; // same
+    QVariantList m_genres;  // same
+    int m_songsWithoutGenre = 0;
     QVariantList m_shownAlbums;
     QVariantList m_shownArtists;
+    QVariantList m_shownGenres;
     QVariantList m_recentlyAdded;
     bool m_loaded = false;
     bool m_scanning = false;

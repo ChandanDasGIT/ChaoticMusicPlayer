@@ -13,8 +13,10 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr const char *Header = "ChaoticMusicPlayer library v3";
-constexpr size_t FieldCount = 13;
+constexpr const char *Header = "ChaoticMusicPlayer library v4";
+constexpr size_t FieldCount = 14;
+constexpr const char *HeaderV3 = "ChaoticMusicPlayer library v3"; // before "genre"
+constexpr size_t FieldCountV3 = 13;
 constexpr const char *HeaderV2 = "ChaoticMusicPlayer library v2"; // before "added"
 constexpr size_t FieldCountV2 = 12;
 // v1 had no album artist: its songs are kept, and read again on the next refresh.
@@ -125,10 +127,11 @@ void MusicLibrary::load()
     std::string line;
     const bool v1 = in && std::getline(in, line) && line == HeaderV1;
     const bool v2 = line == HeaderV2;
-    if (in && (v1 || v2 || line == Header)) {
+    const bool v3 = line == HeaderV3;
+    if (in && (v1 || v2 || v3 || line == Header)) {
         while (std::getline(in, line)) {
             const std::vector<std::string> f = tsv::split(line);
-            if (f.size() != (v1 ? FieldCountV1 : v2 ? FieldCountV2 : FieldCount))
+            if (f.size() != (v1 ? FieldCountV1 : v2 ? FieldCountV2 : v3 ? FieldCountV3 : FieldCount))
                 continue;
             Entry e;
             e.track.path = tsv::unescape(f[0]);
@@ -142,12 +145,14 @@ void MusicLibrary::load()
             e.track.track = tsv::toNumber<int>(f[8]);
             e.track.durationMs = tsv::toNumber<int64_t>(f[9]);
             e.track.hasCover = f[10] == "1";
-            if (v1)
-                e.size = -1; // never matches the file: its tags are read again
-            else
+            if (v1 || v2 || v3)
+                e.size = -1; // never matches the file: its tags are read again (they had no genre)
+            if (!v1)
                 e.track.albumArtist = tsv::unescape(f[11]);
             // Not known before v3: the file's own date is the best guess.
             e.track.addedAt = v1 || v2 ? stampSeconds(e.modified) : tsv::toNumber<int64_t>(f[12]);
+            if (!v1 && !v2 && !v3)
+                e.track.genre = tsv::unescape(f[13]);
             m_entries.push_back(std::move(e));
         }
     }
@@ -171,7 +176,7 @@ bool MusicLibrary::save() const
             out << tsv::escape(t.path) << '\t' << e.size << '\t' << e.modified << '\t' << tsv::escape(t.title)
                 << '\t' << tsv::escape(t.artist) << '\t' << tsv::escape(t.album) << '\t' << t.disc << '\t'
                 << t.discTotal << '\t' << t.track << '\t' << t.durationMs << '\t' << (t.hasCover ? 1 : 0) << '\t'
-                << tsv::escape(t.albumArtist) << '\t' << t.addedAt << '\n';
+                << tsv::escape(t.albumArtist) << '\t' << t.addedAt << '\t' << tsv::escape(t.genre) << '\n';
         }
         if (!out)
             return false;

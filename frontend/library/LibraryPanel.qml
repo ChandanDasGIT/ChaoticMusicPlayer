@@ -17,7 +17,7 @@ Rectangle {
     property bool showCloseButton: true
     property int tab: 0
     readonly property bool hasFolders: SettingsController.libraryFolders.length > 0
-    readonly property bool inDetail: LocalLibraryController.detailKind !== 0 && (tab === 1 || tab === 2)
+    readonly property bool inDetail: LocalLibraryController.detailKind !== 0 && (tab >= 1 && tab <= 3)
 
     // A drag on the tabs must not close the drawer holding this panel (see YtHomeView).
     readonly property bool swipeBlocked: tabRow.busy
@@ -32,7 +32,7 @@ Rectangle {
     onTabChanged: LocalLibraryController.closeDetail()
 
     // Back / Esc: out of the album / artist, or up one folder (false: nothing to go back from).
-    readonly property bool canGoBack: inDetail || (tab === 3 && hasFolders && LocalLibraryController.folder !== "")
+    readonly property bool canGoBack: inDetail || (tab === 4 && hasFolders && LocalLibraryController.folder !== "")
     function back() {
         if (inDetail)
             LocalLibraryController.closeDetail()
@@ -56,7 +56,7 @@ Rectangle {
     }
 
     // Which setting the sort button changes: each tab remembers its own.
-    readonly property string sortSetting: ["librarySort", "albumSort", "artistSort", "folderSort"][tab]
+    readonly property string sortSetting: ["librarySort", "albumSort", "artistSort", "genreSort", "folderSort"][tab]
 
     ThemedMenu {
         id: songSortMenu
@@ -91,6 +91,15 @@ Rectangle {
         SortAction { setting: "artistSort"; sort: "nameDesc"; text: qsTr("Name Z–A") }
         SortAction { setting: "artistSort"; sort: "mostSongs"; text: qsTr("Most songs") }
         SortAction { setting: "artistSort"; sort: "fewestSongs"; text: qsTr("Fewest songs") }
+    }
+
+    ThemedMenu {
+        id: genreSortMenu
+
+        SortAction { setting: "genreSort"; sort: "name"; text: qsTr("Name A–Z") }
+        SortAction { setting: "genreSort"; sort: "nameDesc"; text: qsTr("Name Z–A") }
+        SortAction { setting: "genreSort"; sort: "mostSongs"; text: qsTr("Most songs") }
+        SortAction { setting: "genreSort"; sort: "fewestSongs"; text: qsTr("Fewest songs") }
     }
 
     ThemedMenu {
@@ -210,6 +219,7 @@ Rectangle {
                 { icon: "music", label: qsTr("Songs") },
                 { icon: "compactDisc", label: qsTr("Albums") },
                 { icon: "user", label: qsTr("Artists") },
+                { icon: "music", label: qsTr("Genres") },
                 { icon: "folder", label: qsTr("Folders") }
             ]
             onTabPicked: (index) => root.tab = index
@@ -244,7 +254,7 @@ Rectangle {
                 implicitHeight: 40
                 leftPadding: 40
                 rightPadding: LocalLibraryController.search !== "" ? 40 : 16
-                placeholderText: [qsTr("Search your library"), qsTr("Search albums"), qsTr("Search artists"),
+                placeholderText: [qsTr("Search your library"), qsTr("Search albums"), qsTr("Search artists"), qsTr("Search genres"),
                                   qsTr("Search this folder")][root.tab]
                 placeholderTextColor: Theme.textMuted
                 color: Theme.text
@@ -293,7 +303,7 @@ Rectangle {
                 iconColor: active ? Theme.accent : Theme.textMuted
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Sort")
-                onClicked: [songSortMenu, albumSortMenu, artistSortMenu, folderSortMenu][root.tab]
+                onClicked: [songSortMenu, albumSortMenu, artistSortMenu, genreSortMenu, folderSortMenu][root.tab]
                            .popup(sortButton, 0, sortButton.height)
             }
         }
@@ -435,81 +445,19 @@ Rectangle {
             }
 
             // ---- Artists
-            ListView {
-                populate: ListPopulate {}
-                anchors.fill: parent
-                anchors.leftMargin: Theme.spacing
-                anchors.rightMargin: Theme.spacing
-                opacity: root.tab === 2 && !root.inDetail ? 1 : 0
-                visible: opacity > 0
-                transform: PageShift { page: 2 }
-                Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                flickDeceleration: Theme.flickDeceleration
-                maximumFlickVelocity: Theme.flickVelocity
-                synchronousDrag: true
-                spacing: 2
+            EntryList {
+                page: 2
                 model: LocalLibraryController.artists
-                ScrollBar.vertical: ScrollBar {}
+                onEntryOpened: (name) => LocalLibraryController.showArtist(name)
+            }
 
-                delegate: Rectangle {
-                    id: artistRow
-
-                    required property var modelData
-
-                    width: ListView.view.width
-                    height: 52
-                    radius: Theme.radius
-                    color: artistHover.hovered ? Theme.hover : "transparent"
-
-                    Behavior on color { ColorAnimation { duration: Theme.animFast } }
-
-                    HoverHandler { id: artistHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: LocalLibraryController.showArtist(artistRow.modelData.name) }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 12
-                        spacing: Theme.padding
-
-                        Rectangle {
-                            Layout.preferredWidth: 36
-                            Layout.preferredHeight: 36
-                            radius: 18
-                            color: Theme.accentSoft
-
-                            Label {
-                                anchors.centerIn: parent
-                                text: artistRow.modelData.name.charAt(0).toUpperCase()
-                                color: Theme.accent
-                                font.pixelSize: Theme.fontSizeLarge
-                                font.weight: Font.DemiBold
-                            }
-                        }
-
-                        Label {
-                            Layout.fillWidth: true
-                            text: artistRow.modelData.name
-                            color: Theme.text
-                            font.pixelSize: Theme.fontSize
-                            elide: Text.ElideRight
-                        }
-
-                        Label {
-                            text: Util.songCount(artistRow.modelData.count)
-                            color: Theme.textMuted
-                            font.pixelSize: Theme.fontSizeSmall
-                        }
-
-                        Icon {
-                            name: "chevronRight"
-                            size: 10
-                            color: Theme.textDim
-                        }
-                    }
-                }
+            // ---- Genres
+            EntryList {
+                page: 3
+                model: LocalLibraryController.genres
+                note: LocalLibraryController.songsWithoutGenre > 0
+                      ? qsTr("Not shown: %1 without a genre tag").arg(Util.songCount(LocalLibraryController.songsWithoutGenre)) : ""
+                onEntryOpened: (name) => LocalLibraryController.showGenre(name)
             }
 
             // ---- An opened album / artist
@@ -533,7 +481,7 @@ Rectangle {
                         implicitWidth: 36
                         implicitHeight: 36
                         ToolTip.visible: hovered
-                        ToolTip.text: root.tab === 1 ? qsTr("Back to albums") : qsTr("Back to artists")
+                        ToolTip.text: [qsTr("Back to albums"), qsTr("Back to artists"), qsTr("Back to genres")][root.tab - 1] ?? ""
                         onClicked: LocalLibraryController.closeDetail()
                     }
 
@@ -607,7 +555,7 @@ Rectangle {
                     Layout.fillHeight: true
                     model: LocalLibraryController.detailSongs
                     list: LocalLibraryController.DetailList
-                    showAlbum: LocalLibraryController.detailKind === 2
+                    showAlbum: LocalLibraryController.detailKind !== 1
                 }
             }
 
@@ -617,9 +565,9 @@ Rectangle {
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 4
-                opacity: root.tab === 3 && root.hasFolders ? 1 : 0
+                opacity: root.tab === 4 && root.hasFolders ? 1 : 0
                 visible: opacity > 0
-                transform: PageShift { page: 3 }
+                transform: PageShift { page: 4 }
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
                 readonly property bool atTop: LocalLibraryController.folder === ""
@@ -845,7 +793,7 @@ Rectangle {
                 width: parent.width - 4 * Theme.padding
                 visible: LocalLibraryController.search !== "" && !root.inDetail
                          && [LocalLibraryController.songs.count, LocalLibraryController.albums.length,
-                             LocalLibraryController.artists.length,
+                             LocalLibraryController.artists.length, LocalLibraryController.genres.length,
                              LocalLibraryController.subfolders.length + LocalLibraryController.folderSongs.count][root.tab] === 0
                 text: qsTr("Nothing matches your search.")
                 color: Theme.textMuted
@@ -858,7 +806,7 @@ Rectangle {
             Label {
                 anchors.centerIn: parent
                 width: parent.width - 4 * Theme.padding
-                visible: root.hasFolders && root.tab !== 3 && LocalLibraryController.songCount === 0
+                visible: root.hasFolders && root.tab !== 4 && LocalLibraryController.songCount === 0
                          && !LocalLibraryController.scanning
                 text: qsTr("No songs found in your library folders.")
                 color: Theme.textMuted
@@ -913,6 +861,107 @@ Rectangle {
     }
 
     // Horizontal offset of a tab page: 0 when shown, else off to its side.
+    // A list of names with their song counts (Artists, Genres).
+    component EntryList: ListView {
+        id: entries
+
+        required property int page
+        property string note // a line above the list
+
+        signal entryOpened(string name)
+
+        populate: ListPopulate {}
+        anchors.fill: parent
+        anchors.leftMargin: Theme.spacing
+        anchors.rightMargin: Theme.spacing
+        opacity: root.tab === page && !root.inDetail ? 1 : 0
+        visible: opacity > 0
+        transform: PageShift { page: entries.page }
+        Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
+        spacing: 2
+        ScrollBar.vertical: ScrollBar {}
+
+        header: Item {
+            width: entries.width
+            height: entries.note !== "" ? noteLabel.implicitHeight + Theme.spacing : 0
+
+            Label {
+                id: noteLabel
+                width: parent.width
+                visible: entries.note !== ""
+                leftPadding: 8
+                rightPadding: 8
+                text: entries.note
+                color: Theme.text
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        delegate: Rectangle {
+            id: artistRow
+
+            required property var modelData
+
+            width: ListView.view.width
+            height: 52
+            radius: Theme.radius
+            color: artistHover.hovered ? Theme.hover : "transparent"
+
+            Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+            HoverHandler { id: artistHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: entries.entryOpened(artistRow.modelData.name) }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 8
+                anchors.rightMargin: 12
+                spacing: Theme.padding
+
+                Rectangle {
+                    Layout.preferredWidth: 36
+                    Layout.preferredHeight: 36
+                    radius: 18
+                    color: Theme.accentSoft
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: artistRow.modelData.name.charAt(0).toUpperCase()
+                        color: Theme.accent
+                        font.pixelSize: Theme.fontSizeLarge
+                        font.weight: Font.DemiBold
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: artistRow.modelData.name
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSize
+                    elide: Text.ElideRight
+                }
+
+                Label {
+                    text: Util.songCount(artistRow.modelData.count)
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+
+                Icon {
+                    name: "chevronRight"
+                    size: 10
+                    color: Theme.textDim
+                }
+            }
+        }
+    }
+
     component PageShift: Translate {
         required property int page
         x: root.tab === page ? 0 : (page < root.tab ? -48 : 48)

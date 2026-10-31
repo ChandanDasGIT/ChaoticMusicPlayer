@@ -75,6 +75,25 @@ std::vector<std::string> songArtistNames(const Track &track)
     return names;
 }
 
+// "Rock, Pop" -> Rock, Pop
+std::vector<std::string> genreNames(const std::string &genre)
+{
+    std::vector<std::string> names{genre};
+    for (const char *separator : {", ", "; ", " / "}) {
+        std::vector<std::string> split;
+        for (const std::string &name : names) {
+            size_t start = 0;
+            for (size_t at; (at = name.find(separator, start)) != std::string::npos; start = at + std::strlen(separator))
+                split.push_back(name.substr(start, at - start));
+            split.push_back(name.substr(start));
+        }
+        names = std::move(split);
+    }
+    names.erase(std::remove_if(names.begin(), names.end(), [](const std::string &n) { return n.empty(); }),
+                names.end());
+    return names;
+}
+
 bool byTitle(const Track &a, const Track &b)
 {
     const std::string la = lower(a.title), lb = lower(b.title);
@@ -388,6 +407,24 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     for (const auto &[key, entry] : artists)
         m_artists.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second}});
 
+    // Genres
+    std::map<std::string, std::pair<QString, int>> genres; // lowercase -> (name, songs)
+    m_songsWithoutGenre = 0;
+    for (const Track &t : m_tracks) {
+        const std::vector<std::string> names = genreNames(t.genre);
+        if (names.empty())
+            ++m_songsWithoutGenre;
+        for (const std::string &name : names) {
+            auto &entry = genres[lower(name)];
+            if (entry.first.isEmpty())
+                entry.first = QString::fromStdString(name);
+            ++entry.second;
+        }
+    }
+    m_genres.clear();
+    for (const auto &[key, entry] : genres)
+        m_genres.append(QVariantMap{{QStringLiteral("name"), entry.first}, {QStringLiteral("count"), entry.second}});
+
     emit contentsChanged();
     applySearch();
     rebuildDetail();
@@ -428,6 +465,13 @@ void LocalLibraryController::applySearch()
             m_shownArtists.append(entry);
     }
     sortEntries(m_shownArtists, m_settings->artistSort());
+
+    m_shownGenres.clear();
+    for (const QVariant &entry : m_genres) {
+        if (matches(words, entry.toMap().value(QStringLiteral("name")).toString()))
+            m_shownGenres.append(entry);
+    }
+    sortEntries(m_shownGenres, m_settings->genreSort());
     emit shownChanged();
 
     rebuildFolder();
@@ -443,6 +487,13 @@ void LocalLibraryController::showAlbum(const QString &key)
 void LocalLibraryController::showArtist(const QString &name)
 {
     m_detailKind = 2;
+    m_detailKey = name;
+    rebuildDetail();
+}
+
+void LocalLibraryController::showGenre(const QString &name)
+{
+    m_detailKind = 3;
     m_detailKey = name;
     rebuildDetail();
 }
@@ -466,6 +517,13 @@ void LocalLibraryController::rebuildDetail()
         const std::string wanted = lower(key);
         for (const Track &t : m_tracks) {
             const auto names = songArtistNames(t);
+            if (std::any_of(names.begin(), names.end(), [&](const std::string &n) { return lower(n) == wanted; }))
+                tracks.push_back(t);
+        }
+    } else if (m_detailKind == 3) {
+        const std::string wanted = lower(key);
+        for (const Track &t : m_tracks) {
+            const auto names = genreNames(t.genre);
             if (std::any_of(names.begin(), names.end(), [&](const std::string &n) { return lower(n) == wanted; }))
                 tracks.push_back(t);
         }

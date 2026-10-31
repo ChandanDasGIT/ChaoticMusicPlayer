@@ -11,6 +11,7 @@ struct Track
     std::string artist;
     std::string album;
     std::string albumArtist; // "" = not tagged
+    std::string genre;       // "" = not tagged; several: "A, B"
     int disc = 0;      // 0 = unknown
     int discTotal = 0; // 0 = unknown
     int track = 0;     // 0 = unknown

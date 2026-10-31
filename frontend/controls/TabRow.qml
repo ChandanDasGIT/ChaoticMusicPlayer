@@ -37,7 +37,7 @@ Item {
             required property var modelData
             required property int index
 
-            width: Math.max(implicitWidth, (list.width - 3 * list.spacing) / 4)
+            width: Math.max(implicitWidth, (list.width - (list.count - 1) * list.spacing) / list.count)
             iconName: modelData.icon
             iconSize: 11
             text: modelData.label

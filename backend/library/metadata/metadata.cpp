@@ -236,6 +236,7 @@ Track Metadata::read(const std::filesystem::path &path)
         const TagLib::PropertyMap props = file.properties();
         track.artist = joinArtists(props);
         track.albumArtist = joinList(props.value("ALBUMARTIST"));
+        track.genre = joinList(props.value("GENRE"));
 
         int trackTotal = 0;
         parseNumberPair(firstValue(props, "TRACKNUMBER"), track.track, trackTotal);

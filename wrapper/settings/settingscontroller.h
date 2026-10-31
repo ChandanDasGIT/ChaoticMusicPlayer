@@ -98,6 +98,8 @@ class SettingsController : public QObject
     Q_PROPERTY(QString albumSort READ albumSort WRITE setAlbumSort NOTIFY librarySortChanged)
     // Artists: "name", "nameDesc", "mostSongs" or "fewestSongs"
     Q_PROPERTY(QString artistSort READ artistSort WRITE setArtistSort NOTIFY librarySortChanged)
+    // Genres: as Artists
+    Q_PROPERTY(QString genreSort READ genreSort WRITE setGenreSort NOTIFY librarySortChanged)
     // Folders: "name", "nameDesc", "mostSongs", "fewestSongs", "modifiedNew" or "modifiedOld"
     Q_PROPERTY(QString folderSort READ folderSort WRITE setFolderSort NOTIFY librarySortChanged)
     // Appearance: 0 = plain dark theme, 1 = full cover color
@@ -226,6 +228,8 @@ public:
     void setAlbumSort(const QString &sort);
     QString artistSort() const;
     void setArtistSort(const QString &sort);
+    QString genreSort() const;
+    void setGenreSort(const QString &sort);
     QString folderSort() const;
     void setFolderSort(const QString &sort);
     // Local paths or file:// URLs; return false if it was already there.
