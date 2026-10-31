@@ -40,6 +40,7 @@ constexpr const char *SeekbarThumbKey = "appearance.seekbarThumb";
 constexpr const char *FidgetStyleKey = "appearance.fidgetStyle";
 constexpr const char *FidgetThumbKey = "appearance.fidgetThumb";
 constexpr const char *PanelOrderKey = "layout.panels";
+constexpr const char *NavDividersKey = "layout.dividers";
 constexpr const char *HiddenPanelsKey = "layout.hidden";
 constexpr const char *StartPanelKey = "layout.start";
 constexpr const char *LibrarySortKey = "library.sort";
@@ -497,6 +498,20 @@ QStringList defaultPanels()
 }
 
 } // namespace
+
+bool SettingsController::navDividers() const
+{
+    return m_settings->boolValue(NavDividersKey, true);
+}
+
+void SettingsController::setNavDividers(bool on)
+{
+    if (on == navDividers())
+        return;
+    m_settings->setBool(NavDividersKey, on);
+    scheduleSave();
+    emit navDividersChanged();
+}
 
 QStringList SettingsController::panelOrder() const
 {

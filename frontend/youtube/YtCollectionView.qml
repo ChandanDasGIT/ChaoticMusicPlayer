@@ -51,6 +51,9 @@ ColumnLayout {
         clip: true
         model: YouTubeController.collectionSongs
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         ScrollBar.vertical: ScrollBar {}
 
         // A song here plays the album / playlist from that song.

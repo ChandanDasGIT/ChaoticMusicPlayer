@@ -545,6 +545,7 @@ ApplicationWindow {
             leftSide: false
             SplitView.fillWidth: !window.playerShown && docked
             swipeEnabled: window.layout === "half" && !(face === "youtube" && dockedYoutube.swipeBlocked)
+                          && !(face === "library" && dockedLibrary.swipeBlocked)
             onSwipedAway: window.closePanel(shown !== "" ? shown : rightPanel)
 
             // The panel opened last (the right edge swipe brings it back)
@@ -835,7 +836,7 @@ ApplicationWindow {
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact && !window.panelHidden("library")
+        interactive: window.compact && !drawerLibrary.swipeBlocked && !window.panelHidden("library")
         clip: true // pulled down, the card goes under the mini player
         onAboutToShow: libraryPull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
@@ -1006,6 +1007,10 @@ ApplicationWindow {
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.DragOverBounds
         boundsMovement: Flickable.StopAtBounds
+        // While it settles a Flickable keeps the next touch for itself: quickly, then.
+        rebound: Transition {
+            NumberAnimation { properties: "x,y"; duration: 100; easing.type: Easing.OutCubic }
+        }
         onDraggingChanged: {
             if (!dragging && flickPull > 0 && !away.running
                     && (flickPull > height * 0.2 || -verticalVelocity > 800)) {

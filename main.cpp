@@ -27,6 +27,7 @@
 #include <QProcess>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
+#include <QStyleHints>
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
 
@@ -71,6 +72,9 @@ int main(int argc, char *argv[])
         qputenv("QT_SCALE_FACTOR", QByteArray::number(interfaceScale));
 
     QGuiApplication app(argc, argv);
+#ifdef Q_OS_ANDROID
+    QGuiApplication::styleHints()->setStartDragDistance(8); // Android's own: sooner, and taps still land
+#endif
     QGuiApplication::setApplicationName("TunedChaos");
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION)); // from CMake (project version)
     QGuiApplication::setOrganizationName("TunedChaos");

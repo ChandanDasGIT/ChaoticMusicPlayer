@@ -50,6 +50,7 @@ Rectangle {
                 iconName: root.panelInfo[modelData].icon
                 label: root.panelInfo[modelData].label
                 tip: root.panelInfo[modelData].tip
+                divider: !root.fidget && SettingsController.navDividers // (Settings always comes after it)
                 active: root[modelData + "Open"]
                 onClicked: root[modelData + "Clicked"]()
             }
@@ -188,6 +189,7 @@ Rectangle {
         property string label
         property string tip
         property bool active: false
+        property bool divider: false // a thin line on its right
 
         Layout.fillWidth: !root.fidget
         Layout.preferredWidth: 72
@@ -197,6 +199,16 @@ Rectangle {
         ToolTip.visible: hovered && tip !== ""
         ToolTip.text: tip
         ToolTip.delay: 600
+
+        Rectangle {
+            visible: button.divider
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: parent.height * 0.5
+            color: Theme.text
+            opacity: 0.35
+        }
 
         contentItem: Item {
             Rectangle {

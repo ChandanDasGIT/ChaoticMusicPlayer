@@ -69,6 +69,10 @@ QtObject {
     readonly property int cardGap:      10 // space around / between panels
 
     // Animation
+    // Scrolling: how fast a flick can go, and how quickly it slows down
+    readonly property real flickVelocity: 12000
+    readonly property real flickDeceleration: 2000
+
     readonly property int animFast:   120
     readonly property int anim:       220
     readonly property int animSlow:   420

@@ -113,6 +113,9 @@ Rectangle {
         clip: true
         contentHeight: sections.implicitHeight + 2 * Theme.padding
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         opacity: root.page === "" ? 1 : 0
         visible: opacity > 0
         ScrollBar.vertical: ScrollBar {}
@@ -213,6 +216,9 @@ Rectangle {
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 model: HistoryController.recent
 
                 delegate: CoverCard {
@@ -266,6 +272,9 @@ Rectangle {
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 model: HistoryController.recentAlbums
 
                 delegate: CoverCard {
@@ -293,6 +302,9 @@ Rectangle {
                 spacing: Theme.padding
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 model: LocalLibraryController.recentlyAdded
 
                 delegate: CoverCard {
@@ -558,6 +570,9 @@ Rectangle {
             Layout.rightMargin: Theme.spacing
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
             spacing: 2
             model: HistoryController.entries
             ScrollBar.vertical: ScrollBar {}
@@ -612,6 +627,9 @@ Rectangle {
         clip: true
         contentHeight: statsColumn.implicitHeight + 2 * Theme.padding
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         opacity: root.page === "stats" ? 1 : 0
         visible: opacity > 0
         transform: PageShift { shown: root.page === "stats" }

@@ -32,7 +32,7 @@ Rectangle {
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
-          summary: Qt.platform.os === "android" ? qsTr("Bottom bar, what opens on start") : qsTr("What opens on start") },
+          summary: qsTr("Bottom bar, what opens on start") },
         { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") }
     ]
     // Android has no keyboard to speak of: no Keyboard shortcuts page there
@@ -214,6 +214,9 @@ Rectangle {
                 visible: opacity > 0
                 contentHeight: groupColumn.implicitHeight + 2 * Theme.padding
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 ScrollBar.vertical: ScrollBar {}
 
                 Behavior on x { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easingPanel } }
@@ -1391,18 +1394,29 @@ Rectangle {
                         title: qsTr("Layout Customisation")
 
                         SettingsCard {
-                            readonly property bool hiddenHere: !root.android
-                            visible: !hiddenHere // (phones only)
                             title: qsTr("Bottom bar")
 
                             SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Lines between icons")
+                                description: qsTr("A thin line separates each icon from the next.")
+
+                                SettingsSwitch {
+                                    checked: SettingsController.navDividers
+                                    onToggled: SettingsController.navDividers = checked
+                                }
+                            }
+
+                            SettingsRow {
+                                readonly property bool hiddenHere: !root.android
+                                visible: !hiddenHere // (phones only)
                                 Layout.fillWidth: true
                                 title: qsTr("Panels")
                                 description: qsTr("Choose which panels you can open and their order. A panel turned off can't be opened; your music and its settings stay. Settings is always there.")
                             }
 
                             Repeater {
-                                model: SettingsController.panelOrder
+                                model: root.android ? SettingsController.panelOrder : []
 
                                 delegate: Rectangle {
                                     id: panelRow
@@ -1531,6 +1545,9 @@ Rectangle {
                 clip: true
                 spacing: 2
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 model: root.searching ? root.search(root.query) : []
                 ScrollBar.vertical: ScrollBar {}
 
@@ -1776,6 +1793,13 @@ Rectangle {
     // One page: its cards, scrolling (the header shows its name); fades in when shown.
     component SettingsPage: ScrollView {
         id: settingsPage
+
+        Component.onCompleted: {
+            const flick = contentItem as Flickable
+            flick.flickDeceleration = Theme.flickDeceleration
+            flick.maximumFlickVelocity = Theme.flickVelocity
+            flick.synchronousDrag = true
+        }
 
         property string title
         default property alias content: pageColumn.data

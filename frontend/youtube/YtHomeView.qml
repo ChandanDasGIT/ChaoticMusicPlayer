@@ -24,6 +24,9 @@ Item {
         contentHeight: shelvesColumn.implicitHeight + Theme.padding
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         ScrollBar.vertical: ScrollBar {}
 
         ColumnLayout {

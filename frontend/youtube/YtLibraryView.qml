@@ -136,6 +136,9 @@ Item {
             clip: true
             model: YouTubeController.librarySongs
             boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
             ScrollBar.vertical: ScrollBar {}
 
             delegate: YtTrackRow {

@@ -110,6 +110,9 @@ Item {
             clip: true
             model: YouTubeController.savedSongs
             boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
             ScrollBar.vertical: ScrollBar {}
 
             delegate: YtTrackRow {

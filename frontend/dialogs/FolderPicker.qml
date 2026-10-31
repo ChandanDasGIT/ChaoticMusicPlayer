@@ -189,6 +189,9 @@ Popup {
                     clip: true
                     interactive: contentHeight > height
                     boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: Theme.flickDeceleration
+                    maximumFlickVelocity: Theme.flickVelocity
+                    synchronousDrag: true
                     spacing: 2
                     model: root.drives
 
@@ -234,6 +237,9 @@ Popup {
                     spacing: 6
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: Theme.flickDeceleration
+                    maximumFlickVelocity: Theme.flickVelocity
+                    synchronousDrag: true
                     model: root.places.concat(root.drives.map((d) => ({ icon: "drive", name: d.name, url: d.url })))
 
                     delegate: PillButton {
@@ -278,6 +284,9 @@ Popup {
                             anchors.rightMargin: 6
                             orientation: ListView.Horizontal
                             boundsBehavior: Flickable.StopAtBounds
+                            flickDeceleration: Theme.flickDeceleration
+                            maximumFlickVelocity: Theme.flickVelocity
+                            synchronousDrag: true
                             model: Files.crumbs(root.folder) // [{ name, url }], from the root
                             onCountChanged: positionViewAtEnd()
                             onWidthChanged: positionViewAtEnd()
@@ -325,6 +334,9 @@ Popup {
                     Layout.fillHeight: true
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: Theme.flickDeceleration
+                    maximumFlickVelocity: Theme.flickVelocity
+                    synchronousDrag: true
                     spacing: 2
                     model: folders
                     keyNavigationEnabled: true

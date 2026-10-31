@@ -135,6 +135,9 @@ Item {
         preferredHighlightEnd: height * 0.38 + 30
         highlightMoveDuration: 450
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         ScrollBar.vertical: ScrollBar { policy: root.syncedView ? ScrollBar.AlwaysOff : ScrollBar.AsNeeded }
 
         delegate: Label {

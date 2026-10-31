@@ -394,6 +394,9 @@ Rectangle {
             currentIndex: -1 // selection; the playing track is PlaylistController.currentIndex
             property int openSwipeRow: -1 // row whose Delete button is revealed
             boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
             keyNavigationEnabled: true
             highlightMoveDuration: Theme.anim
             ScrollBar.vertical: ScrollBar {}

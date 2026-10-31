@@ -175,6 +175,9 @@ Item {
                 Layout.rightMargin: Theme.spacing
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 spacing: 2
                 model: SettingsController.ytSearchHistory
                 ScrollBar.vertical: ScrollBar {}
@@ -245,6 +248,9 @@ Item {
             clip: true
             model: root.showCards ? YouTubeController.searchCards : YouTubeController.searchResults
             boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
             opacity: YouTubeController.searching ? 0.4 : 1
             ScrollBar.vertical: ScrollBar {}
 

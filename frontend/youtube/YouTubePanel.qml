@@ -14,7 +14,7 @@ Rectangle {
     property bool showCloseButton: false
     property int tab: 0
     // A drag inside must not close the drawer holding this panel (see YtHomeView).
-    readonly property bool swipeBlocked: homeView.swipeBlocked || artistView.swipeBlocked
+    readonly property bool swipeBlocked: homeView.swipeBlocked || artistView.swipeBlocked || tabRow.busy
     // An artist's page or an album / playlist is open over the tabs.
     readonly property bool overlayOpen: YouTubeController.artistOpen || YouTubeController.collectionOpen
 
@@ -140,32 +140,19 @@ Rectangle {
         }
 
         // Tabs
-        Flow {
+        TabRow {
+            id: tabRow
             Layout.fillWidth: true
             Layout.margins: Theme.padding
             Layout.bottomMargin: 4
-            spacing: 6
-
-            Repeater {
-                model: [
-                    { icon: "compass", label: qsTr("Home") },
-                    { icon: "search", label: qsTr("Search") },
-                    { icon: "listMusic", label: qsTr("Library") },
-                    { icon: "bookmark", label: qsTr("Saved") }
-                ]
-
-                delegate: PillButton {
-                    required property var modelData
-                    required property int index
-
-                    iconName: modelData.icon
-                    iconSize: 11
-                    text: modelData.label
-                    implicitHeight: 34
-                    active: root.tab === index && !root.overlayOpen
-                    onClicked: root.showTab(index)
-                }
-            }
+            current: root.overlayOpen ? -1 : root.tab
+            tabs: [
+                { icon: "compass", label: qsTr("Home") },
+                { icon: "search", label: qsTr("Search") },
+                { icon: "listMusic", label: qsTr("Library") },
+                { icon: "bookmark", label: qsTr("Saved") }
+            ]
+            onTabPicked: (index) => root.showTab(index)
         }
 
         // Tab contents: the new tab slides in from the side it is on, the old one

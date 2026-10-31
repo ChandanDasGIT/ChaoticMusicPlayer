@@ -19,6 +19,9 @@ Rectangle {
     readonly property bool hasFolders: SettingsController.libraryFolders.length > 0
     readonly property bool inDetail: LocalLibraryController.detailKind !== 0 && (tab === 1 || tab === 2)
 
+    // A drag on the tabs must not close the drawer holding this panel (see YtHomeView).
+    readonly property bool swipeBlocked: tabRow.busy
+
     signal pinToggled()
     signal closeRequested()
     signal settingsRequested()
@@ -197,32 +200,19 @@ Rectangle {
         }
 
         // Tabs
-        Flow {
+        TabRow {
+            id: tabRow
             Layout.fillWidth: true
             Layout.margins: Theme.padding
             Layout.bottomMargin: 4
-            spacing: 6
-
-            Repeater {
-                model: [
-                    { icon: "music", label: qsTr("Songs") },
-                    { icon: "compactDisc", label: qsTr("Albums") },
-                    { icon: "user", label: qsTr("Artists") },
-                    { icon: "folder", label: qsTr("Folders") }
-                ]
-
-                delegate: PillButton {
-                    required property var modelData
-                    required property int index
-
-                    iconName: modelData.icon
-                    iconSize: 11
-                    text: modelData.label
-                    implicitHeight: 34
-                    active: root.tab === index
-                    onClicked: root.tab = index
-                }
-            }
+            current: root.tab
+            tabs: [
+                { icon: "music", label: qsTr("Songs") },
+                { icon: "compactDisc", label: qsTr("Albums") },
+                { icon: "user", label: qsTr("Artists") },
+                { icon: "folder", label: qsTr("Folders") }
+            ]
+            onTabPicked: (index) => root.tab = index
         }
 
         // Scan progress
@@ -348,6 +338,9 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 cellWidth: width / columns
                 cellHeight: cellWidth + 46
                 model: LocalLibraryController.albums
@@ -453,6 +446,9 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                flickDeceleration: Theme.flickDeceleration
+                maximumFlickVelocity: Theme.flickVelocity
+                synchronousDrag: true
                 spacing: 2
                 model: LocalLibraryController.artists
                 ScrollBar.vertical: ScrollBar {}
@@ -654,6 +650,9 @@ Rectangle {
                         contentWidth: crumbs.width
                         flickableDirection: Flickable.HorizontalFlick
                         boundsBehavior: Flickable.StopAtBounds
+                        flickDeceleration: Theme.flickDeceleration
+                        maximumFlickVelocity: Theme.flickVelocity
+                        synchronousDrag: true
                         // The deepest part stays in view.
                         onContentWidthChanged: contentX = Math.max(0, contentWidth - width)
 
@@ -733,6 +732,9 @@ Rectangle {
                     Layout.rightMargin: Theme.spacing
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: Theme.flickDeceleration
+                    maximumFlickVelocity: Theme.flickVelocity
+                    synchronousDrag: true
                     spacing: 2
                     ScrollBar.vertical: ScrollBar {}
                     model: LocalLibraryController.folderSongs
@@ -889,6 +891,9 @@ Rectangle {
         Layout.rightMargin: Theme.spacing
         clip: true
         boundsBehavior: Flickable.StopAtBounds
+        flickDeceleration: Theme.flickDeceleration
+        maximumFlickVelocity: Theme.flickVelocity
+        synchronousDrag: true
         spacing: 2
         ScrollBar.vertical: ScrollBar {}
 
