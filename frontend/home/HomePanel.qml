@@ -412,17 +412,27 @@ Rectangle {
                     onClicked: smartDialog.edit(null)
                 }
             }
-            Flow {
+            // Two even columns; an odd last card takes the whole row.
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: Theme.spacing
+                columns: 2
+                columnSpacing: Theme.spacing
+                rowSpacing: Theme.spacing
 
                 Repeater {
+                    id: smartCards
                     model: SmartPlaylistsController.playlists
 
                     delegate: SmartCard {
                         required property var modelData
+                        required property int index
 
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 78
+                        Layout.columnSpan: index === smartCards.count - 1 && smartCards.count % 2 === 1 ? 2 : 1
                         playlist: modelData
+                        hue: (0.72 + index * 0.17) % 1
                     }
                 }
             }
@@ -988,11 +998,10 @@ Rectangle {
         id: smart
 
         property var playlist
+        property real hue: 0.72
 
-        width: 186
-        height: 64
         radius: Theme.radiusLarge
-        color: smartHover.hovered ? Theme.accentSoftHover : Theme.accentSoft
+        color: Qt.hsla(hue, 0.55, 0.5, smartHover.hovered ? 0.26 : 0.16)
         opacity: playlist.count > 0 ? 1 : 0.6
 
         Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -1018,14 +1027,22 @@ Rectangle {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 4
-            spacing: 10
+            anchors.leftMargin: 10
+            anchors.rightMargin: 0
+            spacing: 8
 
-            Icon {
-                name: "sliders"
-                size: 14
-                color: Theme.accent
+            Rectangle {
+                Layout.preferredWidth: 38
+                Layout.preferredHeight: 38
+                radius: 12
+                color: Qt.hsla(smart.hue, 0.6, 0.55, 0.25)
+
+                Icon {
+                    anchors.centerIn: parent
+                    name: "sparkles"
+                    size: 15
+                    color: Qt.hsla(smart.hue, 0.75, 0.75, 1)
+                }
             }
 
             ColumnLayout {
@@ -1038,7 +1055,10 @@ Rectangle {
                     color: Theme.text
                     font.pixelSize: Theme.fontSize
                     font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 2
                     elide: Text.ElideRight
+                    lineHeight: 0.95
                 }
                 Label {
                     Layout.fillWidth: true
@@ -1052,7 +1072,7 @@ Rectangle {
                 iconName: "more"
                 iconSize: 12
                 iconColor: Theme.textMuted
-                opacity: smartHover.hovered ? 1 : 0
+                opacity: smartHover.hovered || Theme.touchOnly ? 1 : 0 // (no hovering on a phone)
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Edit")
                 onClicked: smartDialog.edit(smart.playlist)

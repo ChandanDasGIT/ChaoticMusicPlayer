@@ -362,7 +362,10 @@ Popup {
         property string value
         signal picked(string id)
 
-        text: root.nameIn(options, value) + "  ▾"
+        text: root.nameIn(options, value)
+        iconName: "chevronDown"
+        iconSize: 9
+        iconAfter: true
         implicitHeight: 30
         onClicked: menu.popup(picker, 0, picker.height + 4)
 

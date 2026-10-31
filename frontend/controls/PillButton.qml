@@ -12,6 +12,7 @@ AbstractButton {
     property real iconSize: 16
     property bool filled: false
     property bool active: false
+    property bool iconAfter: false // the icon on the text's right
     property bool transparentIdle: false // no background unless hovered/active (inside a group)
     property color iconColor: filled ? Theme.background : active ? Theme.accent : Theme.text
 
@@ -30,6 +31,7 @@ AbstractButton {
             id: row
             anchors.centerIn: parent
             spacing: 8
+            layoutDirection: root.iconAfter ? Qt.RightToLeft : Qt.LeftToRight
 
             Icon {
                 anchors.verticalCenter: parent.verticalCenter
