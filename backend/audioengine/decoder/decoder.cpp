@@ -4,6 +4,8 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
+#include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 }
 
@@ -73,6 +75,27 @@ Decoder::~Decoder()
     close();
 }
 
+Decoder::ResamplerInfo Decoder::resamplerInfo()
+{
+    ResamplerInfo info;
+    SwrContext *swr = swr_alloc();
+    if (swr) {
+        int64_t filterSize = 0;
+        if (av_opt_get_int(swr, "filter_size", 0, &filterSize) >= 0)
+            info.filterSize = int(filterSize);
+        av_opt_get_double(swr, "cutoff", 0, &info.cutoff);
+        swr_free(&swr);
+    }
+    if (info.cutoff <= 0)
+        info.cutoff = 0.97; // what FFmpeg uses when none is set
+    return info;
+}
+
+std::string Decoder::ffmpegVersion()
+{
+    return av_version_info();
+}
+
 bool Decoder::probe(const std::string &path, AudioInfo &info)
 {
     quietLogging();
@@ -104,6 +127,9 @@ bool Decoder::probe(const std::string &path, AudioInfo &info)
             char layout[64] = {};
             if (av_channel_layout_describe(&par->ch_layout, layout, sizeof(layout)) > 0)
                 info.channelLayout = layout;
+
+            if (const char *name = av_get_sample_fmt_name(AVSampleFormat(par->format)))
+                info.sampleFormat = name;
 
             info.bitrate = par->bit_rate > 0 ? par->bit_rate : format->bit_rate;
             info.sampleRate = par->sample_rate;

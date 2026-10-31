@@ -5,6 +5,7 @@
 #include <QString>
 #include <QThreadPool>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 #include <memory>
@@ -35,6 +36,9 @@ class PlayerController : public QObject
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
     // e.g. "44.1 kHz · 941 kbps · FLAC"; empty until known
     Q_PROPERTY(QString qualityText READ qualityText NOTIFY qualityTextChanged)
+    // The song playing, for the audio pipeline: { codec, sampleRate, bitsPerSample, channels,
+    // bitrate, stream, outputRate, gainTrackDb, gainAlbumDb } (gains only when tagged)
+    Q_PROPERTY(QVariantMap sourceInfo READ sourceInfo NOTIFY sourceInfoChanged)
     // Audio outputs: [{ id, name }]; id "" = system default (always first)
     Q_PROPERTY(QVariantList outputDevices READ outputDevices NOTIFY outputDevicesChanged)
     Q_PROPERTY(QString outputDevice READ outputDevice WRITE setOutputDevice NOTIFY outputDeviceChanged)
@@ -53,6 +57,7 @@ public:
 
     State state() const { return m_state; }
     bool playing() const { return m_state == Playing; }
+    QVariantMap sourceInfo() const { return m_sourceInfo; }
     qint64 position() const { return m_position; }
     qint64 duration() const { return m_duration; }
     qreal volume() const { return m_volume; }
@@ -107,6 +112,7 @@ signals:
     void sourceChanged();
     void errorStringChanged();
     void qualityTextChanged();
+    void sourceInfoChanged();
     void outputDevicesChanged();
     void outputDeviceChanged();
     void trackFinished();
@@ -129,6 +135,7 @@ private:
 
     qint64 m_position = 0;
     qint64 m_seekTarget = -1; // -1: no seek under way
+    QVariantMap m_sourceInfo;
     QElapsedTimer m_seekClock;
     qint64 m_duration = 0;
     qreal m_volume = 0.8;

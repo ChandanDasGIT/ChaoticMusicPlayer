@@ -25,6 +25,7 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
+        margin: 18 // small to look at, but a finger needn't land exactly on it
         onTapped: root.clicked()
     }
 

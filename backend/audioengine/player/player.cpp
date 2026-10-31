@@ -51,6 +51,11 @@ void Player::setOutputDevice(const std::string &deviceId) { post({CommandType::S
 void Player::play() { post({CommandType::Play, {}, 0}); }
 void Player::pause() { post({CommandType::Pause, {}, 0}); }
 void Player::stop() { post({CommandType::Stop, {}, 0}); }
+int64_t Player::bufferMs()
+{
+    return int64_t(RingSamples / Channels) * 1000 / Decoder::OutputRate;
+}
+
 void Player::seek(int64_t positionMs) { post({CommandType::Seek, {}, positionMs}); }
 
 void Player::setEqualizer(const Equalizer::Gains &gainsDb, bool enabled)

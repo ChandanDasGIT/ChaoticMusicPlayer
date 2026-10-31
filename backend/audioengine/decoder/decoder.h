@@ -17,6 +17,7 @@ struct AudioInfo
     std::string codec;         // e.g. "MP3 (MPEG audio layer 3)"
     std::string codecName;     // short, e.g. "FLAC", "MP3", "OPUS"
     std::string channelLayout; // e.g. "stereo"
+    std::string sampleFormat;  // as the decoder gives it, e.g. "s16", "fltp"
     int64_t bitrate = 0;       // bits per second
     int sampleRate = 0;
     int channels = 0;
@@ -37,6 +38,15 @@ public:
 
     // Reads the file's audio properties without decoding it.
     static bool probe(const std::string &path, AudioInfo &info);
+
+    // What the conversion to OutputRate uses (FFmpeg's own values), for showing.
+    struct ResamplerInfo
+    {
+        int filterSize = 0;
+        double cutoff = 0; // of the lower rate's Nyquist frequency
+    };
+    static ResamplerInfo resamplerInfo();
+    static std::string ffmpegVersion();
 
     Decoder(const Decoder &) = delete;
     Decoder &operator=(const Decoder &) = delete;

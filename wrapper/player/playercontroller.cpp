@@ -1,5 +1,6 @@
 #include "wrapper/player/playercontroller.h"
 
+#include "backend/library/metadata/metadata.h"
 #include "backend/audioengine/audiooutput/audiooutput.h"
 #include "backend/audioengine/decoder/decoder.h"
 #include "backend/audioengine/player/player.h"
@@ -255,12 +256,15 @@ void PlayerController::updateQuality()
     if (path.isEmpty()) {
         m_qualityText.clear();
         emit qualityTextChanged();
+        m_sourceInfo.clear();
+        emit sourceInfoChanged();
         return;
     }
 
     m_probePool.start([this, path, generation, resolver = m_resolver.get()] {
         AudioInfo info;
         QStringList parts;
+        QVariantMap details;
         // YouTube tracks: probe the stream (its address is cached by then).
         const std::optional<std::string> source = resolver->resolve(path.toStdString());
         if (source && Decoder::probe(*source, info)) {
@@ -270,10 +274,38 @@ void PlayerController::updateQuality()
                 parts << QStringLiteral("%1 kbps").arg((info.bitrate + 500) / 1000);
             if (!info.codecName.empty())
                 parts << QString::fromStdString(info.codecName);
+
+            const bool stream = StreamResolver::isYouTube(path.toStdString());
+            details = {{QStringLiteral("codec"), QString::fromStdString(info.codec)},
+                       {QStringLiteral("sampleRate"), info.sampleRate},
+                       {QStringLiteral("bitsPerSample"), info.bitsPerSample},
+                       {QStringLiteral("channels"), info.channels},
+                       {QStringLiteral("bitrate"), qint64(info.bitrate)},
+                       {QStringLiteral("stream"), stream},
+                       {QStringLiteral("outputRate"), Decoder::OutputRate},
+                       {QStringLiteral("codecName"), QString::fromStdString(info.codecName)},
+                       {QStringLiteral("container"), QString::fromStdString(info.format)},
+                       {QStringLiteral("channelLayout"), QString::fromStdString(info.channelLayout)},
+                       {QStringLiteral("sampleFormat"), QString::fromStdString(info.sampleFormat)},
+                       {QStringLiteral("ffmpeg"), QString::fromStdString(Decoder::ffmpegVersion())},
+                       {QStringLiteral("filterSize"), Decoder::resamplerInfo().filterSize},
+                       {QStringLiteral("cutoff"), Decoder::resamplerInfo().cutoff},
+                       {QStringLiteral("bufferMs"), qint64(Player::bufferMs())}};
+            if (!stream) {
+                const ReplayGain gain = Metadata::readReplayGain(path.toStdString());
+                if (gain.hasTrack)
+                    details.insert(QStringLiteral("gainTrackDb"), gain.trackGainDb);
+                if (gain.hasAlbum)
+                    details.insert(QStringLiteral("gainAlbumDb"), gain.albumGainDb);
+            }
         }
         const QString text = parts.join(QStringLiteral(" · "));
-        QMetaObject::invokeMethod(this, [this, generation, text] {
-            if (generation != m_qualityGeneration || text == m_qualityText)
+        QMetaObject::invokeMethod(this, [this, generation, text, details] {
+            if (generation != m_qualityGeneration)
+                return;
+            m_sourceInfo = details;
+            emit sourceInfoChanged();
+            if (text == m_qualityText)
                 return;
             m_qualityText = text;
             emit qualityTextChanged();

@@ -58,6 +58,8 @@ public:
     };
 
     Player(std::string appName, Callbacks callbacks, StreamResolver *resolver = nullptr);
+
+    static int64_t bufferMs(); // how much decoded audio the ring buffer holds
     ~Player();
 
     Player(const Player &) = delete;

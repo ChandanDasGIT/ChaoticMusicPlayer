@@ -24,9 +24,101 @@ Popup {
         ytInfo = YtMetadataController.infoFor(filePath)
         editing = false
         saving = false
+        pipelineOpen = false
         if (editTags && canEdit)
             startEditing()
         open()
+    }
+
+    // ---- The audio pipeline: what happens to the song playing, in the engine's order
+    property bool pipelineOpen: false
+    readonly property bool pipelineKnown: path === PlayerController.source
+                                          && PlayerController.sourceInfo.sampleRate !== undefined
+    function kHz(rate) {
+        return (rate / 1000).toLocaleString(Qt.locale("C"), "f", rate % 1000 === 0 ? 0 : 1) + " kHz"
+    }
+    // [{ name, icon, status, on, rows: [[label, value], ...] }]
+    readonly property var pipeline: {
+        if (!pipelineKnown)
+            return []
+        const s = PlayerController.sourceInfo
+        const rate = kHz(s.outputRate)
+        const resampling = s.sampleRate !== s.outputRate
+        const channelNames = { 1: qsTr("Mono"), 2: qsTr("Stereo") }
+        const channels = channelNames[s.channels] ?? s.channelLayout
+        const formats = { u8: "8-bit integer", s16: "16-bit integer", s32: "32-bit integer", s64: "64-bit integer",
+                          flt: "32-bit float", dbl: "64-bit float" }
+        const decoded = formats[(s.sampleFormat || "").replace(/p$/, "")] ?? s.sampleFormat
+
+        const source = [[qsTr("Type"), s.stream ? qsTr("YouTube stream") : qsTr("Local file")],
+                        [qsTr("Container"), s.container],
+                        [qsTr("Sample rate"), kHz(s.sampleRate)]]
+        if (s.bitsPerSample > 0) {
+            source.push([qsTr("Bit depth"), qsTr("%1-bit").arg(s.bitsPerSample)])
+            source.push([qsTr("PCM data rate"),
+                         qsTr("%1 kbps").arg(Math.round(s.sampleRate * s.bitsPerSample * s.channels / 1000))])
+        }
+        if (s.bitrate > 0)
+            source.push([qsTr("Bitrate"), qsTr("%1 kbps").arg(Math.round(s.bitrate / 1000))])
+        source.push([qsTr("Channels"), channels])
+
+        const convert = [[qsTr("Rate"), resampling ? kHz(s.sampleRate) + " → " + rate : rate],
+                         [qsTr("Channels"), s.channels === 2 ? qsTr("Stereo") : channels + " → " + qsTr("Stereo")],
+                         [qsTr("Sample format"), decoded + " → 32-bit float"]]
+        if (resampling) {
+            convert.splice(1, 0, [qsTr("Ratio"), (s.outputRate / s.sampleRate).toFixed(4) + " : 1"],
+                           [qsTr("Filter"), qsTr("%1 taps · cutoff %2").arg(s.filterSize)
+                            .arg(kHz(Math.round(s.cutoff * Math.min(s.sampleRate, s.outputRate) / 2)))])
+        }
+
+        const mode = SettingsController.replayGain
+        const album = mode === 2 && s.gainAlbumDb !== undefined
+        const db = album ? s.gainAlbumDb : s.gainTrackDb
+        const gainOn = mode !== 0 && db !== undefined
+
+        const fade = SettingsController.fadeSeconds
+        const eqGains = SettingsController.eqGains.filter((g) => g !== 0)
+        const eqOn = SettingsController.eqEnabled
+        const volume = PlayerController.volume
+        const volumeDb = volume > 0 ? 60 * Math.log10(volume) : -Infinity // (the slider is cubic)
+        const devices = PlayerController.outputDevices.filter((d) => d.id === PlayerController.outputDevice)
+        const android = Qt.platform.os === "android"
+        const backend = android ? "AAudio" : Qt.platform.os === "windows" ? "WASAPI" : "PipeWire"
+
+        return [
+            { name: qsTr("Source"), icon: s.stream ? "cloud" : "folder", status: s.codecName, on: true, rows: source },
+            { name: qsTr("Decoder"), icon: "compactDisc", status: qsTr("Active"), on: true,
+              rows: [[qsTr("Library"), "FFmpeg " + s.ffmpeg], [qsTr("Codec"), s.codec], [qsTr("Decodes to"), decoded]] },
+            { name: qsTr("Converter"), icon: "wave", status: resampling ? qsTr("Resampling") : qsTr("Rate kept"),
+              on: true, rows: convert },
+            { name: qsTr("ReplayGain"), icon: "sliders", status: gainOn ? qsTr("Active") : qsTr("Off"), on: gainOn,
+              rows: [[qsTr("Mode"), mode === 0 ? qsTr("Off") : mode === 2 ? qsTr("Album") : qsTr("Track")],
+                     [qsTr("This song"), db === undefined ? qsTr("No ReplayGain tags")
+                                                          : (db > 0 ? "+" : "") + db.toFixed(1) + " dB"]] },
+            { name: qsTr("Fades"), icon: "wave", status: fade > 0 ? qsTr("Crossfade") : qsTr("Gapless"), on: fade > 0,
+              rows: [[qsTr("Between songs"), fade > 0 ? qsTr("%1 s").arg(fade) : qsTr("None")],
+                     [qsTr("Curve"), qsTr("Quarter sine")]] },
+            { name: qsTr("Buffer"), icon: "listMusic", status: qsTr("Active"), on: true,
+              rows: [[qsTr("Holds"), qsTr("About %1 s of audio").arg((s.bufferMs / 1000).toFixed(1))]] },
+            { name: qsTr("Equalizer"), icon: "equalizer", status: eqOn ? qsTr("Active") : qsTr("Off"), on: eqOn,
+              rows: [[qsTr("Preset"), eqOn ? SettingsController.eqPreset : qsTr("Off")],
+                     [qsTr("Bands changed"), qsTr("%1 of 10").arg(eqGains.length)],
+                     [qsTr("Limiter"), eqOn ? qsTr("Guards against clipping") : qsTr("Off")]] },
+            { name: qsTr("Volume"), icon: "volume", status: PlayerController.muted ? qsTr("Muted") : qsTr("Active"),
+              on: !PlayerController.muted,
+              rows: [[qsTr("Slider"), Math.round(volume * 100) + "%"],
+                     [qsTr("Gain"), volume >= 1 ? "0.0 dB" : volume > 0 ? volumeDb.toFixed(1) + " dB" : qsTr("Silent")],
+                     [qsTr("Curve"), qsTr("Cubic")]] },
+            { name: qsTr("Output"), icon: "drive", status: backend, on: true,
+              rows: [[qsTr("Device"), devices.length > 0 ? devices[0].name : qsTr("System default")],
+                     [qsTr("Sent as"), rate + " · 32-bit float · " + qsTr("stereo")]] }
+        ]
+    }
+    readonly property string pipelineSummary: {
+        if (!pipelineKnown)
+            return ""
+        const s = PlayerController.sourceInfo
+        return s.codecName + " · " + (s.sampleRate !== s.outputRate ? kHz(s.sampleRate) + " → " : "") + kHz(s.outputRate)
     }
 
     // ---- Editing the tags
@@ -250,6 +342,12 @@ Popup {
 
                 Item { implicitHeight: 1 }
 
+                PipelineSection {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Theme.padding
+                    Layout.rightMargin: Theme.padding
+                }
+
                 // Tags, Audio, File
                 Repeater {
                     model: root.sections.slice(0, 3)
@@ -277,6 +375,164 @@ Popup {
                 }
 
                 Item { implicitHeight: Theme.spacing }
+            }
+        }
+    }
+
+    // Collapsed at first (the heading sums it up): a card for each stage, in order.
+    component PipelineSection: ColumnLayout {
+        spacing: 6
+
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: 24
+
+            RowLayout {
+                anchors.fill: parent
+                spacing: 6
+
+                Icon {
+                    name: root.pipelineOpen ? "chevronDown" : "chevronRight"
+                    size: 10
+                    color: Theme.accent
+                }
+
+                Label {
+                    text: qsTr("Audio pipeline").toUpperCase()
+                    color: Theme.accent
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.bold: true
+                    font.letterSpacing: 1
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignRight
+                    text: root.pipelineSummary
+                    color: Theme.textMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                    elide: Text.ElideRight
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.pipelineOpen = !root.pipelineOpen
+            }
+        }
+
+        Label {
+            Layout.fillWidth: true
+            visible: root.pipelineOpen && !root.pipelineKnown
+            text: qsTr("Play this song to see how it reaches your speakers.")
+            color: Theme.textMuted
+            font.pixelSize: Theme.fontSize
+            wrapMode: Text.WordWrap
+        }
+
+        Repeater {
+            model: root.pipelineOpen ? root.pipeline : []
+
+            delegate: ColumnLayout {
+                id: stage
+
+                required property var modelData
+                required property int index
+
+                Layout.fillWidth: true
+                spacing: 0
+
+                // Flows on from the stage above
+                Icon {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 4
+                    visible: stage.index > 0
+                    name: "chevronDown"
+                    size: 9
+                    color: Theme.textDim
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: stageColumn.implicitHeight + 2 * Theme.spacing
+                    radius: Theme.radius
+                    color: Theme.fillSoft
+                    opacity: stage.modelData.on ? 1 : 0.6
+
+                    ColumnLayout {
+                        id: stageColumn
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: Theme.spacing
+                        spacing: 4
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.bottomMargin: 2
+                            spacing: Theme.spacing
+
+                            Icon {
+                                name: stage.modelData.icon
+                                size: 12
+                                color: stage.modelData.on ? Theme.accent : Theme.textMuted
+                            }
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: stage.modelData.name
+                                color: Theme.text
+                                font.pixelSize: Theme.fontSize
+                                font.weight: Font.DemiBold
+                            }
+
+                            Rectangle {
+                                implicitWidth: statusLabel.implicitWidth + 16
+                                implicitHeight: statusLabel.implicitHeight + 4
+                                radius: height / 2
+                                color: stage.modelData.on ? Theme.accentSoft : Theme.fill
+
+                                Label {
+                                    id: statusLabel
+                                    anchors.centerIn: parent
+                                    text: stage.modelData.status
+                                    color: stage.modelData.on ? Theme.accent : Theme.textMuted
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: Font.DemiBold
+                                }
+                            }
+                        }
+
+                        Repeater {
+                            model: stage.modelData.rows
+
+                            delegate: RowLayout {
+                                id: stageRow
+
+                                required property var modelData
+
+                                Layout.fillWidth: true
+                                spacing: Theme.padding
+
+                                Label {
+                                    text: stageRow.modelData[0]
+                                    color: Theme.textMuted
+                                    font.pixelSize: Theme.fontSizeSmall
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    horizontalAlignment: Text.AlignRight
+                                    text: stageRow.modelData[1]
+                                    color: Theme.text
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    wrapMode: Text.Wrap
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -355,7 +611,7 @@ Popup {
                     Layout.fillWidth: true
                     text: field.modelData.value
                     readOnly: true
-                    selectByMouse: true
+                    selectByMouse: !Theme.touchOnly // (on a phone, a drag here must scroll)
                     wrapMode: TextEdit.WrapAnywhere
                     color: Theme.text
                     selectionColor: Theme.selection
@@ -501,7 +757,7 @@ Popup {
             Layout.fillWidth: true
             text: ytField.value
             readOnly: true
-            selectByMouse: true
+            selectByMouse: !Theme.touchOnly // (on a phone, a drag here must scroll)
             wrapMode: TextEdit.WrapAnywhere
             color: Theme.text
             selectionColor: Theme.selection
