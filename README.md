@@ -75,8 +75,10 @@ chmod +x TunedChaos-*.AppImage
   move the sliders; boosting keeps the volume (a limiter only catches peaks
   that would distort). Open it from the button beside the volume bar.
 - **ReplayGain**: off, by track or by album, so songs play at an even volume.
-- **Sleep timer**: pause after a while, or at the end of the song (the moon
-  beside the volume bar).
+- **Sleep timer**: pause after a while, or at the end of the song (in
+  Settings).
+- **Moods**: the heart on the player adds the song to Happy, Sad, Bored,
+  Suspense, METAL or Dance; they play from Home.
 - **Resume where you left off**: the song, the position and the list it was
   playing from come back, paused, when you start the app again.
 - Shuffle, repeat and autoplay (YouTube Mix) side by side, output device
@@ -87,6 +89,9 @@ chmod +x TunedChaos-*.AppImage
   window isn't in front.
 
 ### Library
+
+- Songs, Albums, Artists, Genres and Folders each have search and their own
+  sort (by name, date added, date modified, song count and more).
 
 - Songs, Albums, Artists and Folders, with live search, refreshed in the
   background (only new or changed files are read). Albums are grouped by
@@ -146,6 +151,12 @@ chmod +x TunedChaos-*.AppImage
   can do for you).
 - **Settings** open like a phone's settings app, in the right-hand column: a
   list of categories, and a search bar at the bottom that finds any setting.
+
+- **Layout Customisation** (phones): choose the bottom bar's panels and their
+  order; choose what opens at start on every platform.
+- **Seekbar**: two animations and ten thumbs, also for the bottom bar's toy
+  seekbar. **Album art** can grow up to edge to edge.
+- **Audio pipeline** in a song's details: every stage from file to speaker.
 
 ### Desktop integration
 
