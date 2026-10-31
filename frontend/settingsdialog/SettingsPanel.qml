@@ -33,13 +33,14 @@ Rectangle {
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
           summary: qsTr("Bottom bar, what opens on start") },
-        { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") }
+        { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") },
+        { name: qsTr("Sleep timer"), icon: "moon", hue: 0.68, summary: qsTr("Pause the music after a while") }
     ]
     // Android has no keyboard to speak of: no Keyboard shortcuts page there
     readonly property bool android: Qt.platform.os === "android"
     readonly property int shortcutsPage: 8
     // The categories in groups, like a phone's settings
-    readonly property var groups: [[0, 1, 2, 10], [3, 11, 5, 6], [4, 7], android ? [9] : [8, 9]]
+    readonly property var groups: [[0, 1, 12, 2, 10], [3, 11, 5, 6], [4, 7], android ? [9] : [8, 9]]
 
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
@@ -1529,6 +1530,55 @@ Rectangle {
                                 thumbSetting: "fidgetThumb"
                                 styleDescription: qsTr("While you drag it: the whole bar moves, or only the part around the thumb. It shows when the bottom bar has one panel or none.")
                                 thumbDescription: qsTr("Just for fun: it has nothing to do with the music.")
+                            }
+                        }
+                    }
+
+                    // ------------------------------------------------------------ Sleep timer
+                    SettingsPage {
+                        title: qsTr("Sleep timer")
+
+                        SettingsCard {
+                            title: qsTr("Sleep timer")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Pause the music")
+                                description: !SleepTimerController.active ? qsTr("Off. The music fades out at the end.")
+                                           : SleepTimerController.endOfSong ? qsTr("Pausing at the end of this song")
+                                           : qsTr("Pausing in %1").arg(Util.formatTime(SleepTimerController.remainingMs))
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: [15, 30, 45, 60, 90]
+
+                                    delegate: PillButton {
+                                        required property int modelData
+
+                                        text: qsTr("%1 min").arg(modelData)
+                                        implicitHeight: 32
+                                        onClicked: SleepTimerController.start(modelData)
+                                    }
+                                }
+
+                                PillButton {
+                                    text: qsTr("End of this song")
+                                    implicitHeight: 32
+                                    enabled: PlayerController.hasTrack
+                                    active: SleepTimerController.endOfSong
+                                    onClicked: SleepTimerController.startEndOfSong()
+                                }
+
+                                PillButton {
+                                    text: qsTr("Turn off")
+                                    implicitHeight: 32
+                                    enabled: SleepTimerController.active
+                                    onClicked: SleepTimerController.cancel()
+                                }
                             }
                         }
                     }

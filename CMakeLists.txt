@@ -264,6 +264,8 @@ qt_add_qml_module(TunedChaos
         wrapper/playlist/playlistcontroller.h
         wrapper/playlist/playlistmodel.cpp
         wrapper/playlist/playlistmodel.h
+        wrapper/moods/moodscontroller.cpp
+        wrapper/moods/moodscontroller.h
         wrapper/playlists/playlistscontroller.cpp
         wrapper/playlists/playlistscontroller.h
         wrapper/sleeptimer/sleeptimercontroller.cpp
@@ -360,6 +362,7 @@ target_include_directories(TunedChaos PRIVATE
     wrapper/library
     wrapper/locallibrary
     wrapper/lyrics
+    wrapper/moods
     wrapper/player
     wrapper/playlist
     wrapper/playlists

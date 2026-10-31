@@ -9,6 +9,7 @@
 #include "wrapper/player/playercontroller.h"
 #include "wrapper/notifications/notificationcontroller.h"
 #include "wrapper/playlist/playlistcontroller.h"
+#include "wrapper/moods/moodscontroller.h"
 #include "wrapper/playlists/playlistscontroller.h"
 #include "wrapper/session/sessioncontroller.h"
 #include "wrapper/settings/settingscontroller.h"
@@ -125,6 +126,7 @@ int main(int argc, char *argv[])
     QObject::connect(&covers, &CoverController::revisionChanged, &coverPalette, &CoverPalette::refresh);
     YouTubeController youtube(&playlist, &settings, nullptr);
     PlaylistsController playlists(&playlist, &player, &settings, nullptr);
+    MoodsController moods(&playlist, &player, nullptr);
     LocalLibraryController localLibrary(&playlist, &playlists, &ytMetadata, &settings, nullptr);
     // Reopen the last song, paused where it was (Settings > General).
     HistoryController history(&player, &playlist, &playlists, &localLibrary, &settings, nullptr);

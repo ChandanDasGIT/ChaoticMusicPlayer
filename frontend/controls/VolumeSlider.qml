@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Mute toggle + volume slider + equalizer and sleep timer buttons. The mouse
+// Mute toggle + volume slider + equalizer and mood buttons. The mouse
 // wheel changes the volume by the step set in Settings.
 RowLayout {
     id: root
@@ -47,45 +47,112 @@ RowLayout {
         onClicked: root.equalizerRequested()
     }
 
-    // The sleep timer (accent while it runs; the tooltip says what is left)
+    // Adds the song playing to a mood (accent once it is in one)
     ControlButton {
-        id: sleepButton
-        iconName: "moon"
+        id: heartButton
+        iconName: "heart"
         iconSize: 13
-        active: SleepTimerController.active
+        enabled: PlayerController.hasTrack
+        active: MoodsController.currentMoods.length > 0
         ToolTip.visible: hovered
-        ToolTip.text: !SleepTimerController.active ? qsTr("Sleep timer")
-                    : SleepTimerController.endOfSong ? qsTr("Pausing at the end of this song")
-                    : qsTr("Pausing in %1").arg(Util.formatTime(SleepTimerController.remainingMs))
-        onClicked: sleepMenu.popup(sleepButton, 0, sleepButton.height + 4)
+        ToolTip.text: qsTr("Add to a mood")
+        onClicked: moodPicker.open()
+    }
 
-        ThemedMenu {
-            id: sleepMenu
+    // Which moods the song playing is in: in the middle of the window. Stays open
+    // while moods are ticked (a song can be in several); outside it or Back closes it.
+    Popup {
+        id: moodPicker
 
-            Instantiator {
-                model: [15, 30, 45, 60, 90]
+        readonly property var emoji: ["😄", "😢", "🥱", "😨", "🤘", "💃"] // in MoodsController's order
 
-                delegate: Action {
-                    required property int modelData
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(300, parent.width - 2 * Theme.padding)
+        modal: true
+        dim: true
+        focus: true
+        padding: Theme.spacing
+        onAboutToShow: Util.openMenus += 1 // (Back only closes this: Main's goBack waits)
+        onAboutToHide: Util.openMenus -= 1
 
-                    text: qsTr("In %1 minutes").arg(modelData)
-                    onTriggered: SleepTimerController.start(modelData)
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.anim }
+            NumberAnimation { property: "scale"; from: 0.9; to: 1; duration: Theme.anim; easing.type: Theme.easing }
+        }
+        exit: Transition {
+            NumberAnimation { property: "opacity"; to: 0; duration: Theme.animFast }
+        }
+
+        background: Rectangle {
+            color: Theme.surfaceAlt
+            border.color: Theme.border
+            radius: Theme.radiusCard
+        }
+
+        contentItem: Column {
+            spacing: 2
+
+            Label {
+                width: parent.width
+                padding: Theme.spacing
+                text: qsTr("Add to a mood")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSize
+            }
+
+            Repeater {
+                model: MoodsController.moods
+
+                delegate: AbstractButton {
+                    id: moodRow
+
+                    required property var modelData
+                    required property int index
+                    readonly property bool inMood: MoodsController.currentMoods.includes(modelData.id)
+
+                    width: parent.width
+                    height: 54
+                    hoverEnabled: true
+                    focusPolicy: Qt.NoFocus
+                    onClicked: MoodsController.toggleCurrent(modelData.id)
+
+                    background: Rectangle {
+                        radius: Theme.radius
+                        color: moodRow.inMood ? Theme.accentSoft : moodRow.hovered ? Theme.hover : "transparent"
+
+                        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: Theme.padding
+
+                        Label {
+                            Layout.leftMargin: Theme.spacing
+                            Layout.preferredWidth: 32
+                            horizontalAlignment: Text.AlignHCenter
+                            text: moodPicker.emoji[moodRow.index]
+                            font.pixelSize: 24
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: moodRow.modelData.name
+                            color: moodRow.inMood ? Theme.accent : Theme.text
+                            font.pixelSize: Theme.fontSizeLarge
+                            font.weight: moodRow.inMood ? Font.DemiBold : Font.Medium
+                            elide: Text.ElideRight
+                        }
+
+                        Icon {
+                            Layout.rightMargin: Theme.padding
+                            visible: moodRow.inMood
+                            name: "check"
+                            size: 14
+                            color: Theme.accent
+                        }
+                    }
                 }
-
-                onObjectAdded: (index, object) => sleepMenu.insertAction(index, object)
-                onObjectRemoved: (index, object) => sleepMenu.removeAction(object)
-            }
-
-            Action {
-                text: qsTr("At the end of this song")
-                enabled: PlayerController.hasTrack
-                onTriggered: SleepTimerController.startEndOfSong()
-            }
-
-            Action {
-                text: qsTr("Turn off")
-                enabled: SleepTimerController.active
-                onTriggered: SleepTimerController.cancel()
             }
         }
     }

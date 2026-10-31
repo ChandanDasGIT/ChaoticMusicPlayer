@@ -16,7 +16,10 @@ Rectangle {
     property bool showPinButton: true
     property bool pinned: false
     property bool showCloseButton: false
-    property string page: "" // "": the overview; "history" / "stats": that page instead
+    property string page: "" // "": the overview; "history" / "stats" / "mood": that page instead
+    property var mood: ({ id: "", name: "" }) // the mood open on the "mood" page
+    // (Read again whenever a mood changes.)
+    readonly property var moodSongs: MoodsController.moods.length >= 0 ? MoodsController.songs(mood.id) : []
     // Back / Esc: from a page to the overview (false: already there).
     readonly property bool canGoBack: page !== ""
     function back() {
@@ -52,6 +55,7 @@ Rectangle {
     readonly property bool scrolled: (root.page === "" && overview.contentY > 4)
                                      || (root.page === "history" && historyList.contentY > historyList.originY + 4)
                                      || (root.page === "stats" && statsPage.contentY > 4)
+                                     || (root.page === "mood" && moodList.contentY > 4)
 
     Rectangle {
         z: 2
@@ -197,6 +201,73 @@ Rectangle {
                             name: "shuffle"
                             size: 22
                             color: Theme.background
+                        }
+                    }
+                }
+            }
+
+            // Moods: filled from the player's heart button
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 3
+                columnSpacing: Theme.spacing
+                rowSpacing: Theme.spacing
+
+                Repeater {
+                    model: MoodsController.moods
+
+                    delegate: Rectangle {
+                        id: moodTile
+
+                        required property var modelData
+                        required property int index
+                        readonly property var look: [
+                            { icon: "moodHappy", hue: 0.13 }, { icon: "moodSad", hue: 0.6 },
+                            { icon: "moodBored", hue: 0.3 }, { icon: "moodSuspense", hue: 0.78 },
+                            { icon: "moodMetal", hue: 0.0 }, { icon: "moodDance", hue: 0.9 }
+                        ][index]
+
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 84
+                        radius: Theme.radiusLarge
+                        color: Qt.hsla(look.hue, 0.55, 0.5, moodHover.hovered ? 0.26 : 0.16)
+
+                        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+                        HoverHandler { id: moodHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler {
+                            onTapped: {
+                                root.mood = moodTile.modelData
+                                root.page = "mood"
+                            }
+                        }
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            Icon {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                name: moodTile.look.icon
+                                size: 18
+                                color: Qt.hsla(moodTile.look.hue, 0.75, 0.72, 1)
+                            }
+
+                            Label {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: moodTile.modelData.name
+                                color: Theme.text
+                                font.pixelSize: Theme.fontSize
+                                font.weight: Font.DemiBold
+                            }
+
+                            Label {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: Util.songCount(moodTile.modelData.count)
+                                color: Theme.textMuted
+                                font.pixelSize: Theme.fontSizeSmall
+                            }
                         }
                     }
                 }
@@ -518,6 +589,96 @@ Rectangle {
                       : qsTr("The listening history is off (Settings → General), so Home has nothing to show yet.")
                 color: Theme.textMuted
                 font.pixelSize: Theme.fontSize
+                wrapMode: Text.WordWrap
+            }
+        }
+    }
+
+    // ---- One mood's songs
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 1
+        anchors.bottomMargin: 6
+        spacing: Theme.spacing
+        opacity: root.page === "mood" ? 1 : 0
+        visible: opacity > 0
+        transform: PageShift { shown: root.page === "mood" }
+
+        Behavior on opacity { NumberAnimation { duration: Theme.anim } }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing
+            Layout.topMargin: Theme.spacing
+            Layout.rightMargin: 90 // clear of the pin / close buttons
+            spacing: Theme.padding
+
+            PillButton {
+                iconName: "back"
+                iconSize: 12
+                implicitWidth: 36
+                implicitHeight: 36
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Back to Home")
+                onClicked: root.page = ""
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: root.mood.name
+                color: Theme.text
+                font.pixelSize: Theme.fontSizeTitle
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+
+            PillButton {
+                visible: root.moodSongs.length > 0
+                iconName: "play"
+                iconSize: 11
+                text: qsTr("Play all")
+                implicitHeight: 36
+                filled: true
+                onClicked: MoodsController.play(root.mood.id, 0)
+            }
+        }
+
+        ListView {
+            id: moodList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.leftMargin: Theme.spacing
+            Layout.rightMargin: Theme.spacing
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: Theme.flickDeceleration
+            maximumFlickVelocity: Theme.flickVelocity
+            synchronousDrag: true
+            spacing: 2
+            model: root.moodSongs
+            ScrollBar.vertical: ScrollBar {}
+
+            delegate: HomeSongRow {
+                required property var modelData
+                required property int index
+
+                width: moodList.width
+                song: modelData
+                note: Util.formatTime(modelData.durationMs)
+                removable: true
+                removeTip: qsTr("Remove from this mood")
+                onClicked: MoodsController.play(root.mood.id, index)
+                onRemoveRequested: MoodsController.removeSong(root.mood.id, index)
+            }
+
+            Label {
+                anchors.centerIn: parent
+                width: parent.width - 4 * Theme.padding
+                visible: root.moodSongs.length === 0
+                text: qsTr("No songs here yet. While a song plays, tap the heart on the player to add it.")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSize
+                horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
             }
         }

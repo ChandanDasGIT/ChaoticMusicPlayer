@@ -4,14 +4,15 @@ import QtQuick.Layouts
 
 // A song on Home: cover, title, artist and a note on the right ("12 plays",
 // "21:40"). A click plays it (with the list it's in); hold and drag to drop it
-// on the Queue or the player. With `removable`, an × (on hover) removes it from
-// the history. `song` is a HistoryController song map.
+// on the Queue or the player. With `removable`, an × (on hover; always on a
+// phone) removes it. `song` is a HistoryController song map.
 Rectangle {
     id: root
 
     required property var song
     property string note: ""
     property bool removable: false
+    property string removeTip: qsTr("Remove from history")
     readonly property bool isCurrent: PlayerController.source === (song.path || "")
 
     signal clicked()
@@ -107,9 +108,9 @@ Rectangle {
             implicitWidth: 28
             implicitHeight: 28
             transparentIdle: true
-            opacity: hover.hovered ? 1 : 0
+            opacity: hover.hovered || Theme.touchOnly ? 1 : 0 // (no hovering on a phone)
             ToolTip.visible: hovered
-            ToolTip.text: qsTr("Remove from history")
+            ToolTip.text: root.removeTip
             onClicked: root.removeRequested()
 
             Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
