@@ -43,6 +43,8 @@ class SettingsController : public QObject
     Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled WRITE setNotificationsEnabled NOTIFY notificationsEnabledChanged)
     Q_PROPERTY(bool historyYouTube READ historyYouTube WRITE setHistoryYouTube NOTIFY historyChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
+    // The player's cover: 60 (%, a square) .. 100 (reaches the screen's edges)
+    Q_PROPERTY(int coverSize READ coverSize WRITE setCoverSize NOTIFY coverSizeChanged)
     // The seek bar while playing: "wave" (all of it flows) or "dot" (only around the dot)
     Q_PROPERTY(QString seekbarStyle READ seekbarStyle WRITE setSeekbarStyle NOTIFY seekbarStyleChanged)
     // The bottom bar's toy seek bar: its own choice of the same (phones)
@@ -153,6 +155,8 @@ public:
     void setBackgroundPlayback(bool enabled);
     QString themeMode() const; // "system" (follow the desktop), "dark" (default) or "light"
     void setThemeMode(const QString &mode);
+    int coverSize() const;
+    void setCoverSize(int size);
     QString seekbarStyle() const;
     void setSeekbarStyle(const QString &style);
     QString fidgetStyle() const;
@@ -277,6 +281,7 @@ signals:
     void replayGainChanged();
     void notificationsEnabledChanged();
     void themeModeChanged();
+    void coverSizeChanged();
     void seekbarStyleChanged();
     void seekbarThumbChanged();
     void resumeSessionChanged();

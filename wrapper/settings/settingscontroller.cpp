@@ -35,6 +35,7 @@ constexpr const char *ReplayGainKey = "playback.replayGain";
 constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *CoverSizeKey = "appearance.coverSize";
 constexpr const char *SeekbarStyleKey = "appearance.seekbar";
 constexpr const char *SeekbarThumbKey = "appearance.seekbarThumb";
 constexpr const char *FidgetStyleKey = "appearance.fidgetStyle";
@@ -402,6 +403,21 @@ void SettingsController::setSession(const QString &path, qint64 positionMs, qint
     m_settings->setValue(SessionDurationKey, std::to_string(durationMs));
     m_settings->setValue(SessionListKey, list.toStdString());
     scheduleSave();
+}
+
+int SettingsController::coverSize() const
+{
+    return qBound(60, m_settings->intValue(CoverSizeKey, 60), 100);
+}
+
+void SettingsController::setCoverSize(int size)
+{
+    size = qBound(60, size, 100);
+    if (size == coverSize())
+        return;
+    m_settings->setValue(CoverSizeKey, std::to_string(size));
+    scheduleSave();
+    emit coverSizeChanged();
 }
 
 QString SettingsController::seekbarStyle() const

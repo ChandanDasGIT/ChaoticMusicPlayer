@@ -985,6 +985,40 @@ Rectangle {
                         title: qsTr("Album art")
 
                         SettingsCard {
+                            title: qsTr("Size")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Album art size")
+                                description: qsTr("On the player. At 100% it reaches the edges of the screen, above the song's title, and stays still.")
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.spacing
+
+                                ThemedSlider {
+                                    Layout.fillWidth: true
+                                    from: 60
+                                    to: 100
+                                    stepSize: 5
+                                    snapMode: Slider.SnapAlways
+                                    value: SettingsController.coverSize
+                                    onMoved: SettingsController.coverSize = Math.round(value)
+                                }
+
+                                Label {
+                                    Layout.preferredWidth: 44
+                                    horizontalAlignment: Text.AlignRight
+                                    text: SettingsController.coverSize + "%"
+                                    color: Theme.text
+                                    font.pixelSize: Theme.fontSize
+                                    font.features: { "tnum": 1 }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
                             title: qsTr("Missing covers")
 
                             SettingsRow {

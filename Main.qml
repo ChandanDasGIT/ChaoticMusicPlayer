@@ -523,6 +523,8 @@ ApplicationWindow {
                 id: nowPlaying
                 objectName: "nowPlaying"
                 anchors.fill: parent
+                edgeTop: window.compact ? Theme.cardGap + window.safeTop : 0
+                edgeSide: window.compact ? Theme.cardGap + Math.max(window.safeLeft, window.safeRight) : 0
                 onDetailsRequested: detailsDialog.show(PlayerController.source)
                 onEqualizerRequested: window.openSettings(settingsPanel.equalizerPage)
                 onQuitRequested: window.quitApp()

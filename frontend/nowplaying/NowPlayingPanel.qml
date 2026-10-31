@@ -7,6 +7,12 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
+    // Settings' cover size: 0 = the square (60%) .. 1 = edge to edge (100%).
+    readonly property real coverSpread: (SettingsController.coverSize - 60) / 40
+    // How far this panel sits from the window's edges (0: stay inside the panel).
+    property real edgeTop: 0
+    property real edgeSide: 0
+
     // Lyrics replace the cover and title; the seek bar and controls stay.
     property bool lyricsOpen: false
     // 0 = cover .. 1 = lyrics. The cover flies into the lyrics' mini cover
@@ -27,6 +33,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.margins: Theme.spacing
         spacing: 6
+        z: 1 // over a cover reaching the edges
 
         // With background playing, closing the window doesn't quit: this does.
         PillButton {
@@ -72,8 +79,14 @@ Rectangle {
             }
 
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.max(80, Math.min(parent.width, area.height - content.otherHeight))
-            height: width
+            readonly property real room: area.height - content.otherHeight // above the title
+            readonly property real squareSide: Math.max(80, Math.min(parent.width, room))
+
+            width: squareSide + (parent.width - squareSide) * root.coverSpread
+            height: squareSide + Math.max(0, room - squareSide) * root.coverSpread
+            spread: root.coverSpread
+            bleedTop: root.coverSpread * (area.y + root.edgeTop)
+            bleedSide: root.coverSpread * ((root.width - width) / 2 + root.edgeSide)
             path: PlayerController.source
             thumbnail: PlaylistController.currentThumbnail
             playing: PlayerController.playing || root.lyricsOpen // full size while it flies
