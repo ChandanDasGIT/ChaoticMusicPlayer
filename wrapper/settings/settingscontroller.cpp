@@ -35,6 +35,9 @@ constexpr const char *ReplayGainKey = "playback.replayGain";
 constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *PanelOrderKey = "layout.panels";
+constexpr const char *HiddenPanelsKey = "layout.hidden";
+constexpr const char *StartPanelKey = "layout.start";
 constexpr const char *LibrarySortKey = "library.sort";
 constexpr const char *AlbumSortKey = "library.sort.albums";
 constexpr const char *ArtistSortKey = "library.sort.artists";
@@ -411,6 +414,76 @@ void SettingsController::setThemeMode(const QString &mode)
     m_settings->setValue(ThemeModeKey, mode.toStdString());
     scheduleSave();
     emit themeModeChanged();
+}
+
+namespace {
+
+QStringList defaultPanels()
+{
+    return {QStringLiteral("youtube"), QStringLiteral("queue"), QStringLiteral("home"), QStringLiteral("library")};
+}
+
+} // namespace
+
+QStringList SettingsController::panelOrder() const
+{
+    const QStringList all = defaultPanels();
+    QStringList order;
+    for (const QString &panel : pathList(PanelOrderKey)) {
+        if (all.contains(panel) && !order.contains(panel))
+            order << panel;
+    }
+    for (const QString &panel : all) {
+        if (!order.contains(panel))
+            order << panel;
+    }
+    return order;
+}
+
+QStringList SettingsController::hiddenPanels() const
+{
+    return pathList(HiddenPanelsKey);
+}
+
+void SettingsController::movePanel(int index, int delta)
+{
+    QStringList order = panelOrder();
+    const int target = index + delta;
+    if (index < 0 || index >= order.size() || target < 0 || target >= order.size())
+        return;
+    order.move(index, target);
+    setPathList(PanelOrderKey, order);
+    scheduleSave();
+    emit panelsChanged();
+}
+
+void SettingsController::setPanelHidden(const QString &panel, bool hidden)
+{
+    QStringList list = hiddenPanels();
+    if (!defaultPanels().contains(panel) || list.contains(panel) == hidden)
+        return;
+    if (hidden)
+        list << panel;
+    else
+        list.removeAll(panel);
+    setPathList(HiddenPanelsKey, list);
+    scheduleSave();
+    emit panelsChanged();
+}
+
+QString SettingsController::startPanel() const
+{
+    const QString panel = QString::fromStdString(m_settings->value(StartPanelKey));
+    return defaultPanels().contains(panel) ? panel : QStringLiteral("player");
+}
+
+void SettingsController::setStartPanel(const QString &panel)
+{
+    if (panel == startPanel() || (panel != QLatin1String("player") && !defaultPanels().contains(panel)))
+        return;
+    m_settings->setValue(StartPanelKey, panel.toStdString());
+    scheduleSave();
+    emit startPanelChanged();
 }
 
 namespace {

@@ -76,6 +76,11 @@ class SettingsController : public QObject
     // Local library: folders scanned for music, and folders left out of them
     Q_PROPERTY(QStringList libraryFolders READ libraryFolders NOTIFY libraryFoldersChanged)
     Q_PROPERTY(QStringList libraryExcluded READ libraryExcluded NOTIFY libraryExcludedChanged)
+    // The bottom bar (phones): its panels in order, and the ones turned off
+    Q_PROPERTY(QStringList panelOrder READ panelOrder NOTIFY panelsChanged)
+    Q_PROPERTY(QStringList hiddenPanels READ hiddenPanels NOTIFY panelsChanged)
+    // What opens at start: "player", "youtube", "queue", "home" or "library"
+    Q_PROPERTY(QString startPanel READ startPanel WRITE setStartPanel NOTIFY startPanelChanged)
     // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
     // "modifiedOld", "artist" or "album"
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
@@ -189,6 +194,12 @@ public:
     QStringList enabledCoverSourceIds() const;
     QStringList libraryFolders() const;
     QStringList libraryExcluded() const;
+    QStringList panelOrder() const;
+    QStringList hiddenPanels() const;
+    Q_INVOKABLE void movePanel(int index, int delta);
+    Q_INVOKABLE void setPanelHidden(const QString &panel, bool hidden);
+    QString startPanel() const;
+    void setStartPanel(const QString &panel);
     QString librarySort() const;
     void setLibrarySort(const QString &sort);
     QString albumSort() const;
@@ -263,6 +274,8 @@ signals:
     void libraryFoldersChanged();
     void libraryExcludedChanged();
     void librarySortChanged();
+    void panelsChanged();
+    void startPanelChanged();
     void visualizerEnabledChanged();
     void visualizerStyleChanged();
 

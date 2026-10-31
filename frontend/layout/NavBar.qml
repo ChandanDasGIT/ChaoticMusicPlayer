@@ -2,12 +2,21 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The floating bar at the bottom of the window: YouTube Music, Queue, Home,
-// Library and Settings, each an icon over its name. What is open is marked with a pill
-// behind its icon. Wide windows get a compact, centered bar; phone-size ones a
-// full-width bar.
+// The floating bar at the bottom of the window: the panels in `panels`, then
+// Settings, each an icon over its name. What is open is marked with a pill behind
+// its icon. Wide windows get a compact, centered bar; phone-size ones a full-width
+// bar. Two panels or more share the width; with fewer, a toy seek bar fills it.
 Rectangle {
     id: root
+
+    property var panels: ["youtube", "queue", "home", "library"]
+    readonly property bool fidget: panels.length < 2
+    readonly property var panelInfo: ({
+        youtube: { icon: "cloud", label: qsTr("YouTube"), tip: qsTr("YouTube Music (Ctrl+2)") },
+        queue: { icon: "listMusic", label: qsTr("Queue"), tip: qsTr("Queue (Ctrl+1)") },
+        home: { icon: "home", label: qsTr("Home"), tip: qsTr("Home") },
+        library: { icon: "compactDisc", label: qsTr("Library"), tip: qsTr("Library (Ctrl+3)") }
+    })
 
     property bool homeOpen: false
     property bool queueOpen: false
@@ -32,40 +41,133 @@ Rectangle {
         anchors.rightMargin: Theme.spacing
         spacing: 0
 
-        NavButton {
-            iconName: "cloud"
-            label: qsTr("YouTube")
-            active: root.youtubeOpen
-            tip: qsTr("YouTube Music (Ctrl+2)")
-            onClicked: root.youtubeClicked()
+        Repeater {
+            model: root.panels
+
+            delegate: NavButton {
+                required property string modelData
+
+                iconName: root.panelInfo[modelData].icon
+                label: root.panelInfo[modelData].label
+                tip: root.panelInfo[modelData].tip
+                active: root[modelData + "Open"]
+                onClicked: root[modelData + "Clicked"]()
+            }
         }
-        NavButton {
-            iconName: "listMusic"
-            label: qsTr("Queue")
-            active: root.queueOpen
-            tip: qsTr("Queue (Ctrl+1)")
-            onClicked: root.queueClicked()
+
+        FidgetBar {
+            visible: root.fidget
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
-        NavButton {
-            iconName: "home"
-            label: qsTr("Home")
-            active: root.homeOpen
-            tip: qsTr("Home")
-            onClicked: root.homeClicked()
-        }
-        NavButton {
-            iconName: "compactDisc"
-            label: qsTr("Library")
-            active: root.libraryOpen
-            tip: qsTr("Library (Ctrl+3)")
-            onClicked: root.libraryClicked()
-        }
+
         NavButton {
             iconName: "settings"
             label: qsTr("Settings")
             active: root.settingsOpen
             tip: qsTr("Settings (Ctrl+,)")
             onClicked: root.settingsClicked()
+        }
+    }
+
+    // Looks like the seek bar but has nothing to do with the music: only there
+    // to be dragged around, filling the bar when it has one panel or none.
+    component FidgetBar: Item {
+        id: bar
+
+        readonly property real pad: 8
+        readonly property real wavelength: 24
+        readonly property bool dragging: touch.pressed
+        property real progress: 0.5
+        property real phase: 0
+        property real boost: dragging ? 5.5 : 0
+        readonly property real handleX: pad + progress * (width - 2 * pad)
+
+        function amplitudeAt(x) {
+            const d = (x - handleX) / 46
+            return boost * Math.exp(-d * d)
+        }
+        function waveY(x) {
+            return height / 2 + amplitudeAt(x) * Math.sin(2 * Math.PI * x / wavelength - phase)
+        }
+        function dragTo(x) {
+            progress = Math.max(0, Math.min(1, (x - pad) / Math.max(1, width - 2 * pad)))
+        }
+
+        onProgressChanged: wave.requestPaint()
+        onBoostChanged: wave.requestPaint()
+        onWidthChanged: wave.requestPaint()
+
+        Behavior on boost {
+            SpringAnimation {
+                id: spring
+                spring: 4
+                damping: 0.25
+                epsilon: 0.05
+            }
+        }
+
+        FrameAnimation {
+            running: bar.visible && (bar.dragging || spring.running)
+            onTriggered: {
+                bar.phase = (bar.phase + frameTime * 9) % (2 * Math.PI)
+                wave.requestPaint()
+            }
+        }
+
+        Canvas {
+            id: wave
+            anchors.fill: parent
+            antialiasing: true
+
+            function strokeWave(ctx, x0, x1) {
+                if (x1 <= x0)
+                    return
+                ctx.beginPath()
+                ctx.moveTo(x0, bar.waveY(x0))
+                for (let x = x0 + 2; x < x1; x += 2)
+                    ctx.lineTo(x, bar.waveY(x))
+                ctx.lineTo(x1, bar.waveY(x1))
+                ctx.stroke()
+            }
+
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                ctx.lineWidth = 3
+                ctx.lineCap = "round"
+                ctx.lineJoin = "round"
+
+                ctx.strokeStyle = Theme.textDim.toString()
+                ctx.globalAlpha = 0.55
+                strokeWave(ctx, bar.handleX, width - bar.pad)
+
+                ctx.globalAlpha = 1
+                ctx.strokeStyle = Theme.accent.toString()
+                strokeWave(ctx, bar.pad, bar.handleX)
+            }
+        }
+
+        Rectangle {
+            readonly property real size: bar.dragging ? 16 : 10
+
+            x: bar.handleX - width / 2
+            y: (bar.height - height) / 2
+            width: size
+            height: size
+            radius: width / 2
+            color: Theme.text
+
+            Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+            Behavior on height { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+        }
+
+        MouseArea {
+            id: touch
+            anchors.fill: parent
+            preventStealing: true
+            onPressed: (mouse) => bar.dragTo(mouse.x)
+            onPositionChanged: (mouse) => bar.dragTo(mouse.x)
         }
     }
 
@@ -78,7 +180,8 @@ Rectangle {
         property string tip
         property bool active: false
 
-        Layout.fillWidth: true
+        Layout.fillWidth: !root.fidget
+        Layout.preferredWidth: 72
         Layout.fillHeight: true
         hoverEnabled: true
         focusPolicy: Qt.NoFocus

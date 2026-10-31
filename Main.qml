@@ -32,10 +32,31 @@ ApplicationWindow {
     property string rightOpen: ""      // "youtube" / "library" / "settings", shown over a pinned one
     property bool playerRecalled: false // half: the player in place of two pinned panels
     property string lastOpened: ""     // the panel opened last pushes the player away from its side
-    readonly property string leftPinned: SettingsController.playlistPinned ? "queue"
-                                       : SettingsController.homePanelPinned ? "home" : ""
-    readonly property string rightPinned: SettingsController.youtubePanelPinned ? "youtube"
-                                        : SettingsController.libraryPanelPinned ? "library" : ""
+    // Phones: a panel turned off in Layout Customisation is gone, with every way to
+    // open it (only the panel: what it shows keeps working).
+    readonly property var hiddenPanels: Theme.touchOnly ? SettingsController.hiddenPanels : []
+    function panelHidden(name) {
+        return hiddenPanels.includes(name)
+    }
+    onHiddenPanelsChanged: {
+        if (panelHidden(leftOpen))
+            leftOpen = ""
+        if (panelHidden(rightOpen))
+            rightOpen = ""
+        if (panelHidden("queue"))
+            playlistDrawer.close()
+        if (panelHidden("youtube"))
+            youtubeDrawer.close()
+        if (panelHidden("library"))
+            libraryDrawer.close()
+        if (panelHidden("home"))
+            homeSheet.shown = false
+    }
+
+    readonly property string leftPinned: SettingsController.playlistPinned && !panelHidden("queue") ? "queue"
+                                       : SettingsController.homePanelPinned && !panelHidden("home") ? "home" : ""
+    readonly property string rightPinned: SettingsController.youtubePanelPinned && !panelHidden("youtube") ? "youtube"
+                                        : SettingsController.libraryPanelPinned && !panelHidden("library") ? "library" : ""
     // What the columns show
     readonly property string leftShown: compact ? "" : leftOpen !== "" ? leftOpen : leftPinned
     readonly property bool playlistDocked: leftShown === "queue"
@@ -52,6 +73,8 @@ ApplicationWindow {
         return name === "queue" || name === "home"
     }
     function openPanel(name) {
+        if (panelHidden(name))
+            return
         playerRecalled = false
         lastOpened = name
         if (isLeft(name)) {
@@ -108,6 +131,23 @@ ApplicationWindow {
     Component.onCompleted: {
         if (SettingsController.playlistPinned && SettingsController.homePanelPinned)
             SettingsController.homePanelPinned = false
+        Qt.callLater(openStartPanel) // (once the window has its size)
+    }
+    // What Layout Customisation says to open at start (the player needs nothing).
+    function openStartPanel() {
+        const name = SettingsController.startPanel
+        if (name === "player" || panelHidden(name))
+            return
+        if (!compact)
+            openPanel(name)
+        else if (name === "queue")
+            toggleQueue()
+        else if (name === "youtube")
+            toggleYoutube()
+        else if (name === "library")
+            toggleLibrary()
+        else if (name === "home")
+            toggleHome()
     }
 
     // Panels opened in one layout stay open in the next.
@@ -208,18 +248,24 @@ ApplicationWindow {
         }
     }
     function toggleQueue() {
+        if (panelHidden("queue"))
+            return
         if (compact)
             toggleDrawer(playlistDrawer)
         else
             playlistDocked ? closePanel("queue") : openPanel("queue")
     }
     function toggleYoutube() {
+        if (panelHidden("youtube"))
+            return
         if (compact)
             toggleDrawer(youtubeDrawer)
         else
             youtubeDocked ? closePanel("youtube") : openPanel("youtube")
     }
     function toggleLibrary() {
+        if (panelHidden("library"))
+            return
         if (compact)
             toggleDrawer(libraryDrawer)
         else
@@ -245,6 +291,8 @@ ApplicationWindow {
         settingsShown ? closeSettings() : openSettings()
     }
     function toggleHome() {
+        if (panelHidden("home"))
+            return
         if (compact) {
             const show = !homeSheet.shown
             closeDrawers()
@@ -263,6 +311,8 @@ ApplicationWindow {
         } else if (libraryDrawer.visible) {
             drawerLibrary.focusSearch()
             searchOnOpen = !libraryDrawer.opened
+        } else if (panelHidden("youtube")) {
+            return
         } else if (youtubeDocked) {
             dockedYoutube.focusSearch()
         } else if (!compact) {
@@ -586,13 +636,19 @@ ApplicationWindow {
         anchors.left: parent.left
         enabled: window.layout === "half" && window.leftShown === ""
         inward: 1
-        onTriggered: window.openPanel(playlistSlot.leftPanel)
+        onTriggered: {
+            const other = playlistSlot.leftPanel === "queue" ? "home" : "queue"
+            window.openPanel(window.panelHidden(playlistSlot.leftPanel) ? other : playlistSlot.leftPanel)
+        }
     }
     EdgeSwipe {
         anchors.right: parent.right
         enabled: window.layout === "half" && window.rightShown === ""
         inward: -1
-        onTriggered: window.openPanel(rightSlot.rightPanel)
+        onTriggered: {
+            const other = rightSlot.rightPanel === "youtube" ? "library" : "youtube"
+            window.openPanel(window.panelHidden(rightSlot.rightPanel) ? other : rightSlot.rightPanel)
+        }
     }
 
     // Whenever the player is out of sight (pushed out in the half layout, or
@@ -642,6 +698,7 @@ ApplicationWindow {
         width: window.compact ? room : Math.min(room, 560)
         height: implicitHeight
         z: 5
+        panels: SettingsController.panelOrder.filter((panel) => !window.panelHidden(panel))
         homeOpen: window.homeDocked || window.homeSheetOpen
         queueOpen: window.playlistDocked || window.queueDrawerOpen
         youtubeOpen: window.youtubeDocked || window.youtubeDrawerOpen
@@ -680,7 +737,7 @@ ApplicationWindow {
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact
+        interactive: window.compact && !window.panelHidden("queue")
         clip: true // pulled down, the card goes under the mini player
         onAboutToShow: playlistPull.reset()
         background: Item {}
@@ -728,7 +785,7 @@ ApplicationWindow {
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact && !drawerYoutube.swipeBlocked
+        interactive: window.compact && !drawerYoutube.swipeBlocked && !window.panelHidden("youtube")
         clip: true // pulled down, the card goes under the mini player
         onAboutToShow: youtubePull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
@@ -778,7 +835,7 @@ ApplicationWindow {
         modal: false
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
-        interactive: window.compact
+        interactive: window.compact && !window.panelHidden("library")
         clip: true // pulled down, the card goes under the mini player
         onAboutToShow: libraryPull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
@@ -1007,6 +1064,8 @@ ApplicationWindow {
     }
 
     function showPlaylistPanel() {
+        if (panelHidden("queue"))
+            return
         if (!compact) {
             if (!playlistDocked)
                 openPanel("queue")

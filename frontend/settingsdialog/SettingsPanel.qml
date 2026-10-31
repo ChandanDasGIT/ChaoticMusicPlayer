@@ -30,16 +30,26 @@ Rectangle {
         { name: qsTr("Lyrics"), icon: "lyrics", hue: 0.13, summary: qsTr("Sources, synced lyrics, script") },
         { name: qsTr("YouTube Music"), icon: "cloud", hue: 0.0, summary: qsTr("Account, autoplay, audio quality") },
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
-        { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") }
+        { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
+        { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
+          summary: Qt.platform.os === "android" ? qsTr("Bottom bar, what opens on start") : qsTr("What opens on start") }
     ]
     // Android has no keyboard to speak of: no Keyboard shortcuts page there
     readonly property bool android: Qt.platform.os === "android"
     readonly property int shortcutsPage: 8
     // The categories in groups, like a phone's settings
-    readonly property var groups: [[0, 1, 2], [3, 5, 6], [4, 7], android ? [9] : [8, 9]]
+    readonly property var groups: [[0, 1, 2, 10], [3, 5, 6], [4, 7], android ? [9] : [8, 9]]
 
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
+
+    // Layout Customisation
+    readonly property var panelNames: ({ youtube: qsTr("YouTube"), queue: qsTr("Queue"), home: qsTr("Home"),
+                                         library: qsTr("Library"), player: qsTr("Player") })
+    readonly property var startChoices: ["player"].concat(SettingsController.panelOrder.filter(
+        (panel) => !android || !SettingsController.hiddenPanels.includes(panel)))
+    readonly property string startShown: startChoices.includes(SettingsController.startPanel)
+                                         ? SettingsController.startPanel : "player"
 
     // Shown: the category groups rise in, one after another.
     function intro() {
@@ -1369,6 +1379,108 @@ Rectangle {
                                         ToolTip.visible: hovered
                                         ToolTip.text: qsTr("Open the folder")
                                         onClicked: Qt.openUrlExternally(dataRow.folder)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ------------------------------------------------------------ Layout Customisation
+                    SettingsPage {
+                        title: qsTr("Layout Customisation")
+
+                        SettingsCard {
+                            readonly property bool hiddenHere: !root.android
+                            visible: !hiddenHere // (phones only)
+                            title: qsTr("Bottom bar")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Panels")
+                                description: qsTr("Choose which panels you can open and their order. A panel turned off can't be opened; your music and its settings stay. Settings is always there.")
+                            }
+
+                            Repeater {
+                                model: SettingsController.panelOrder
+
+                                delegate: Rectangle {
+                                    id: panelRow
+
+                                    required property string modelData
+                                    required property int index
+                                    readonly property bool shownInBar: !SettingsController.hiddenPanels.includes(modelData)
+
+                                    Layout.fillWidth: true
+                                    implicitHeight: 44
+                                    radius: Theme.radius
+                                    color: Theme.fillSoft
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: Theme.padding
+                                        anchors.rightMargin: Theme.spacing
+                                        spacing: Theme.spacing
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: root.panelNames[panelRow.modelData]
+                                            color: panelRow.shownInBar ? Theme.text : Theme.textMuted
+                                            font.pixelSize: Theme.fontSize
+                                            elide: Text.ElideRight
+                                        }
+
+                                        PillButton {
+                                            iconName: "arrowUp"
+                                            iconSize: 11
+                                            implicitWidth: 32
+                                            implicitHeight: 28
+                                            transparentIdle: true
+                                            enabled: panelRow.index > 0
+                                            onClicked: SettingsController.movePanel(panelRow.index, -1)
+                                        }
+
+                                        PillButton {
+                                            iconName: "arrowDown"
+                                            iconSize: 11
+                                            implicitWidth: 32
+                                            implicitHeight: 28
+                                            transparentIdle: true
+                                            enabled: panelRow.index < SettingsController.panelOrder.length - 1
+                                            onClicked: SettingsController.movePanel(panelRow.index, 1)
+                                        }
+
+                                        SettingsSwitch {
+                                            checked: panelRow.shownInBar
+                                            onToggled: SettingsController.setPanelHidden(panelRow.modelData, !checked)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
+                            title: qsTr("Startup")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Open on start")
+                                description: qsTr("What you see when the app opens.")
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: root.startChoices
+
+                                    delegate: PillButton {
+                                        required property string modelData
+
+                                        text: root.panelNames[modelData]
+                                        implicitHeight: 32
+                                        active: root.startShown === modelData
+                                        onClicked: SettingsController.startPanel = modelData
                                     }
                                 }
                             }
