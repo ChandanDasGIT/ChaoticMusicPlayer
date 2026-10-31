@@ -79,6 +79,12 @@ class SettingsController : public QObject
     // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
     // "modifiedOld", "artist" or "album"
     Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
+    // Albums: "name", "nameDesc", "newest", "oldest", "modifiedNew", "modifiedOld", "artist" or "mostSongs"
+    Q_PROPERTY(QString albumSort READ albumSort WRITE setAlbumSort NOTIFY librarySortChanged)
+    // Artists: "name", "nameDesc", "mostSongs" or "fewestSongs"
+    Q_PROPERTY(QString artistSort READ artistSort WRITE setArtistSort NOTIFY librarySortChanged)
+    // Folders: "name", "nameDesc", "mostSongs", "fewestSongs", "modifiedNew" or "modifiedOld"
+    Q_PROPERTY(QString folderSort READ folderSort WRITE setFolderSort NOTIFY librarySortChanged)
     // Appearance: 0 = plain dark theme, 1 = full cover color
     Q_PROPERTY(qreal coverTintStrength READ coverTintStrength WRITE setCoverTintStrength NOTIFY coverTintStrengthChanged)
     // Interface size (1 = 100%), applied at the next start; activeInterfaceScale: this run's
@@ -185,6 +191,12 @@ public:
     QStringList libraryExcluded() const;
     QString librarySort() const;
     void setLibrarySort(const QString &sort);
+    QString albumSort() const;
+    void setAlbumSort(const QString &sort);
+    QString artistSort() const;
+    void setArtistSort(const QString &sort);
+    QString folderSort() const;
+    void setFolderSort(const QString &sort);
     // Local paths or file:// URLs; return false if it was already there.
     Q_INVOKABLE bool addLibraryFolder(const QString &folder);
     Q_INVOKABLE void removeLibraryFolder(const QString &folder);
@@ -258,6 +270,8 @@ private:
     void setWidth(const char *key, int width, int min, int max);
     QStringList pathList(const char *key) const;
     void setPathList(const char *key, const QStringList &paths);
+    QString sortValue(const char *key, const QStringList &allowed) const; // (the first one is the default)
+    void setSortValue(const char *key, const QStringList &allowed, const QString &sort);
     void scheduleSave();
 
     struct LyricsSource

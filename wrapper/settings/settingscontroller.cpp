@@ -36,6 +36,9 @@ constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
 constexpr const char *LibrarySortKey = "library.sort";
+constexpr const char *AlbumSortKey = "library.sort.albums";
+constexpr const char *ArtistSortKey = "library.sort.artists";
+constexpr const char *FolderSortKey = "library.sort.folders";
 constexpr const char *ResumeKey = "playback.resume";
 constexpr const char *SessionPathKey = "session.path";
 constexpr const char *SessionPositionKey = "session.positionMs";
@@ -414,27 +417,54 @@ namespace {
 
 QStringList librarySorts()
 {
-    return {QStringLiteral("title"),       QStringLiteral("titleDesc"),   QStringLiteral("newest"),
-            QStringLiteral("oldest"),      QStringLiteral("modifiedNew"), QStringLiteral("modifiedOld"),
-            QStringLiteral("artist"),      QStringLiteral("album")};
+    return {QStringLiteral("title"),  QStringLiteral("titleDesc"),   QStringLiteral("newest"),
+            QStringLiteral("oldest"), QStringLiteral("modifiedNew"), QStringLiteral("modifiedOld"),
+            QStringLiteral("artist"), QStringLiteral("album")};
+}
+
+QStringList albumSorts()
+{
+    return {QStringLiteral("name"),   QStringLiteral("nameDesc"),    QStringLiteral("newest"),
+            QStringLiteral("oldest"), QStringLiteral("modifiedNew"), QStringLiteral("modifiedOld"),
+            QStringLiteral("artist"), QStringLiteral("mostSongs")};
+}
+
+QStringList artistSorts()
+{
+    return {QStringLiteral("name"), QStringLiteral("nameDesc"), QStringLiteral("mostSongs"),
+            QStringLiteral("fewestSongs")};
+}
+
+QStringList folderSorts()
+{
+    return artistSorts() + QStringList{QStringLiteral("modifiedNew"), QStringLiteral("modifiedOld")};
 }
 
 } // namespace
 
-QString SettingsController::librarySort() const
+QString SettingsController::sortValue(const char *key, const QStringList &allowed) const
 {
-    const QString sort = QString::fromStdString(m_settings->value(LibrarySortKey));
-    return librarySorts().contains(sort) ? sort : QStringLiteral("title");
+    const QString sort = QString::fromStdString(m_settings->value(key));
+    return allowed.contains(sort) ? sort : allowed.first();
 }
 
-void SettingsController::setLibrarySort(const QString &sort)
+void SettingsController::setSortValue(const char *key, const QStringList &allowed, const QString &sort)
 {
-    if (sort == librarySort() || !librarySorts().contains(sort))
+    if (sort == sortValue(key, allowed) || !allowed.contains(sort))
         return;
-    m_settings->setValue(LibrarySortKey, sort.toStdString());
+    m_settings->setValue(key, sort.toStdString());
     scheduleSave();
     emit librarySortChanged();
 }
+
+QString SettingsController::librarySort() const { return sortValue(LibrarySortKey, librarySorts()); }
+void SettingsController::setLibrarySort(const QString &sort) { setSortValue(LibrarySortKey, librarySorts(), sort); }
+QString SettingsController::albumSort() const { return sortValue(AlbumSortKey, albumSorts()); }
+void SettingsController::setAlbumSort(const QString &sort) { setSortValue(AlbumSortKey, albumSorts(), sort); }
+QString SettingsController::artistSort() const { return sortValue(ArtistSortKey, artistSorts()); }
+void SettingsController::setArtistSort(const QString &sort) { setSortValue(ArtistSortKey, artistSorts(), sort); }
+QString SettingsController::folderSort() const { return sortValue(FolderSortKey, folderSorts()); }
+void SettingsController::setFolderSort(const QString &sort) { setSortValue(FolderSortKey, folderSorts(), sort); }
 
 QString SettingsController::outputDevice() const
 {

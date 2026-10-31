@@ -118,6 +118,55 @@ void sortSongs(std::vector<Track> &tracks, const QString &sort)
     }
 }
 
+// Numbers from an album / artist / folder entry. Ties keep their order.
+void sortByNumber(QVariantList &list, const QString &field, bool descending)
+{
+    std::stable_sort(list.begin(), list.end(), [&](const QVariant &a, const QVariant &b) {
+        const qint64 x = a.toMap().value(field).toLongLong(), y = b.toMap().value(field).toLongLong();
+        return descending ? x > y : x < y;
+    });
+}
+
+// Albums, artists and folders; `list` comes sorted by name.
+void sortEntries(QVariantList &list, const QString &sort)
+{
+    if (sort == QLatin1String("nameDesc"))
+        std::reverse(list.begin(), list.end());
+    else if (sort == QLatin1String("newest"))
+        sortByNumber(list, QStringLiteral("addedAt"), true);
+    else if (sort == QLatin1String("oldest"))
+        sortByNumber(list, QStringLiteral("addedAt"), false);
+    else if (sort == QLatin1String("modifiedNew"))
+        sortByNumber(list, QStringLiteral("modifiedAt"), true);
+    else if (sort == QLatin1String("modifiedOld"))
+        sortByNumber(list, QStringLiteral("modifiedAt"), false);
+    else if (sort == QLatin1String("mostSongs"))
+        sortByNumber(list, QStringLiteral("count"), true);
+    else if (sort == QLatin1String("fewestSongs"))
+        sortByNumber(list, QStringLiteral("count"), false);
+    else if (sort == QLatin1String("artist"))
+        std::stable_sort(list.begin(), list.end(), [](const QVariant &a, const QVariant &b) {
+            const QString field = QStringLiteral("artist");
+            return a.toMap().value(field).toString().compare(b.toMap().value(field).toString(), Qt::CaseInsensitive) < 0;
+        });
+}
+
+QStringList searchWords(const QString &search)
+{
+    return search.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+}
+
+bool matches(const QStringList &words, const QString &text)
+{
+    return std::all_of(words.begin(), words.end(),
+                       [&](const QString &w) { return text.contains(w, Qt::CaseInsensitive); });
+}
+
+bool songMatches(const QStringList &words, const Track &t)
+{
+    return words.isEmpty() || matches(words, QString::fromStdString(t.title + ' ' + t.artist + ' ' + t.album));
+}
+
 // "1 song" / "9 songs"
 QString songsText(int count)
 {
@@ -283,6 +332,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
         QString coverPath;
         int count = 0;
         int64_t addedAt = 0; // its newest song's
+        int64_t modifiedAt = 0; // same
     };
     std::map<std::string, Album> albums; // by key
     for (const Track &t : m_tracks) {
@@ -297,6 +347,7 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
             album.coverPath = QString::fromStdString(t.path);
         ++album.count;
         album.addedAt = std::max(album.addedAt, t.addedAt);
+        album.modifiedAt = std::max(album.modifiedAt, t.modifiedAt);
     }
     std::vector<std::pair<std::string, Album>> sortedAlbums(albums.begin(), albums.end());
     std::sort(sortedAlbums.begin(), sortedAlbums.end(), [](const auto &a, const auto &b) {
@@ -312,7 +363,8 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
                                     {QStringLiteral("artist"), artist},
                                     {QStringLiteral("coverPath"), album.coverPath},
                                     {QStringLiteral("count"), album.count},
-                                    {QStringLiteral("addedAt"), qint64(album.addedAt)}});
+                                    {QStringLiteral("addedAt"), qint64(album.addedAt)},
+                                    {QStringLiteral("modifiedAt"), qint64(album.modifiedAt)}});
     }
     // Recently added: the same albums, newest first
     constexpr int RecentlyAddedCount = 12;
@@ -339,7 +391,6 @@ void LocalLibraryController::setTracks(std::vector<Track> tracks)
     emit contentsChanged();
     applySearch();
     rebuildDetail();
-    rebuildFolder();
 }
 
 void LocalLibraryController::setSearch(const QString &search)
@@ -353,16 +404,33 @@ void LocalLibraryController::setSearch(const QString &search)
 
 void LocalLibraryController::applySearch()
 {
-    const QStringList words = m_search.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    const QStringList words = searchWords(m_search);
     std::vector<Track> found;
     for (const Track &t : m_tracks) {
-        const QString text = QString::fromStdString(t.title + ' ' + t.artist + ' ' + t.album);
-        if (std::all_of(words.begin(), words.end(),
-                        [&](const QString &w) { return text.contains(w, Qt::CaseInsensitive); }))
+        if (songMatches(words, t))
             found.push_back(t);
     }
     sortSongs(found, m_settings->librarySort());
     m_songs->setTracks(std::move(found));
+
+    m_shownAlbums.clear();
+    for (const QVariant &entry : m_albums) {
+        const QVariantMap album = entry.toMap();
+        if (matches(words, album.value(QStringLiteral("album")).toString() + QLatin1Char(' ')
+                               + album.value(QStringLiteral("artist")).toString()))
+            m_shownAlbums.append(entry);
+    }
+    sortEntries(m_shownAlbums, m_settings->albumSort());
+
+    m_shownArtists.clear();
+    for (const QVariant &entry : m_artists) {
+        if (matches(words, entry.toMap().value(QStringLiteral("name")).toString()))
+            m_shownArtists.append(entry);
+    }
+    sortEntries(m_shownArtists, m_settings->artistSort());
+    emit shownChanged();
+
+    rebuildFolder();
 }
 
 void LocalLibraryController::showAlbum(const QString &key)
@@ -530,7 +598,14 @@ QVariantList LocalLibraryController::folderCrumbs() const
 void LocalLibraryController::openFolder(const QString &path)
 {
     m_folder = path.isEmpty() ? QString() : cleanFolder(path);
-    rebuildFolder();
+    if (m_search.isEmpty()) {
+        rebuildFolder();
+        return;
+    }
+    // A search only looks inside one folder: it shouldn't hide what the next one holds.
+    m_search.clear();
+    emit searchChanged();
+    applySearch();
 }
 
 void LocalLibraryController::folderUp()
@@ -566,21 +641,41 @@ std::vector<Track> LocalLibraryController::folderTracks(const QString &folder, b
 
 // What the open folder holds: its subfolders (with how many songs are in each,
 // subfolders included) and its own songs. At the top, the music folders.
+// Search and sort apply here too.
 void LocalLibraryController::rebuildFolder()
 {
+    const QStringList words = searchWords(m_search);
+    const QString sort = m_settings->folderSort();
+    const auto arrangeFolders = [&] {
+        QVariantList shown;
+        for (const QVariant &entry : std::as_const(m_subfolders)) {
+            if (matches(words, entry.toMap().value(QStringLiteral("name")).toString()))
+                shown.append(entry);
+        }
+        sortEntries(shown, sort);
+        m_subfolders = std::move(shown);
+    };
+
     m_subfolders.clear();
     if (m_folder.isEmpty()) {
         for (const QString &folder : m_settings->libraryFolders()) {
             const QString clean = cleanFolder(folder);
             const std::string prefix = (clean + QLatin1Char('/')).toStdString();
-            const int count = int(std::count_if(m_tracks.begin(), m_tracks.end(), [&](const Track &t) {
-                return t.path.compare(0, prefix.size(), prefix) == 0;
-            }));
+            int count = 0;
+            int64_t modifiedAt = 0;
+            for (const Track &t : m_tracks) {
+                if (t.path.compare(0, prefix.size(), prefix) == 0) {
+                    ++count;
+                    modifiedAt = std::max(modifiedAt, t.modifiedAt);
+                }
+            }
             m_subfolders.append(QVariantMap{{QStringLiteral("name"), QFileInfo(clean).fileName()},
                                             {QStringLiteral("path"), clean},
                                             {QStringLiteral("count"), count},
+                                            {QStringLiteral("modifiedAt"), qint64(modifiedAt)},
                                             {QStringLiteral("location"), QFileInfo(clean).path()}});
         }
+        arrangeFolders();
         m_folderSongs->setTracks({});
         emit folderChanged();
         return;
@@ -588,12 +683,16 @@ void LocalLibraryController::rebuildFolder()
 
     const std::string prefix = (m_folder + QLatin1Char('/')).toStdString();
     std::map<QString, int> counts; // subfolder name -> songs in it
+    std::map<QString, int64_t> modified; // subfolder name -> its newest song's
     for (const Track &t : m_tracks) {
         if (t.path.compare(0, prefix.size(), prefix) != 0)
             continue;
         const size_t slash = t.path.find('/', prefix.size());
-        if (slash != std::string::npos)
-            ++counts[QString::fromStdString(t.path.substr(prefix.size(), slash - prefix.size()))];
+        if (slash != std::string::npos) {
+            const QString name = QString::fromStdString(t.path.substr(prefix.size(), slash - prefix.size()));
+            ++counts[name];
+            modified[name] = std::max(modified[name], t.modifiedAt);
+        }
     }
     QStringList names;
     for (const auto &entry : counts)
@@ -602,8 +701,22 @@ void LocalLibraryController::rebuildFolder()
     for (const QString &name : names)
         m_subfolders.append(QVariantMap{{QStringLiteral("name"), name},
                                         {QStringLiteral("path"), m_folder + QLatin1Char('/') + name},
-                                        {QStringLiteral("count"), counts[name]}});
-    m_folderSongs->setTracks(folderTracks(m_folder, false));
+                                        {QStringLiteral("count"), counts[name]},
+                                        {QStringLiteral("modifiedAt"), qint64(modified[name])}});
+    arrangeFolders();
+
+    std::vector<Track> songs = folderTracks(m_folder, false);
+    songs.erase(std::remove_if(songs.begin(), songs.end(), [&](const Track &t) { return !songMatches(words, t); }),
+                songs.end());
+    if (sort == QLatin1String("nameDesc")) {
+        std::reverse(songs.begin(), songs.end());
+    } else if (sort == QLatin1String("modifiedNew") || sort == QLatin1String("modifiedOld")) {
+        const bool newest = sort == QLatin1String("modifiedNew");
+        std::stable_sort(songs.begin(), songs.end(), [newest](const Track &a, const Track &b) {
+            return newest ? a.modifiedAt > b.modifiedAt : a.modifiedAt < b.modifiedAt;
+        });
+    }
+    m_folderSongs->setTracks(std::move(songs));
     emit folderChanged();
 }
 

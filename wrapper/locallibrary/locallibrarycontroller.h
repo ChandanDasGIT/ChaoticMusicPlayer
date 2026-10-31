@@ -38,8 +38,9 @@ class LocalLibraryController : public QObject
     Q_PROPERTY(LibrarySongsModel *detailSongs READ detailSongs CONSTANT)  // the opened album / artist
     Q_PROPERTY(QString search READ search WRITE setSearch NOTIFY searchChanged)
     Q_PROPERTY(int songCount READ songCount NOTIFY contentsChanged)       // whole library
-    Q_PROPERTY(QVariantList albums READ albums NOTIFY contentsChanged)    // [{ key, album, artist, coverPath, count }]
-    Q_PROPERTY(QVariantList artists READ artists NOTIFY contentsChanged)  // [{ name, count }]
+    // Albums / Artists tabs (search and sort applied)
+    Q_PROPERTY(QVariantList albums READ albums NOTIFY shownChanged)       // [{ key, album, artist, coverPath, count }]
+    Q_PROPERTY(QVariantList artists READ artists NOTIFY shownChanged)     // [{ name, count }]
     // Albums by when their newest song was added, newest first (as albums, + addedAt)
     Q_PROPERTY(QVariantList recentlyAdded READ recentlyAdded NOTIFY contentsChanged)
     Q_PROPERTY(bool loaded READ loaded NOTIFY contentsChanged)            // index read (startup)
@@ -71,8 +72,8 @@ public:
     QString search() const { return m_search; }
     void setSearch(const QString &search);
     int songCount() const { return int(m_tracks.size()); }
-    QVariantList albums() const { return m_albums; }
-    QVariantList artists() const { return m_artists; }
+    QVariantList albums() const { return m_shownAlbums; }
+    QVariantList artists() const { return m_shownArtists; }
     QVariantList recentlyAdded() const { return m_recentlyAdded; }
     bool loaded() const { return m_loaded; }
     bool scanning() const { return m_scanning; }
@@ -128,6 +129,7 @@ public:
 signals:
     void searchChanged();
     void contentsChanged();
+    void shownChanged();
     void scanChanged();
     void detailChanged();
     void folderChanged();
@@ -162,8 +164,10 @@ private:
     QString m_folder;
     QVariantList m_subfolders;
     QString m_search;
-    QVariantList m_albums;
-    QVariantList m_artists;
+    QVariantList m_albums;  // the whole library, by name
+    QVariantList m_artists; // same
+    QVariantList m_shownAlbums;
+    QVariantList m_shownArtists;
     QVariantList m_recentlyAdded;
     bool m_loaded = false;
     bool m_scanning = false;

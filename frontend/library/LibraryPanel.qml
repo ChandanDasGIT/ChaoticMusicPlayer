@@ -39,9 +39,9 @@ Rectangle {
             return false
         return true
     }
-    // Ctrl+F: the Songs tab's search, ready to type.
+    // Ctrl+F: the search of the open tab, ready to type.
     function focusSearch() {
-        tab = 0
+        LocalLibraryController.closeDetail()
         searchField.forceActiveFocus()
         searchField.selectAll()
     }
@@ -52,8 +52,11 @@ Rectangle {
         id: addAllMenu
     }
 
+    // Which setting the sort button changes: each tab remembers its own.
+    readonly property string sortSetting: ["librarySort", "albumSort", "artistSort", "folderSort"][tab]
+
     ThemedMenu {
-        id: sortMenu
+        id: songSortMenu
 
         SortAction { sort: "title"; text: qsTr("Title A–Z") }
         SortAction { sort: "titleDesc"; text: qsTr("Title Z–A") }
@@ -63,6 +66,39 @@ Rectangle {
         SortAction { sort: "modifiedOld"; text: qsTr("Last-modified date") }
         SortAction { sort: "artist"; text: qsTr("Artist") }
         SortAction { sort: "album"; text: qsTr("Album") }
+    }
+
+    ThemedMenu {
+        id: albumSortMenu
+
+        SortAction { setting: "albumSort"; sort: "name"; text: qsTr("Name A–Z") }
+        SortAction { setting: "albumSort"; sort: "nameDesc"; text: qsTr("Name Z–A") }
+        SortAction { setting: "albumSort"; sort: "newest"; text: qsTr("Newest added") }
+        SortAction { setting: "albumSort"; sort: "oldest"; text: qsTr("Oldest added") }
+        SortAction { setting: "albumSort"; sort: "modifiedNew"; text: qsTr("Newly-modified date") }
+        SortAction { setting: "albumSort"; sort: "modifiedOld"; text: qsTr("Last-modified date") }
+        SortAction { setting: "albumSort"; sort: "artist"; text: qsTr("Artist") }
+        SortAction { setting: "albumSort"; sort: "mostSongs"; text: qsTr("Most songs") }
+    }
+
+    ThemedMenu {
+        id: artistSortMenu
+
+        SortAction { setting: "artistSort"; sort: "name"; text: qsTr("Name A–Z") }
+        SortAction { setting: "artistSort"; sort: "nameDesc"; text: qsTr("Name Z–A") }
+        SortAction { setting: "artistSort"; sort: "mostSongs"; text: qsTr("Most songs") }
+        SortAction { setting: "artistSort"; sort: "fewestSongs"; text: qsTr("Fewest songs") }
+    }
+
+    ThemedMenu {
+        id: folderSortMenu
+
+        SortAction { setting: "folderSort"; sort: "name"; text: qsTr("Name A–Z") }
+        SortAction { setting: "folderSort"; sort: "nameDesc"; text: qsTr("Name Z–A") }
+        SortAction { setting: "folderSort"; sort: "mostSongs"; text: qsTr("Most songs") }
+        SortAction { setting: "folderSort"; sort: "fewestSongs"; text: qsTr("Fewest songs") }
+        SortAction { setting: "folderSort"; sort: "modifiedNew"; text: qsTr("Newly-modified date") }
+        SortAction { setting: "folderSort"; sort: "modifiedOld"; text: qsTr("Last-modified date") }
     }
     radius: Theme.radiusCard
     border.color: Theme.border
@@ -202,6 +238,76 @@ Rectangle {
             font.pixelSize: Theme.fontSizeSmall
         }
 
+        // Search and sort, for whichever tab is open
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.padding
+            Layout.rightMargin: Theme.padding
+            Layout.topMargin: 4
+            Layout.bottomMargin: Theme.spacing
+            visible: LocalLibraryController.songCount > 0 && !root.inDetail
+            spacing: Theme.spacing
+
+            TextField {
+                id: searchField
+                Layout.fillWidth: true
+                implicitHeight: 40
+                leftPadding: 40
+                rightPadding: LocalLibraryController.search !== "" ? 40 : 16
+                placeholderText: [qsTr("Search your library"), qsTr("Search albums"), qsTr("Search artists"),
+                                  qsTr("Search this folder")][root.tab]
+                placeholderTextColor: Theme.textMuted
+                color: Theme.text
+                font.pixelSize: Theme.fontSize
+                selectByMouse: true
+                text: LocalLibraryController.search
+                onTextEdited: LocalLibraryController.search = text
+
+                background: Rectangle {
+                    radius: height / 2
+                    color: searchField.activeFocus ? Theme.fillStrong : Theme.fill
+                    border.width: searchField.activeFocus ? 1 : 0
+                    border.color: Theme.accent
+
+                    Behavior on color { ColorAnimation { duration: Theme.animFast } }
+                }
+
+                Icon {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 15
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "search"
+                    size: 12
+                    color: Theme.textMuted
+                }
+
+                ControlButton {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: LocalLibraryController.search !== ""
+                    iconName: "close"
+                    iconSize: 12
+                    iconColor: Theme.textMuted
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Clear")
+                    onClicked: LocalLibraryController.search = ""
+                }
+            }
+
+            ControlButton {
+                id: sortButton
+                iconName: "sortList"
+                iconSize: 14
+                active: SettingsController[root.sortSetting] !== (root.tab === 0 ? "title" : "name")
+                iconColor: active ? Theme.accent : Theme.textMuted
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Sort")
+                onClicked: [songSortMenu, albumSortMenu, artistSortMenu, folderSortMenu][root.tab]
+                           .popup(sortButton, 0, sortButton.height)
+            }
+        }
+
         // Pages: the new one slides in from its side, the old one out the other way.
         Item {
             id: pages
@@ -217,59 +323,6 @@ Rectangle {
                 visible: opacity > 0
                 transform: PageShift { page: 0 }
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Theme.padding
-                    Layout.rightMargin: Theme.padding
-                    Layout.topMargin: 4
-                    visible: LocalLibraryController.songCount > 0
-                    spacing: Theme.spacing
-
-                    TextField {
-                        id: searchField
-                        Layout.fillWidth: true
-                        implicitHeight: 40
-                        leftPadding: 40
-                        rightPadding: 16
-                        placeholderText: qsTr("Search your library")
-                        placeholderTextColor: Theme.textMuted
-                        color: Theme.text
-                        font.pixelSize: Theme.fontSize
-                        selectByMouse: true
-                        text: LocalLibraryController.search
-                        onTextEdited: LocalLibraryController.search = text
-
-                        background: Rectangle {
-                            radius: height / 2
-                            color: searchField.activeFocus ? Theme.fillStrong : Theme.fill
-                            border.width: searchField.activeFocus ? 1 : 0
-                            border.color: Theme.accent
-
-                            Behavior on color { ColorAnimation { duration: Theme.animFast } }
-                        }
-
-                        Icon {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 15
-                            anchors.verticalCenter: parent.verticalCenter
-                            name: "search"
-                            size: 12
-                            color: Theme.textMuted
-                        }
-                    }
-
-                    ControlButton {
-                        id: sortButton
-                        iconName: "sortList"
-                        iconSize: 14
-                        active: SettingsController.librarySort !== "title"
-                        iconColor: active ? Theme.accent : Theme.textMuted
-                        ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Sort songs")
-                        onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
-                    }
-                }
 
                 SongList {
                     Layout.fillWidth: true
@@ -719,6 +772,7 @@ Rectangle {
                         anchors.centerIn: parent
                         width: parent.width - 4 * Theme.padding
                         visible: folderView.count === 0 && LocalLibraryController.subfolders.length === 0
+                                 && LocalLibraryController.search === ""
                         text: qsTr("No songs in this folder.")
                         color: Theme.textMuted
                         font.pixelSize: Theme.fontSize
@@ -783,6 +837,21 @@ Rectangle {
                 }
             }
 
+            // A search that found nothing
+            Label {
+                anchors.centerIn: parent
+                width: parent.width - 4 * Theme.padding
+                visible: LocalLibraryController.search !== "" && !root.inDetail
+                         && [LocalLibraryController.songs.count, LocalLibraryController.albums.length,
+                             LocalLibraryController.artists.length,
+                             LocalLibraryController.subfolders.length + LocalLibraryController.folderSongs.count][root.tab] === 0
+                text: qsTr("Nothing matches your search.")
+                color: Theme.textMuted
+                font.pixelSize: Theme.fontSize
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+            }
+
             // Folders added, nothing found (yet)
             Label {
                 anchors.centerIn: parent
@@ -800,12 +869,13 @@ Rectangle {
     }
 
     // A list of library songs.
-    // One way to sort the Songs tab; a check marks the one in use.
+    // One way to sort a tab; a check marks the one in use.
     component SortAction: Action {
+        property string setting: "librarySort"
         property string sort
 
-        icon.name: SettingsController.librarySort === sort ? "check" : ""
-        onTriggered: SettingsController.librarySort = sort
+        icon.name: SettingsController[setting] === sort ? "check" : ""
+        onTriggered: SettingsController[setting] = sort
     }
 
     component SongList: ListView {
