@@ -675,20 +675,28 @@ ApplicationWindow {
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact
+        clip: true // pulled down, the card goes under the mini player
+        onAboutToShow: playlistPull.reset()
         background: Item {}
 
         DrawerCard {
             drawer: playlistDrawer
+            pull: playlistPull.pull
             transformOrigin: Item.Left
 
-            PlaylistPanel {
-                id: drawerPlaylist
-                anchors.fill: parent
-                showCloseButton: true
-                onCloseRequested: playlistDrawer.close()
-                onDetailsRequested: (path) => detailsDialog.show(path)
-                onImportM3uRequested: window.importM3u()
-                onExportM3uRequested: (id, name) => window.exportM3u(id, name)
+            PullToClose {
+                id: playlistPull
+                onPulledDown: playlistDrawer.close()
+
+                PlaylistPanel {
+                    id: drawerPlaylist
+                    anchors.fill: parent
+                    showCloseButton: true
+                    onCloseRequested: playlistDrawer.close()
+                    onDetailsRequested: (path) => detailsDialog.show(path)
+                    onImportM3uRequested: window.importM3u()
+                    onExportM3uRequested: (id, name) => window.exportM3u(id, name)
+                }
             }
         }
     }
@@ -715,22 +723,30 @@ ApplicationWindow {
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact && !drawerYoutube.swipeBlocked
+        clip: true // pulled down, the card goes under the mini player
+        onAboutToShow: youtubePull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerYoutube.focusSearch() }
         onClosed: window.searchOnOpen = false
         background: Item {}
 
         DrawerCard {
             drawer: youtubeDrawer
+            pull: youtubePull.pull
             transformOrigin: Item.Right
 
-            YouTubePanel {
-                id: drawerYoutube
-                objectName: "youtubePanel"
-                anchors.fill: parent
-                showPinButton: false
-                showCloseButton: true
-                onCloseRequested: youtubeDrawer.close()
-                onSettingsRequested: window.openSettings()
+            PullToClose {
+                id: youtubePull
+                onPulledDown: youtubeDrawer.close()
+
+                YouTubePanel {
+                    id: drawerYoutube
+                    objectName: "youtubePanel"
+                    anchors.fill: parent
+                    showPinButton: false
+                    showCloseButton: true
+                    onCloseRequested: youtubeDrawer.close()
+                    onSettingsRequested: window.openSettings()
+                }
             }
         }
     }
@@ -757,24 +773,32 @@ ApplicationWindow {
         dim: false
         closePolicy: Popup.NoAutoClose // Esc / Back: window.goBack()
         interactive: window.compact
+        clip: true // pulled down, the card goes under the mini player
+        onAboutToShow: libraryPull.reset()
         onOpened: if (window.searchOnOpen) { window.searchOnOpen = false; drawerLibrary.focusSearch() }
         onClosed: window.searchOnOpen = false
         background: Item {}
 
         DrawerCard {
             drawer: libraryDrawer
+            pull: libraryPull.pull
             transformOrigin: Item.Right
 
-            LibraryPanel {
-                id: drawerLibrary
-                objectName: "libraryPanel"
-                anchors.fill: parent
-                showPinButton: false
-                onCloseRequested: libraryDrawer.close()
-                onDetailsRequested: (path) => detailsDialog.show(path)
-                onEditTagsRequested: (path) => detailsDialog.show(path, true)
-                onSettingsRequested: window.openSettings()
-                onFoldersSettingsRequested: window.openSettings(settingsPanel.libraryPage)
+            PullToClose {
+                id: libraryPull
+                onPulledDown: libraryDrawer.close()
+
+                LibraryPanel {
+                    id: drawerLibrary
+                    objectName: "libraryPanel"
+                    anchors.fill: parent
+                    showPinButton: false
+                    onCloseRequested: libraryDrawer.close()
+                    onDetailsRequested: (path) => detailsDialog.show(path)
+                    onEditTagsRequested: (path) => detailsDialog.show(path, true)
+                    onSettingsRequested: window.openSettings()
+                    onFoldersSettingsRequested: window.openSettings(settingsPanel.libraryPage)
+                }
             }
         }
     }
@@ -791,15 +815,21 @@ ApplicationWindow {
         Rectangle {
             id: settingsSheet
             property bool shown: false
+            onShownChanged: if (shown) settingsPull.reset()
             property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap + window.safeLeft
             width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
             height: parent.height - 2 * Theme.cardGap - window.safeTop
-            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop)
+            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop) + settingsPull.pull
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
             Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
+
+            PullToClose {
+                id: settingsPull
+                onPulledDown: window.closeSettings()
+            }
         }
     }
 
@@ -814,24 +844,30 @@ ApplicationWindow {
         Rectangle {
             id: homeSheet
             property bool shown: false
+            onShownChanged: if (shown) homePull.reset()
             property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap + window.safeLeft
             width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
             height: parent.height - 2 * Theme.cardGap - window.safeTop
-            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop)
+            y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop) + homePull.pull
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
 
             Behavior on down { NumberAnimation { duration: Theme.animPanel; easing.type: Theme.easingPanel } }
 
-            HomePanel {
-                id: sheetHome
-                objectName: "homePanel"
-                anchors.fill: parent
-                backdrop: homeSheet.color
-                showPinButton: false
-                showCloseButton: true
-                onCloseRequested: homeSheet.shown = false
+            PullToClose {
+                id: homePull
+                onPulledDown: homeSheet.shown = false
+
+                HomePanel {
+                    id: sheetHome
+                    objectName: "homePanel"
+                    anchors.fill: parent
+                    backdrop: homeSheet.color
+                    showPinButton: false
+                    showCloseButton: true
+                    onCloseRequested: homeSheet.shown = false
+                }
             }
         }
     }
@@ -840,7 +876,7 @@ ApplicationWindow {
     SettingsPanel {
         id: settingsPanel
         objectName: "settingsPanel"
-        parent: window.compact ? settingsSheet : settingsCard
+        parent: window.compact ? settingsPull.contentItem : settingsCard
         anchors.fill: parent
         onCloseRequested: window.closeSettings()
         onClearHistoryRequested: clearHistoryDialog.ask(qsTr("Clear your listening history?"),
@@ -880,11 +916,58 @@ ApplicationWindow {
         }
     }
 
+    // Phone size: drag a panel down from anywhere to put it away, as DockSlot does
+    // sideways. Lists inside scroll first; at their top they let go of a downward
+    // drag and this takes it. Its content stays put; the overshoot (`pull`) moves
+    // the card instead, and springs back by itself unless pulled far or fast enough.
+    component PullToClose: Flickable {
+        id: pullFlick
+
+        signal pulledDown()
+
+        // Dragged past its edge, a Flickable reports half the distance.
+        readonly property real flickPull: Math.max(0, -2 * verticalOvershoot)
+        property real closingPull: -1 // on its way out; -1: following the finger
+        readonly property real pull: closingPull >= 0 ? closingPull : flickPull
+
+        function reset() {
+            away.stop()
+            closingPull = -1
+        }
+
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: height
+        interactive: window.compact && !SongDrag.active
+        flickableDirection: Flickable.VerticalFlick
+        boundsBehavior: Flickable.DragOverBounds
+        boundsMovement: Flickable.StopAtBounds
+        onDraggingChanged: {
+            if (!dragging && flickPull > 0 && !away.running
+                    && (flickPull > height * 0.2 || -verticalVelocity > 800)) {
+                closingPull = flickPull
+                away.start()
+            }
+        }
+
+        NumberAnimation {
+            id: away
+            target: pullFlick
+            property: "closingPull"
+            to: pullFlick.height + 2 * Theme.cardGap
+            duration: Theme.anim
+            easing.type: Theme.easing
+            onFinished: pullFlick.pulledDown()
+        }
+    }
+
     // A drawer's panel: an inset rounded card on a solid tinted background that
     // grows slightly and brightens as the drawer opens.
     component DrawerCard: Rectangle {
         required property Drawer drawer
+        property real pull: 0 // dragged down (PullToClose)
 
+        transform: Translate { y: pull }
         anchors.fill: parent
         anchors.margins: Theme.cardGap
         anchors.topMargin: Theme.cardGap + window.safeTop
