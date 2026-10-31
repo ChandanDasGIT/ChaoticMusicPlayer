@@ -38,13 +38,23 @@ PlayerController::PlayerController(QObject *parent)
         queued([this, s] { setState(toState(s)); });
     };
     callbacks.positionChanged = [this, queued](int64_t ms) {
-        queued([this, ms] { setPosition(ms); });
+        queued([this, ms] {
+            // After a seek, the engine reports the old place for a moment: the
+            // bar stays at the new one until it arrives (or plainly isn't coming).
+            if (m_seekTarget >= 0) {
+                if (qAbs(ms - m_seekTarget) > SeekArrivedMs && m_seekClock.elapsed() < SeekPatienceMs)
+                    return;
+                m_seekTarget = -1;
+            }
+            setPosition(ms);
+        });
     };
     callbacks.durationChanged = [this, queued](int64_t ms) {
         queued([this, ms] { setDuration(ms); });
     };
     callbacks.trackChanged = [this, queued](const std::string &path) {
         queued([this, p = QString::fromStdString(path)] {
+            m_seekTarget = -1;
             setErrorString({});
             m_source = p;
             emit sourceChanged();
@@ -153,6 +163,8 @@ void PlayerController::stop()
 void PlayerController::seek(qint64 positionMs)
 {
     setPosition(positionMs); // update the UI right away; the engine confirms shortly
+    m_seekTarget = positionMs;
+    m_seekClock.start();
     m_player->seek(positionMs);
     emit seeked(positionMs);
 }

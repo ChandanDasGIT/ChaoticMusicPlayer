@@ -53,6 +53,7 @@ Text {
         case "link": return "\uf0c1"
         case "user": return "\uf007"
         case "heart": return "\uf004"
+        case "star": return "\uf005"
         case "compass": return "\uf14e"
         case "listMusic": return "\uf0ca"
         case "check": return "\uf00c"

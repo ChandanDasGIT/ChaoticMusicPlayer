@@ -43,6 +43,11 @@ class SettingsController : public QObject
     Q_PROPERTY(bool notificationsEnabled READ notificationsEnabled WRITE setNotificationsEnabled NOTIFY notificationsEnabledChanged)
     Q_PROPERTY(bool historyYouTube READ historyYouTube WRITE setHistoryYouTube NOTIFY historyChanged)
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
+    // The seek bar while playing: "wave" (all of it flows) or "dot" (only around the dot)
+    Q_PROPERTY(QString seekbarStyle READ seekbarStyle WRITE setSeekbarStyle NOTIFY seekbarStyleChanged)
+    // The seek bar's thumb: "circle", "ring", "pill", "diamond", "heart", "star", "note", "disc",
+    // "play" or "arrow"
+    Q_PROPERTY(QString seekbarThumb READ seekbarThumb WRITE setSeekbarThumb NOTIFY seekbarThumbChanged)
     Q_PROPERTY(bool resumeSession READ resumeSession WRITE setResumeSession NOTIFY resumeSessionChanged)
     Q_PROPERTY(int volumeStep READ volumeStep WRITE setVolumeStep NOTIFY volumeStepChanged)
     Q_PROPERTY(bool showRemainingTime READ showRemainingTime WRITE setShowRemainingTime NOTIFY showRemainingTimeChanged)
@@ -141,6 +146,10 @@ public:
     void setBackgroundPlayback(bool enabled);
     QString themeMode() const; // "system" (follow the desktop), "dark" (default) or "light"
     void setThemeMode(const QString &mode);
+    QString seekbarStyle() const;
+    void setSeekbarStyle(const QString &style);
+    QString seekbarThumb() const;
+    void setSeekbarThumb(const QString &thumb);
     bool resumeSession() const; // reopen on the last song, paused where it was
     void setResumeSession(bool resume);
 
@@ -253,6 +262,8 @@ signals:
     void replayGainChanged();
     void notificationsEnabledChanged();
     void themeModeChanged();
+    void seekbarStyleChanged();
+    void seekbarThumbChanged();
     void resumeSessionChanged();
     void showRemainingTimeChanged();
     void fadeSecondsChanged();

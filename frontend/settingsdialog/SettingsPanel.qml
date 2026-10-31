@@ -771,6 +771,93 @@ Rectangle {
                         }
 
                         SettingsCard {
+                            title: qsTr("Seekbar")
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Seekbar animation")
+                                description: qsTr("While a song plays: the whole bar flows, or only the part around the dot.")
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: [
+                                        { id: "wave", name: qsTr("Full wave") },
+                                        { id: "dot", name: qsTr("Around the dot") }
+                                    ]
+
+                                    delegate: PillButton {
+                                        required property var modelData
+
+                                        text: modelData.name
+                                        implicitHeight: 32
+                                        active: SettingsController.seekbarStyle === modelData.id
+                                        onClicked: SettingsController.seekbarStyle = modelData.id
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                Layout.fillWidth: true
+                                title: qsTr("Seekbar thumb")
+                                description: qsTr("The marker that shows where you are in the song.")
+                            }
+
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Repeater {
+                                    model: [
+                                        { id: "circle", name: qsTr("Circle") },
+                                        { id: "ring", name: qsTr("Ring") },
+                                        { id: "pill", name: qsTr("Pill") },
+                                        { id: "diamond", name: qsTr("Diamond") },
+                                        { id: "heart", name: qsTr("Heart") },
+                                        { id: "star", name: qsTr("Star") },
+                                        { id: "note", name: qsTr("Music note") },
+                                        { id: "disc", name: qsTr("Disc") },
+                                        { id: "play", name: qsTr("Play") },
+                                        { id: "arrow", name: qsTr("Wave arrow") }
+                                    ]
+
+                                    delegate: AbstractButton {
+                                        id: thumbChoice
+
+                                        required property var modelData
+                                        readonly property bool chosen: SettingsController.seekbarThumb === modelData.id
+
+                                        implicitWidth: 52
+                                        implicitHeight: 44
+                                        hoverEnabled: true
+                                        focusPolicy: Qt.NoFocus
+                                        ToolTip.visible: hovered
+                                        ToolTip.text: modelData.name
+                                        onClicked: SettingsController.seekbarThumb = modelData.id
+
+                                        background: Rectangle {
+                                            radius: Theme.radius
+                                            color: thumbChoice.chosen ? Theme.accentSoft
+                                                 : thumbChoice.hovered ? Theme.hover : Theme.fillSoft
+                                        }
+
+                                        contentItem: Item {
+                                            SeekThumb {
+                                                anchors.centerIn: parent
+                                                kind: thumbChoice.modelData.id
+                                                size: 12
+                                                color: thumbChoice.chosen ? Theme.accent : Theme.text
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsCard {
                             title: qsTr("Background")
 
                             SettingsRow {

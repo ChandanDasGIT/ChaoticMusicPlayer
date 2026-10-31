@@ -291,6 +291,7 @@ qt_add_qml_module(TunedChaos
         frontend/controls/PillButton.qml
         frontend/controls/PlayingBars.qml
         frontend/controls/SeekBar.qml
+        frontend/controls/SeekThumb.qml
         frontend/controls/ThemedMenu.qml
         frontend/controls/Toast.qml
         frontend/controls/ThemedSlider.qml

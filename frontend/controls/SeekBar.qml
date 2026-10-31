@@ -4,8 +4,9 @@ import QtQuick.Controls
 // Seek bar drawn as a flowing wave ‿⁀‿⁀: the played part in the accent
 // color, the rest dimmed. The wave flows while playing, eases flat when
 // paused, and wiggles harder around the pointer while dragging, springing
-// back when released. Elapsed time on the left; remaining (or total) on the
-// right, click it to switch.
+// back when released. With the "dot" style only that wiggle plays, around the
+// dot, for as long as a song plays. Elapsed time on the left; remaining (or
+// total) on the right, click it to switch.
 Item {
     id: root
 
@@ -23,8 +24,9 @@ Item {
     readonly property real pad: 8          // keeps round line caps inside
     readonly property real wavelength: 24
     property real phase: 0
-    property real baseAmplitude: PlayerController.playing ? 3.2 : 0 // flat when paused/stopped
-    property real dragBoost: dragging ? 5.5 : 0
+    readonly property bool aroundDot: PlayerController.playing && SettingsController.seekbarStyle === "dot"
+    property real baseAmplitude: PlayerController.playing && !aroundDot ? 3.2 : 0 // flat when paused/stopped
+    property real dragBoost: dragging || aroundDot ? 5.5 : 0
     readonly property real handleX: pad + progress * (waveArea.width - 2 * pad)
 
     Behavior on baseAmplitude {
@@ -54,6 +56,8 @@ Item {
 
     implicitHeight: waveArea.height + timeRow.height + 6
 
+    readonly property real thumbGap: thumb.visible ? thumb.gap : 0
+    onThumbGapChanged: canvas.requestPaint()
     onProgressChanged: canvas.requestPaint()
     onBaseAmplitudeChanged: canvas.requestPaint()
     onDragBoostChanged: canvas.requestPaint()
@@ -65,7 +69,7 @@ Item {
                  && (PlayerController.playing || root.dragging || boostSpring.running
                      || amplitudeAnimation.running)
         onTriggered: {
-            const speed = root.dragging ? 9 : PlayerController.playing ? 2.4 : 0.5
+            const speed = root.dragging || root.aroundDot ? 9 : PlayerController.playing ? 2.4 : 0.5
             root.phase = (root.phase + frameTime * speed) % (2 * Math.PI)
             canvas.requestPaint()
         }
@@ -104,28 +108,30 @@ Item {
 
                 ctx.strokeStyle = Theme.textDim.toString()
                 ctx.globalAlpha = 0.55
-                strokeWave(ctx, root.handleX, right)
+                strokeWave(ctx, root.handleX + root.thumbGap, right)
 
                 ctx.globalAlpha = 1
                 ctx.strokeStyle = root.active ? Theme.accent.toString() : Theme.textDim.toString()
-                strokeWave(ctx, left, root.handleX)
+                strokeWave(ctx, left, root.handleX - root.thumbGap)
             }
         }
 
-        // Position dot: stays on the bar's center line while the wave moves around it
-        Rectangle {
-            readonly property real size: root.dragging ? 16 : hover.hovered ? 13 : 10
-
+        // The thumb: stays on the bar's center line while the wave moves around it
+        SeekThumb {
+            id: thumb
             visible: root.active
+            kind: SettingsController.seekbarThumb
+            moving: PlayerController.playing && !root.dragging
+            wavePhase: root.phase - 2 * Math.PI * root.handleX / root.wavelength
+            waveAmplitude: root.amplitudeAt(root.handleX)
+            waveLength: root.wavelength
+            mixing: true
+            barAhead: Qt.rgba(Theme.textDim.r, Theme.textDim.g, Theme.textDim.b, 0.55)
+            size: root.dragging ? 18 : hover.hovered ? 15 : 13
             x: root.handleX - width / 2
             y: waveArea.height / 2 - height / 2
-            width: size
-            height: size
-            radius: width / 2
-            color: Theme.text
 
-            Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
-            Behavior on height { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+            Behavior on size { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
         }
 
         HoverHandler {
@@ -138,7 +144,9 @@ Item {
             id: mouse
 
             function setFromX(x) {
-                root.dragProgress = Math.max(0, Math.min(1, (x - root.pad) / (width - 2 * root.pad)))
+                const target = Math.max(0, Math.min(1, (x - root.pad) / (width - 2 * root.pad)))
+                thumb.scrubbed((target - root.dragProgress) * width)
+                root.dragProgress = target
             }
 
             anchors.fill: parent
@@ -147,9 +155,16 @@ Item {
             enabled: root.active
             preventStealing: true
 
-            onPressed: (event) => setFromX(event.x)
+            onPressed: (event) => {
+                root.dragProgress = Math.min(1, PlayerController.position / PlayerController.duration)
+                setFromX(event.x)
+            }
             onPositionChanged: (event) => setFromX(event.x)
-            onReleased: PlayerController.seek(Math.round(root.dragProgress * PlayerController.duration))
+            onReleased: {
+                thumb.direction = 1
+                PlayerController.seek(Math.round(root.dragProgress * PlayerController.duration))
+            }
+            onCanceled: thumb.direction = 1
         }
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QString>
 #include <QThreadPool>
@@ -123,7 +124,12 @@ private:
     static inline PlayerController *s_instance = nullptr;
 
     State m_state = Stopped;
+    static constexpr qint64 SeekArrivedMs = 2000; // this close to the target: the seek is done
+    static constexpr qint64 SeekPatienceMs = 3000;
+
     qint64 m_position = 0;
+    qint64 m_seekTarget = -1; // -1: no seek under way
+    QElapsedTimer m_seekClock;
     qint64 m_duration = 0;
     qreal m_volume = 0.8;
     bool m_muted = false;

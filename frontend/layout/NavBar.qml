@@ -91,9 +91,13 @@ Rectangle {
             return height / 2 + amplitudeAt(x) * Math.sin(2 * Math.PI * x / wavelength - phase)
         }
         function dragTo(x) {
-            progress = Math.max(0, Math.min(1, (x - pad) / Math.max(1, width - 2 * pad)))
+            const target = Math.max(0, Math.min(1, (x - pad) / Math.max(1, width - 2 * pad)))
+            fidgetThumb.scrubbed((target - progress) * width)
+            progress = target
         }
 
+        readonly property real thumbGap: fidgetThumb.gap
+        onThumbGapChanged: wave.requestPaint()
         onProgressChanged: wave.requestPaint()
         onBoostChanged: wave.requestPaint()
         onWidthChanged: wave.requestPaint()
@@ -140,26 +144,27 @@ Rectangle {
 
                 ctx.strokeStyle = Theme.textDim.toString()
                 ctx.globalAlpha = 0.55
-                strokeWave(ctx, bar.handleX, width - bar.pad)
+                strokeWave(ctx, bar.handleX + bar.thumbGap, width - bar.pad)
 
                 ctx.globalAlpha = 1
                 ctx.strokeStyle = Theme.accent.toString()
-                strokeWave(ctx, bar.pad, bar.handleX)
+                strokeWave(ctx, bar.pad, bar.handleX - bar.thumbGap)
             }
         }
 
-        Rectangle {
-            readonly property real size: bar.dragging ? 16 : 10
-
+        SeekThumb {
+            id: fidgetThumb
+            kind: SettingsController.seekbarThumb
+            wavePhase: bar.phase - 2 * Math.PI * bar.handleX / bar.wavelength
+            waveAmplitude: bar.amplitudeAt(bar.handleX)
+            waveLength: bar.wavelength
+            mixing: true
+            barAhead: Qt.rgba(Theme.textDim.r, Theme.textDim.g, Theme.textDim.b, 0.55)
+            size: bar.dragging ? 18 : 13
             x: bar.handleX - width / 2
             y: (bar.height - height) / 2
-            width: size
-            height: size
-            radius: width / 2
-            color: Theme.text
 
-            Behavior on width { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
-            Behavior on height { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
+            Behavior on size { NumberAnimation { duration: Theme.animFast; easing.type: Theme.easing } }
         }
 
         MouseArea {
@@ -168,6 +173,8 @@ Rectangle {
             preventStealing: true
             onPressed: (mouse) => bar.dragTo(mouse.x)
             onPositionChanged: (mouse) => bar.dragTo(mouse.x)
+            onReleased: fidgetThumb.direction = 1
+            onCanceled: fidgetThumb.direction = 1
         }
     }
 

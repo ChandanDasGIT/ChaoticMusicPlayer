@@ -35,6 +35,8 @@ constexpr const char *ReplayGainKey = "playback.replayGain";
 constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *SeekbarStyleKey = "appearance.seekbar";
+constexpr const char *SeekbarThumbKey = "appearance.seekbarThumb";
 constexpr const char *PanelOrderKey = "layout.panels";
 constexpr const char *HiddenPanelsKey = "layout.hidden";
 constexpr const char *StartPanelKey = "layout.start";
@@ -396,6 +398,46 @@ void SettingsController::setSession(const QString &path, qint64 positionMs, qint
     m_settings->setValue(SessionDurationKey, std::to_string(durationMs));
     m_settings->setValue(SessionListKey, list.toStdString());
     scheduleSave();
+}
+
+QString SettingsController::seekbarStyle() const
+{
+    return m_settings->value(SeekbarStyleKey) == "dot" ? QStringLiteral("dot") : QStringLiteral("wave");
+}
+
+void SettingsController::setSeekbarStyle(const QString &style)
+{
+    if (style == seekbarStyle() || (style != QLatin1String("wave") && style != QLatin1String("dot")))
+        return;
+    m_settings->setValue(SeekbarStyleKey, style.toStdString());
+    scheduleSave();
+    emit seekbarStyleChanged();
+}
+
+namespace {
+
+QStringList seekbarThumbs()
+{
+    return {QStringLiteral("circle"), QStringLiteral("ring"), QStringLiteral("pill"), QStringLiteral("diamond"),
+            QStringLiteral("heart"),  QStringLiteral("star"), QStringLiteral("note"), QStringLiteral("disc"),
+            QStringLiteral("play"),   QStringLiteral("arrow")};
+}
+
+} // namespace
+
+QString SettingsController::seekbarThumb() const
+{
+    const QString thumb = QString::fromStdString(m_settings->value(SeekbarThumbKey));
+    return seekbarThumbs().contains(thumb) ? thumb : QStringLiteral("circle");
+}
+
+void SettingsController::setSeekbarThumb(const QString &thumb)
+{
+    if (thumb == seekbarThumb() || !seekbarThumbs().contains(thumb))
+        return;
+    m_settings->setValue(SeekbarThumbKey, thumb.toStdString());
+    scheduleSave();
+    emit seekbarThumbChanged();
 }
 
 QString SettingsController::themeMode() const
