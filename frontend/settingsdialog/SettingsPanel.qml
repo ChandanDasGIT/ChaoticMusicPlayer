@@ -32,13 +32,14 @@ Rectangle {
         { name: qsTr("Keyboard shortcuts"), icon: "keyboard", hue: 0.7, summary: qsTr("Every key the app knows") },
         { name: qsTr("About"), icon: "info", hue: 0.5, summary: qsTr("Version and your data") },
         { name: qsTr("Layout Customisation"), icon: "layout", hue: 0.75,
-          summary: Qt.platform.os === "android" ? qsTr("Bottom bar, what opens on start") : qsTr("What opens on start") }
+          summary: Qt.platform.os === "android" ? qsTr("Bottom bar, what opens on start") : qsTr("What opens on start") },
+        { name: qsTr("Seekbar"), icon: "wave", hue: 0.3, summary: qsTr("Animation and thumb style") }
     ]
     // Android has no keyboard to speak of: no Keyboard shortcuts page there
     readonly property bool android: Qt.platform.os === "android"
     readonly property int shortcutsPage: 8
     // The categories in groups, like a phone's settings
-    readonly property var groups: [[0, 1, 2, 10], [3, 5, 6], [4, 7], android ? [9] : [8, 9]]
+    readonly property var groups: [[0, 1, 2, 10], [3, 11, 5, 6], [4, 7], android ? [9] : [8, 9]]
 
     readonly property int equalizerPage: 2
     readonly property int libraryPage: 4
@@ -771,93 +772,6 @@ Rectangle {
                         }
 
                         SettingsCard {
-                            title: qsTr("Seekbar")
-
-                            SettingsRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Seekbar animation")
-                                description: qsTr("While a song plays: the whole bar flows, or only the part around the dot.")
-                            }
-
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: 6
-
-                                Repeater {
-                                    model: [
-                                        { id: "wave", name: qsTr("Full wave") },
-                                        { id: "dot", name: qsTr("Around the dot") }
-                                    ]
-
-                                    delegate: PillButton {
-                                        required property var modelData
-
-                                        text: modelData.name
-                                        implicitHeight: 32
-                                        active: SettingsController.seekbarStyle === modelData.id
-                                        onClicked: SettingsController.seekbarStyle = modelData.id
-                                    }
-                                }
-                            }
-
-                            SettingsRow {
-                                Layout.fillWidth: true
-                                title: qsTr("Seekbar thumb")
-                                description: qsTr("The marker that shows where you are in the song.")
-                            }
-
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: 6
-
-                                Repeater {
-                                    model: [
-                                        { id: "circle", name: qsTr("Circle") },
-                                        { id: "ring", name: qsTr("Ring") },
-                                        { id: "pill", name: qsTr("Pill") },
-                                        { id: "diamond", name: qsTr("Diamond") },
-                                        { id: "heart", name: qsTr("Heart") },
-                                        { id: "star", name: qsTr("Star") },
-                                        { id: "note", name: qsTr("Music note") },
-                                        { id: "disc", name: qsTr("Disc") },
-                                        { id: "play", name: qsTr("Play") },
-                                        { id: "arrow", name: qsTr("Wave arrow") }
-                                    ]
-
-                                    delegate: AbstractButton {
-                                        id: thumbChoice
-
-                                        required property var modelData
-                                        readonly property bool chosen: SettingsController.seekbarThumb === modelData.id
-
-                                        implicitWidth: 52
-                                        implicitHeight: 44
-                                        hoverEnabled: true
-                                        focusPolicy: Qt.NoFocus
-                                        ToolTip.visible: hovered
-                                        ToolTip.text: modelData.name
-                                        onClicked: SettingsController.seekbarThumb = modelData.id
-
-                                        background: Rectangle {
-                                            radius: Theme.radius
-                                            color: thumbChoice.chosen ? Theme.accentSoft
-                                                 : thumbChoice.hovered ? Theme.hover : Theme.fillSoft
-                                        }
-
-                                        contentItem: Item {
-                                            SeekThumb {
-                                                anchors.centerIn: parent
-                                                kind: thumbChoice.modelData.id
-                                                size: 12
-                                                color: thumbChoice.chosen ? Theme.accent : Theme.text
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        SettingsCard {
                             title: qsTr("Background")
 
                             SettingsRow {
@@ -1573,6 +1487,37 @@ Rectangle {
                             }
                         }
                     }
+
+                    // ------------------------------------------------------------ Seekbar
+                    SettingsPage {
+                        title: qsTr("Seekbar")
+
+                        SettingsCard {
+                            title: qsTr("Player seekbar")
+
+                            SeekbarOptions {
+                                Layout.fillWidth: true
+                                styleSetting: "seekbarStyle"
+                                thumbSetting: "seekbarThumb"
+                                styleDescription: qsTr("While a song plays: the whole bar flows, or only the part around the thumb.")
+                                thumbDescription: qsTr("The marker that shows where you are in the song.")
+                            }
+                        }
+
+                        SettingsCard {
+                            readonly property bool hiddenHere: !root.android
+                            visible: !hiddenHere // (phones only)
+                            title: qsTr("Bottom bar seekbar")
+
+                            SeekbarOptions {
+                                Layout.fillWidth: true
+                                styleSetting: "fidgetStyle"
+                                thumbSetting: "fidgetThumb"
+                                styleDescription: qsTr("While you drag it: the whole bar moves, or only the part around the thumb. It shows when the bottom bar has one panel or none.")
+                                thumbDescription: qsTr("Just for fun: it has nothing to do with the music.")
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1986,6 +1931,101 @@ Rectangle {
     }
 
     // A rounded card with a small accent heading.
+    // One seek bar's choices: its animation and its thumb.
+    component SeekbarOptions: ColumnLayout {
+        id: options
+
+        property string styleSetting
+        property string thumbSetting
+        property string styleDescription
+        property string thumbDescription
+
+        spacing: Theme.spacing
+
+        SettingsRow {
+            Layout.fillWidth: true
+            title: qsTr("Animation")
+            description: options.styleDescription
+        }
+
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Repeater {
+                model: [
+                    { id: "wave", name: qsTr("Full wave") },
+                    { id: "dot", name: qsTr("Around the thumb") }
+                ]
+
+                delegate: PillButton {
+                    required property var modelData
+
+                    text: modelData.name
+                    implicitHeight: 32
+                    active: SettingsController[options.styleSetting] === modelData.id
+                    onClicked: SettingsController[options.styleSetting] = modelData.id
+                }
+            }
+        }
+
+        SettingsRow {
+            Layout.fillWidth: true
+            title: qsTr("Thumb")
+            description: options.thumbDescription
+        }
+
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Repeater {
+                model: [
+                    { id: "circle", name: qsTr("Circle") },
+                    { id: "ring", name: qsTr("Ring") },
+                    { id: "pill", name: qsTr("Pill") },
+                    { id: "diamond", name: qsTr("Diamond") },
+                    { id: "heart", name: qsTr("Heart") },
+                    { id: "star", name: qsTr("Star") },
+                    { id: "note", name: qsTr("Music note") },
+                    { id: "disc", name: qsTr("Disc") },
+                    { id: "play", name: qsTr("Play") },
+                    { id: "arrow", name: qsTr("Wave arrow") }
+                ]
+
+                delegate: AbstractButton {
+                    id: thumbChoice
+
+                    required property var modelData
+                    readonly property bool chosen: SettingsController[options.thumbSetting] === modelData.id
+
+                    implicitWidth: 52
+                    implicitHeight: 44
+                    hoverEnabled: true
+                    focusPolicy: Qt.NoFocus
+                    ToolTip.visible: hovered
+                    ToolTip.text: modelData.name
+                    onClicked: SettingsController[options.thumbSetting] = modelData.id
+
+                    background: Rectangle {
+                        radius: Theme.radius
+                        color: thumbChoice.chosen ? Theme.accentSoft
+                             : thumbChoice.hovered ? Theme.hover : Theme.fillSoft
+                    }
+
+                    contentItem: Item {
+                        SeekThumb {
+                            anchors.centerIn: parent
+                            kind: thumbChoice.modelData.id
+                            size: 12
+                            color: thumbChoice.chosen ? Theme.accent : Theme.text
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     component SettingsCard: Rectangle {
         id: card
 

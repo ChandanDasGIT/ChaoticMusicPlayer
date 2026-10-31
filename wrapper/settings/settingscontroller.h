@@ -45,6 +45,9 @@ class SettingsController : public QObject
     Q_PROPERTY(QString themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
     // The seek bar while playing: "wave" (all of it flows) or "dot" (only around the dot)
     Q_PROPERTY(QString seekbarStyle READ seekbarStyle WRITE setSeekbarStyle NOTIFY seekbarStyleChanged)
+    // The bottom bar's toy seek bar: its own choice of the same (phones)
+    Q_PROPERTY(QString fidgetStyle READ fidgetStyle WRITE setFidgetStyle NOTIFY seekbarStyleChanged)
+    Q_PROPERTY(QString fidgetThumb READ fidgetThumb WRITE setFidgetThumb NOTIFY seekbarThumbChanged)
     // The seek bar's thumb: "circle", "ring", "pill", "diamond", "heart", "star", "note", "disc",
     // "play" or "arrow"
     Q_PROPERTY(QString seekbarThumb READ seekbarThumb WRITE setSeekbarThumb NOTIFY seekbarThumbChanged)
@@ -148,6 +151,10 @@ public:
     void setThemeMode(const QString &mode);
     QString seekbarStyle() const;
     void setSeekbarStyle(const QString &style);
+    QString fidgetStyle() const;
+    void setFidgetStyle(const QString &style);
+    QString fidgetThumb() const;
+    void setFidgetThumb(const QString &thumb);
     QString seekbarThumb() const;
     void setSeekbarThumb(const QString &thumb);
     bool resumeSession() const; // reopen on the last song, paused where it was

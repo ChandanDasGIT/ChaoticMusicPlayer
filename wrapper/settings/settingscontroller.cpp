@@ -37,6 +37,8 @@ constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
 constexpr const char *SeekbarStyleKey = "appearance.seekbar";
 constexpr const char *SeekbarThumbKey = "appearance.seekbarThumb";
+constexpr const char *FidgetStyleKey = "appearance.fidgetStyle";
+constexpr const char *FidgetThumbKey = "appearance.fidgetThumb";
 constexpr const char *PanelOrderKey = "layout.panels";
 constexpr const char *HiddenPanelsKey = "layout.hidden";
 constexpr const char *StartPanelKey = "layout.start";
@@ -424,6 +426,35 @@ QStringList seekbarThumbs()
 }
 
 } // namespace
+
+QString SettingsController::fidgetStyle() const
+{
+    return m_settings->value(FidgetStyleKey) == "wave" ? QStringLiteral("wave") : QStringLiteral("dot");
+}
+
+void SettingsController::setFidgetStyle(const QString &style)
+{
+    if (style == fidgetStyle() || (style != QLatin1String("wave") && style != QLatin1String("dot")))
+        return;
+    m_settings->setValue(FidgetStyleKey, style.toStdString());
+    scheduleSave();
+    emit seekbarStyleChanged();
+}
+
+QString SettingsController::fidgetThumb() const
+{
+    const QString thumb = QString::fromStdString(m_settings->value(FidgetThumbKey));
+    return seekbarThumbs().contains(thumb) ? thumb : QStringLiteral("circle");
+}
+
+void SettingsController::setFidgetThumb(const QString &thumb)
+{
+    if (thumb == fidgetThumb() || !seekbarThumbs().contains(thumb))
+        return;
+    m_settings->setValue(FidgetThumbKey, thumb.toStdString());
+    scheduleSave();
+    emit seekbarThumbChanged();
+}
 
 QString SettingsController::seekbarThumb() const
 {

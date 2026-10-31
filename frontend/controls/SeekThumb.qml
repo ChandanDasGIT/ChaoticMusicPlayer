@@ -39,6 +39,7 @@ Item {
     onWavePhaseChanged: if (kind === "arrow") arrow.requestPaint()
     onWaveAmplitudeChanged: if (kind === "arrow") arrow.requestPaint()
     onDirectionChanged: if (kind === "arrow") arrow.requestPaint()
+    onColorChanged: if (kind === "arrow") arrow.requestPaint()
 
     width: size
     height: size

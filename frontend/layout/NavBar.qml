@@ -84,6 +84,8 @@ Rectangle {
         readonly property real handleX: pad + progress * (width - 2 * pad)
 
         function amplitudeAt(x) {
+            if (SettingsController.fidgetStyle === "wave")
+                return boost * 0.6
             const d = (x - handleX) / 46
             return boost * Math.exp(-d * d)
         }
@@ -154,7 +156,7 @@ Rectangle {
 
         SeekThumb {
             id: fidgetThumb
-            kind: SettingsController.seekbarThumb
+            kind: SettingsController.fidgetThumb
             wavePhase: bar.phase - 2 * Math.PI * bar.handleX / bar.wavelength
             waveAmplitude: bar.amplitudeAt(bar.handleX)
             waveLength: bar.wavelength
