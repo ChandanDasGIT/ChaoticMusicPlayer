@@ -267,6 +267,39 @@ hook = '''    // ---- screenshot harness
                         std::fflush(stdout);
                     }
                 }
+                else if (step == QLatin1String("chipspots")) { // click around the quality chip: does each spot seek, open details, or both?
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    QObject *dialog = root->findChild<QObject *>("detailsDialog");
+                    for (QQuickItem *chip : findItems("QualityChip")) {
+                        if (!chip->isVisible())
+                            continue;
+                        const QRectF r(chip->mapToScene({0, 0}), QSizeF(chip->width(), chip->height()));
+                        const int cx = qRound(r.center().x()), cy = qRound(r.center().y());
+                        const int top = qFloor(r.top()), bottom = qCeil(r.bottom()) - 1, left = qFloor(r.left()), right = qCeil(r.right()) - 1;
+                        std::printf("chip rect x %d..%d y %d..%d\\n", left, right, top, bottom);
+                        const QList<QPair<const char *, QPoint>> spots = {
+                            {"above 20", {cx, top - 20}}, {"above 14", {cx, top - 14}}, {"above 8", {cx, top - 8}}, {"above 3", {cx, top - 3}},
+                            {"above 1", {cx, top - 1}}, {"top edge", {cx, top}}, {"middle", {cx, cy}}, {"bottom edge", {cx, bottom}},
+                            {"below 3", {cx, bottom + 3}}, {"left 3", {left - 3, cy}}, {"right 3", {right + 3, cy}}, {"left 14", {left - 14, cy}}, {"right 14", {right + 14, cy}}};
+                        for (const auto &spot : spots) {
+                            player.seek(1000);
+                            QTest::qWait(250);
+                            const qint64 before = player.position();
+                            QTest::mouseMove(w, spot.second);
+                            QTest::qWait(60);
+                            QTest::mouseClick(w, Qt::LeftButton, {}, spot.second);
+                            QTest::qWait(350);
+                            const bool opened = dialog->property("visible").toBool();
+                            const bool seeked = qAbs(player.position() - before) > 5000;
+                            std::printf("%-12s (%4d,%4d): seek=%d details=%d%s\\n", spot.first, spot.second.x(), spot.second.y(), int(seeked), int(opened), seeked && opened ? "  <-- BOTH" : "");
+                            std::fflush(stdout);
+                            if (opened) {
+                                QMetaObject::invokeMethod(dialog, "close");
+                                QTest::qWait(400);
+                            }
+                        }
+                    }
+                }
                 else if (step == QLatin1String("dialogrow")) { // click inside Track details, over a Library row: does the song change?
                     auto *w = qobject_cast<QQuickWindow *>(root);
                     QObject *dialog = root->findChild<QObject *>("detailsDialog");

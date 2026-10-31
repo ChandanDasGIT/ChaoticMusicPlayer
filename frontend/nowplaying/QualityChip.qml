@@ -26,10 +26,18 @@ Rectangle {
         enabled: !root.covered
         cursorShape: Qt.PointingHandCursor
     }
-    TapHandler {
-        enabled: !root.covered
-        margin: 18 // small to look at, but a finger needn't land exactly on it
-        onTapped: root.clicked()
+    // Small to look at, so a finger needn't land exactly on it. Never reaches
+    // upward: the seek bar is right above, and a tap there would do both.
+    Item {
+        anchors.fill: parent
+        anchors.leftMargin: Theme.touchOnly ? -18 : 0
+        anchors.rightMargin: Theme.touchOnly ? -18 : 0
+        anchors.bottomMargin: Theme.touchOnly ? -18 : 0
+
+        TapHandler {
+            enabled: !root.covered
+            onTapped: root.clicked()
+        }
     }
 
     ToolTip.visible: chipHover.hovered

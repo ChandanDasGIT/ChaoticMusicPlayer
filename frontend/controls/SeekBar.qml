@@ -152,7 +152,7 @@ Item {
 
             anchors.fill: parent
             anchors.topMargin: -6
-            anchors.bottomMargin: -6
+            anchors.bottomMargin: -2 // stops short of the quality chip, which has clicks of its own
             enabled: root.active
             preventStealing: true
 
