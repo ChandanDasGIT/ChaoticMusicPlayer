@@ -598,8 +598,14 @@ ApplicationWindow {
     // Whenever the player is out of sight (pushed out in the half layout, or
     // covered by a panel at phone size), a floating mini player above the
     // navigation bar stands in for it; tap the cover or title to bring it back.
-    readonly property bool anyDrawerOpen: playlistDrawer.visible || youtubeDrawer.visible || libraryDrawer.visible
-                                          || homeSheet.shown || settingsSheet.shown
+    // (A panel let go to close counts as closed: what it covered shouldn't wait for it.)
+    readonly property bool queueDrawerOpen: playlistDrawer.visible && !playlistPull.closing
+    readonly property bool youtubeDrawerOpen: youtubeDrawer.visible && !youtubePull.closing
+    readonly property bool libraryDrawerOpen: libraryDrawer.visible && !libraryPull.closing
+    readonly property bool homeSheetOpen: homeSheet.shown && !homePull.closing
+    readonly property bool settingsSheetOpen: settingsSheet.shown && !settingsPull.closing
+    readonly property bool anyDrawerOpen: queueDrawerOpen || youtubeDrawerOpen || libraryDrawerOpen
+                                          || homeSheetOpen || settingsSheetOpen
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
@@ -636,11 +642,11 @@ ApplicationWindow {
         width: window.compact ? room : Math.min(room, 560)
         height: implicitHeight
         z: 5
-        homeOpen: window.homeDocked || homeSheet.shown
-        queueOpen: window.playlistDocked || playlistDrawer.visible
-        youtubeOpen: window.youtubeDocked || youtubeDrawer.visible
-        libraryOpen: window.libraryDocked || libraryDrawer.visible
-        settingsOpen: window.settingsShown
+        homeOpen: window.homeDocked || window.homeSheetOpen
+        queueOpen: window.playlistDocked || window.queueDrawerOpen
+        youtubeOpen: window.youtubeDocked || window.youtubeDrawerOpen
+        libraryOpen: window.libraryDocked || window.libraryDrawerOpen
+        settingsOpen: window.rightShown === "settings" || window.settingsSheetOpen
         onHomeClicked: window.toggleHome()
         onQueueClicked: window.toggleQueue()
         onYoutubeClicked: window.toggleYoutube()
@@ -928,6 +934,7 @@ ApplicationWindow {
         // Dragged past its edge, a Flickable reports half the distance.
         readonly property real flickPull: Math.max(0, -2 * verticalOvershoot)
         property real closingPull: -1 // on its way out; -1: following the finger
+        readonly property bool closing: closingPull >= 0
         readonly property real pull: closingPull >= 0 ? closingPull : flickPull
 
         function reset() {
