@@ -92,6 +92,32 @@ bool byAlbumOrder(const Track &a, const Track &b)
     return byTitle(a, b);
 }
 
+// `tracks` come sorted by title, and the sorts below are stable: songs that tie
+// (an album's date, a whole scan's) stay in title order.
+void sortSongs(std::vector<Track> &tracks, const QString &sort)
+{
+    if (sort == QLatin1String("titleDesc")) {
+        std::reverse(tracks.begin(), tracks.end());
+    } else if (sort == QLatin1String("newest")) {
+        std::stable_sort(tracks.begin(), tracks.end(),
+                         [](const Track &a, const Track &b) { return a.addedAt > b.addedAt; });
+    } else if (sort == QLatin1String("oldest")) {
+        std::stable_sort(tracks.begin(), tracks.end(),
+                         [](const Track &a, const Track &b) { return a.addedAt < b.addedAt; });
+    } else if (sort == QLatin1String("modifiedNew")) {
+        std::stable_sort(tracks.begin(), tracks.end(),
+                         [](const Track &a, const Track &b) { return a.modifiedAt > b.modifiedAt; });
+    } else if (sort == QLatin1String("modifiedOld")) {
+        std::stable_sort(tracks.begin(), tracks.end(),
+                         [](const Track &a, const Track &b) { return a.modifiedAt < b.modifiedAt; });
+    } else if (sort == QLatin1String("artist")) {
+        std::stable_sort(tracks.begin(), tracks.end(),
+                         [](const Track &a, const Track &b) { return lower(a.artist) < lower(b.artist); });
+    } else if (sort == QLatin1String("album")) {
+        std::stable_sort(tracks.begin(), tracks.end(), byAlbumOrder);
+    }
+}
+
 // "1 song" / "9 songs"
 QString songsText(int count)
 {
@@ -145,6 +171,7 @@ LocalLibraryController::LocalLibraryController(PlaylistController *queue, Playli
     connect(m_settings, &SettingsController::libraryFoldersChanged, this, &LocalLibraryController::refresh);
     connect(m_settings, &SettingsController::libraryFoldersChanged, this, &LocalLibraryController::rebuildFolder);
     connect(m_settings, &SettingsController::libraryExcludedChanged, this, &LocalLibraryController::refresh);
+    connect(m_settings, &SettingsController::librarySortChanged, this, &LocalLibraryController::applySearch);
     startRefresh(true); // the saved library at once, then a check for changes
 }
 
@@ -327,10 +354,6 @@ void LocalLibraryController::setSearch(const QString &search)
 void LocalLibraryController::applySearch()
 {
     const QStringList words = m_search.split(QLatin1Char(' '), Qt::SkipEmptyParts);
-    if (words.isEmpty()) {
-        m_songs->setTracks(m_tracks);
-        return;
-    }
     std::vector<Track> found;
     for (const Track &t : m_tracks) {
         const QString text = QString::fromStdString(t.title + ' ' + t.artist + ' ' + t.album);
@@ -338,6 +361,7 @@ void LocalLibraryController::applySearch()
                         [&](const QString &w) { return text.contains(w, Qt::CaseInsensitive); }))
             found.push_back(t);
     }
+    sortSongs(found, m_settings->librarySort());
     m_songs->setTracks(std::move(found));
 }
 

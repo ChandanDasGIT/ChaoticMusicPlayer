@@ -26,6 +26,7 @@ Text {
         case "info": return "\uf05a"
         case "sortUp": return "\uf0d8"
         case "sortDown": return "\uf0d7"
+        case "sortList": return "\uf160"
         case "chevronDown": return "\uf078"
         case "chevronRight": return "\uf054"
         case "trash": return "\uf1f8"

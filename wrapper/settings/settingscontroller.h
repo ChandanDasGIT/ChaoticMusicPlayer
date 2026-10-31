@@ -76,6 +76,9 @@ class SettingsController : public QObject
     // Local library: folders scanned for music, and folders left out of them
     Q_PROPERTY(QStringList libraryFolders READ libraryFolders NOTIFY libraryFoldersChanged)
     Q_PROPERTY(QStringList libraryExcluded READ libraryExcluded NOTIFY libraryExcludedChanged)
+    // The Library's Songs tab: "title", "titleDesc", "newest", "oldest", "modifiedNew",
+    // "modifiedOld", "artist" or "album"
+    Q_PROPERTY(QString librarySort READ librarySort WRITE setLibrarySort NOTIFY librarySortChanged)
     // Appearance: 0 = plain dark theme, 1 = full cover color
     Q_PROPERTY(qreal coverTintStrength READ coverTintStrength WRITE setCoverTintStrength NOTIFY coverTintStrengthChanged)
     // Interface size (1 = 100%), applied at the next start; activeInterfaceScale: this run's
@@ -180,6 +183,8 @@ public:
     QStringList enabledCoverSourceIds() const;
     QStringList libraryFolders() const;
     QStringList libraryExcluded() const;
+    QString librarySort() const;
+    void setLibrarySort(const QString &sort);
     // Local paths or file:// URLs; return false if it was already there.
     Q_INVOKABLE bool addLibraryFolder(const QString &folder);
     Q_INVOKABLE void removeLibraryFolder(const QString &folder);
@@ -245,6 +250,7 @@ signals:
     void coverSourcesChanged();
     void libraryFoldersChanged();
     void libraryExcludedChanged();
+    void librarySortChanged();
     void visualizerEnabledChanged();
     void visualizerStyleChanged();
 

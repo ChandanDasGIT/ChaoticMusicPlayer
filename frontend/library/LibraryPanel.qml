@@ -51,6 +51,19 @@ Rectangle {
     LibraryAddAllMenu {
         id: addAllMenu
     }
+
+    ThemedMenu {
+        id: sortMenu
+
+        SortAction { sort: "title"; text: qsTr("Title A–Z") }
+        SortAction { sort: "titleDesc"; text: qsTr("Title Z–A") }
+        SortAction { sort: "newest"; text: qsTr("Newest added") }
+        SortAction { sort: "oldest"; text: qsTr("Oldest added") }
+        SortAction { sort: "modifiedNew"; text: qsTr("Newly-modified date") }
+        SortAction { sort: "modifiedOld"; text: qsTr("Last-modified date") }
+        SortAction { sort: "artist"; text: qsTr("Artist") }
+        SortAction { sort: "album"; text: qsTr("Album") }
+    }
     radius: Theme.radiusCard
     border.color: Theme.border
 
@@ -205,40 +218,56 @@ Rectangle {
                 transform: PageShift { page: 0 }
                 Behavior on opacity { NumberAnimation { duration: Theme.anim } }
 
-                TextField {
-                    id: searchField
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: Theme.padding
                     Layout.rightMargin: Theme.padding
                     Layout.topMargin: 4
                     visible: LocalLibraryController.songCount > 0
-                    implicitHeight: 40
-                    leftPadding: 40
-                    rightPadding: 16
-                    placeholderText: qsTr("Search your library")
-                    placeholderTextColor: Theme.textMuted
-                    color: Theme.text
-                    font.pixelSize: Theme.fontSize
-                    selectByMouse: true
-                    text: LocalLibraryController.search
-                    onTextEdited: LocalLibraryController.search = text
+                    spacing: Theme.spacing
 
-                    background: Rectangle {
-                        radius: height / 2
-                        color: searchField.activeFocus ? Theme.fillStrong : Theme.fill
-                        border.width: searchField.activeFocus ? 1 : 0
-                        border.color: Theme.accent
+                    TextField {
+                        id: searchField
+                        Layout.fillWidth: true
+                        implicitHeight: 40
+                        leftPadding: 40
+                        rightPadding: 16
+                        placeholderText: qsTr("Search your library")
+                        placeholderTextColor: Theme.textMuted
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSize
+                        selectByMouse: true
+                        text: LocalLibraryController.search
+                        onTextEdited: LocalLibraryController.search = text
 
-                        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+                        background: Rectangle {
+                            radius: height / 2
+                            color: searchField.activeFocus ? Theme.fillStrong : Theme.fill
+                            border.width: searchField.activeFocus ? 1 : 0
+                            border.color: Theme.accent
+
+                            Behavior on color { ColorAnimation { duration: Theme.animFast } }
+                        }
+
+                        Icon {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 15
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "search"
+                            size: 12
+                            color: Theme.textMuted
+                        }
                     }
 
-                    Icon {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 15
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "search"
-                        size: 12
-                        color: Theme.textMuted
+                    ControlButton {
+                        id: sortButton
+                        iconName: "sortList"
+                        iconSize: 14
+                        active: SettingsController.librarySort !== "title"
+                        iconColor: active ? Theme.accent : Theme.textMuted
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Sort songs")
+                        onClicked: sortMenu.popup(sortButton, 0, sortButton.height)
                     }
                 }
 
@@ -771,6 +800,14 @@ Rectangle {
     }
 
     // A list of library songs.
+    // One way to sort the Songs tab; a check marks the one in use.
+    component SortAction: Action {
+        property string sort
+
+        icon.name: SettingsController.librarySort === sort ? "check" : ""
+        onTriggered: SettingsController.librarySort = sort
+    }
+
     component SongList: ListView {
         id: songList
         populate: ListPopulate {}

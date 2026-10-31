@@ -35,6 +35,7 @@ constexpr const char *ReplayGainKey = "playback.replayGain";
 constexpr const char *NotificationsKey = "general.notifications";
 constexpr const char *HistoryYouTubeKey = "history.youtube";
 constexpr const char *ThemeModeKey = "appearance.theme";
+constexpr const char *LibrarySortKey = "library.sort";
 constexpr const char *ResumeKey = "playback.resume";
 constexpr const char *SessionPathKey = "session.path";
 constexpr const char *SessionPositionKey = "session.positionMs";
@@ -407,6 +408,32 @@ void SettingsController::setThemeMode(const QString &mode)
     m_settings->setValue(ThemeModeKey, mode.toStdString());
     scheduleSave();
     emit themeModeChanged();
+}
+
+namespace {
+
+QStringList librarySorts()
+{
+    return {QStringLiteral("title"),       QStringLiteral("titleDesc"),   QStringLiteral("newest"),
+            QStringLiteral("oldest"),      QStringLiteral("modifiedNew"), QStringLiteral("modifiedOld"),
+            QStringLiteral("artist"),      QStringLiteral("album")};
+}
+
+} // namespace
+
+QString SettingsController::librarySort() const
+{
+    const QString sort = QString::fromStdString(m_settings->value(LibrarySortKey));
+    return librarySorts().contains(sort) ? sort : QStringLiteral("title");
+}
+
+void SettingsController::setLibrarySort(const QString &sort)
+{
+    if (sort == librarySort() || !librarySorts().contains(sort))
+        return;
+    m_settings->setValue(LibrarySortKey, sort.toStdString());
+    scheduleSave();
+    emit librarySortChanged();
 }
 
 QString SettingsController::outputDevice() const

@@ -236,6 +236,8 @@ void MusicLibrary::rebuildTracks()
 {
     m_tracks.clear();
     m_tracks.reserve(m_entries.size());
-    for (const Entry &e : m_entries)
+    for (const Entry &e : m_entries) {
         m_tracks.push_back(e.track);
+        m_tracks.back().modifiedAt = e.modified;
+    }
 }
