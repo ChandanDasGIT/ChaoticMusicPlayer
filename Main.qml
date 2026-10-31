@@ -366,9 +366,10 @@ ApplicationWindow {
             target.close()
     }
 
+    readonly property bool dialogOpen: Util.openDialogs > 0
+
     AppShortcuts {
-        dialogOpen: detailsDialog.visible || nameDialog.visible || confirmDialog.visible
-                    || folderPicker.visible
+        dialogOpen: window.dialogOpen
         escapeEnabled: !dialogOpen && Util.openMenus === 0 && window.canGoBack
         onEscapePressed: window.goBack()
         onToggleLyrics: nowPlaying.lyricsOpen = !nowPlaying.lyricsOpen
@@ -397,6 +398,7 @@ ApplicationWindow {
     // Panels float as rounded cards over the tinted background.
     SplitView {
         id: split
+        enabled: !window.dialogOpen // (everything behind a dialog: see Util.openDialogs)
 
         // Equal widths for every open column (fractional while one docks / undocks).
         readonly property real openColumns: Math.max(1, playlistSlot.openness + playerSlot.openness
@@ -470,6 +472,7 @@ ApplicationWindow {
                 pinned: window.leftPinned === "queue"
                 showCloseButton: !pinned
                 visible: playlistSlot.queueUnder || homeCard.down > 0
+                enabled: homeCard.down > 0 // under Home, clicks there would reach its rows (see NowPlayingPanel.covered)
                 onPinToggled: window.togglePin("queue")
                 onCloseRequested: window.closePanel("queue")
                 onDetailsRequested: (path) => detailsDialog.show(path)
@@ -525,20 +528,10 @@ ApplicationWindow {
                 anchors.fill: parent
                 edgeTop: window.compact ? Theme.cardGap + window.safeTop : 0
                 edgeSide: window.compact ? Theme.cardGap + Math.max(window.safeLeft, window.safeRight) : 0
+                covered: window.compact && window.anyDrawerOpen
                 onDetailsRequested: detailsDialog.show(PlayerController.source)
                 onEqualizerRequested: window.openSettings(settingsPanel.equalizerPage)
                 onQuitRequested: window.quitApp()
-            }
-
-            // Phone size: a panel covers the player, so nothing gets through to it.
-            // (Not `enabled` on the player: its controls would dim as the panel slides.)
-            MouseArea {
-                anchors.fill: nowPlaying
-                z: 1
-                visible: window.compact && window.anyDrawerOpen
-                acceptedButtons: Qt.AllButtons
-                hoverEnabled: true
-                onWheel: (wheel) => wheel.accepted = true
             }
 
             // Songs dragged from the Library or YouTube: dropped here, they join the Queue.
@@ -581,6 +574,7 @@ ApplicationWindow {
             YouTubePanel {
                 id: dockedYoutube
                 anchors.fill: parent
+                enabled: settingsCard.down > 0 // (as for dockedPlaylist)
                 pinned: window.rightPinned === "youtube"
                 showCloseButton: !pinned
                 onPinToggled: window.togglePin("youtube")
@@ -600,6 +594,7 @@ ApplicationWindow {
             LibraryPanel {
                 id: dockedLibrary
                 anchors.fill: parent
+                enabled: settingsCard.down > 0 // (as for dockedPlaylist)
                 pinned: window.rightPinned === "library"
                 showCloseButton: !pinned
                 onPinToggled: window.togglePin("library")
@@ -679,6 +674,7 @@ ApplicationWindow {
     MiniPlayer {
         id: floatingMini
         objectName: "floatingMini"
+        enabled: !window.dialogOpen
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: navBar.top
@@ -703,6 +699,7 @@ ApplicationWindow {
     NavBar {
         id: navBar
         objectName: "navBar"
+        enabled: !window.dialogOpen
         readonly property real room: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
 
         anchors.bottom: parent.bottom
@@ -822,6 +819,7 @@ ApplicationWindow {
         height: window.drawerHeight
         clip: true
         z: 4
+        enabled: !window.dialogOpen
         visible: settingsSheet.y < height
 
         Rectangle {
@@ -851,6 +849,7 @@ ApplicationWindow {
         height: window.drawerHeight
         clip: true
         z: 4
+        enabled: !window.dialogOpen
         visible: homeSheet.y < height
 
         Rectangle {
@@ -933,6 +932,7 @@ ApplicationWindow {
     // closes it: nothing around it does.
     component SlidePanel: Popup {
         property real position: 0 // 0 closed, 1 open
+        enabled: !window.dialogOpen
 
         x: 0
         y: 0

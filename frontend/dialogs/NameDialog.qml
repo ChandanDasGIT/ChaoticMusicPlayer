@@ -27,6 +27,7 @@ Popup {
     anchors.centerIn: Overlay.overlay
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 380, 380)
     modal: true
+    onVisibleChanged: Util.openDialogs += visible ? 1 : -1
     focus: true
     padding: Theme.padding * 1.5
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside

@@ -11,6 +11,7 @@ Item {
     id: root
 
     readonly property bool active: PlayerController.hasTrack && PlayerController.duration > 0
+    property bool covered: false // a panel lies over this (see NowPlayingPanel)
     signal detailsRequested() // the quality chip was clicked
 
     readonly property bool dragging: mouse.pressed && active
@@ -177,6 +178,7 @@ Item {
 
         QualityChip {
             anchors.centerIn: parent
+            covered: root.covered
             onClicked: root.detailsRequested()
         }
 

@@ -19,6 +19,7 @@ Item {
     readonly property bool following: syncedView && LyricsController.currentLine >= 0
     // 0 = closed .. 1 = open: the parts come in one after another (see phase()).
     property real progress: 1
+    property bool covered: false // a panel lies over this (see NowPlayingPanel)
     // Where the big cover lands when the lyrics open (NowPlayingPanel flies it here).
     readonly property Item coverSlot: capsuleCover
 
@@ -167,12 +168,12 @@ Item {
             Behavior on scale { NumberAnimation { duration: Theme.animSlow; easing.type: Theme.easing } }
 
             HoverHandler {
-                enabled: root.syncedView && line.modelData.time >= 0
+                enabled: root.syncedView && !root.covered && line.modelData.time >= 0
                 cursorShape: Qt.PointingHandCursor
             }
 
             TapHandler {
-                enabled: root.syncedView && line.modelData.time >= 0
+                enabled: root.syncedView && !root.covered && line.modelData.time >= 0
                 onTapped: PlayerController.seek(line.modelData.time)
             }
         }

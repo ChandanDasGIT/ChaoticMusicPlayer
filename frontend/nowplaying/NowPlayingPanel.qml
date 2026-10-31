@@ -12,6 +12,10 @@ Rectangle {
     // How far this panel sits from the window's edges (0: stay inside the panel).
     property real edgeTop: 0
     property real edgeSide: 0
+    // A panel lies over this one. Scrolling lists there don't fully take a click, so
+    // TapHandlers here would still fire: the ones that can be hit turn off. (Not
+    // `enabled` on this whole panel: its controls would dim as the panel slides.)
+    property bool covered: false
 
     // Lyrics replace the cover and title; the seek bar and controls stay.
     property bool lyricsOpen: false
@@ -133,6 +137,7 @@ Rectangle {
         SeekBar {
             id: seekBar
             width: parent.width
+            covered: root.covered
             onDetailsRequested: root.detailsRequested()
         }
 
@@ -172,6 +177,7 @@ Rectangle {
         width: Math.min(area.width - 2 * Theme.padding, 640)
         height: Math.max(0, content.y + seekBar.y - Theme.padding - y)
         progress: root.lyricsProgress
+        covered: root.covered
         visible: progress > 0
         onCloseRequested: root.lyricsOpen = false
     }

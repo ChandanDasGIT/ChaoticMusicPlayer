@@ -10,7 +10,7 @@ AbstractButton {
     focusPolicy: Qt.NoFocus
     implicitWidth: 46
     implicitHeight: 26
-    opacity: enabled ? 1 : 0.4
+    opacity: enabled || Util.openDialogs > 0 ? 1 : 0.4
 
     background: Rectangle {
         radius: height / 2

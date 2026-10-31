@@ -245,7 +245,112 @@ hook = '''    // ---- screenshot harness
             QTimer::singleShot(2000 + i * 1300, [&, steps, i, columns, findItems] {
                 QObject *root = engine.rootObjects().constFirst();
                 const QString step = steps[i];
-                if (step.startsWith(QLatin1String("click:"))) { // click that panel's pin button like a user
+                if (step == QLatin1String("chip")) { // click right where the quality chip sits, covered or not
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    QObject *dialog = root->findChild<QObject *>("detailsDialog");
+                    if (qEnvironmentVariableIsSet("SHOT_UNCOVER")) // as if the player didn't know it's covered
+                        root->findChild<QObject *>("nowPlaying")->setProperty("covered", false);
+                    for (QQuickItem *chip : findItems("QualityChip")) {
+                        const QPoint p = chip->mapToScene({chip->width() / 2, chip->height() / 2}).toPoint();
+                        QTest::mouseMove(w, p);
+                        QTest::qWait(100);
+                        if (qEnvironmentVariableIsSet("SHOT_TOUCH")) { // a finger instead of a mouse
+                            static QPointingDevice *finger = QTest::createTouchDevice();
+                            QTest::touchEvent(w, finger).press(0, p, w);
+                            QTest::qWait(60);
+                            QTest::touchEvent(w, finger).release(0, p, w);
+                        } else {
+                            QTest::mouseClick(w, Qt::LeftButton, {}, p);
+                        }
+                        QTest::qWait(300);
+                        std::printf("chip click at %d,%d: details open=%d\\n", p.x(), p.y(), int(dialog->property("visible").toBool()));
+                        std::fflush(stdout);
+                    }
+                }
+                else if (step == QLatin1String("dialogrow")) { // click inside Track details, over a Library row: does the song change?
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    QObject *dialog = root->findChild<QObject *>("detailsDialog");
+                    QMetaObject::invokeMethod(dialog, "show", Q_ARG(QVariant, QVariant(player.source())), Q_ARG(QVariant, QVariant(false)));
+                    QTest::qWait(500);
+                    const QString before = player.source();
+                    const QPoint p(w->width() / 2, w->height() / 2);
+                    std::printf("before click: dialog open=%d x=%.0f y=%.0f w=%.0f h=%.0f song=%s\\n", int(dialog->property("visible").toBool()),
+                                dialog->property("x").toDouble(), dialog->property("y").toDouble(), dialog->property("width").toDouble(),
+                                dialog->property("height").toDouble(), qPrintable(QFileInfo(before).fileName()));
+                    if (!qEnvironmentVariableIsSet("SHOT_NO_CLICK")) {
+                        QTest::mouseMove(w, p);
+                        QTest::qWait(100);
+                        QTest::mouseClick(w, Qt::LeftButton, {}, p);
+                    }
+                    QTest::qWait(400);
+                    std::printf("dialog click at %d,%d: dialog open=%d song changed=%d song=%s\\n", p.x(), p.y(),
+                                int(dialog->property("visible").toBool()), int(player.source() != before), qPrintable(QFileInfo(player.source()).fileName()));
+                    std::fflush(stdout);
+                }
+                else if (step == QLatin1String("pickerrow")) { // click a folder in the picker, over a Library row (SHOT_PICK_DIR): does the song change?
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    QObject *picker = root->findChild<QObject *>("folderPicker");
+                    QMetaObject::invokeMethod(picker, "pick", Q_ARG(QVariant, QVariant(QStringLiteral("t"))), Q_ARG(QVariant, QVariant(QStringLiteral("b"))),
+                                              Q_ARG(QVariant, QVariant(QUrl::fromLocalFile(qEnvironmentVariable("SHOT_PICK_DIR")))), Q_ARG(QVariant, QVariant()), Q_ARG(QVariant, QVariant()));
+                    QTest::qWait(700);
+                    const QString before = player.source();
+                    const QString folderBefore = picker->property("folder").toUrl().toLocalFile();
+                    const QPoint p(w->width() / 2, w->height() / 2);
+                    std::printf("before click: picker open=%d\\n", int(picker->property("visible").toBool()));
+                    QTest::mouseMove(w, p);
+                    QTest::qWait(100);
+                    QTest::mouseClick(w, Qt::LeftButton, {}, p);
+                    QTest::qWait(400);
+                    std::printf("picker click: row worked=%d song changed=%d song=%s\\n", int(picker->property("folder").toUrl().toLocalFile() != folderBefore),
+                                int(player.source() != before), qPrintable(QFileInfo(player.source()).fileName()));
+                    std::fflush(stdout);
+                }
+                else if (step == QLatin1String("home") || step == QLatin1String("settings")) { // Home / Settings over their column
+                    QMetaObject::invokeMethod(root, step == QLatin1String("home") ? "toggleHome" : "toggleSettings");
+                }
+                else if (step.startsWith(QLatin1String("tapin:"))) { // tapin:<panel type>:<n>: click its nth visible left-button TapHandler, print what happens to the song
+                    auto *w = qobject_cast<QQuickWindow *>(root);
+                    QList<QQuickItem *> targets;
+                    for (QQuickItem *panel : findItems(qPrintable(step.section(QLatin1Char(':'), 1, 1))))
+                        if (panel->isVisible()) {
+                            std::function<void(QQuickItem *)> walk = [&](QQuickItem *item) { // (list rows are only in the visual tree)
+                                if (!item->isVisible())
+                                    return;
+                                for (QObject *o : item->children())
+                                    if (o->inherits("QQuickTapHandler") && o->property("acceptedButtons").toInt() == Qt::LeftButton && item->width() > 40) {
+                                        const QPointF c = item->mapToScene({item->width() / 2, item->height() / 2});
+                                        if (panel->contains(panel->mapFromScene(c)) && c.y() > 150 && c.y() < w->height() - 150)
+                                            targets << item;
+                                    }
+                                for (QQuickItem *child : item->childItems())
+                                    walk(child);
+                            };
+                            walk(panel);
+                        }
+                    const int n = step.section(QLatin1Char(':'), 2, 2).toInt();
+                    if (n >= targets.size()) {
+                        std::printf("tapin: only %d targets\\n", int(targets.size()));
+                    } else {
+                        const QPoint p = targets[n]->mapToScene({targets[n]->width() / 2, targets[n]->height() / 2}).toPoint();
+                        const QString cls = QString::fromLatin1(targets[n]->metaObject()->className()).section(QLatin1Char('_'), 0, 0);
+                        const QString before = player.source();
+                        QTest::mouseMove(w, p);
+                        QTest::qWait(100);
+                        QTest::mouseClick(w, Qt::LeftButton, {}, p);
+                        QTest::qWait(300);
+                        std::printf("tapin %s at %d,%d (%s, of %d): song before='%s' after='%s'\\n", qPrintable(step), p.x(), p.y(), qPrintable(cls), int(targets.size()),
+                                    qPrintable(QFileInfo(before).fileName()), qPrintable(QFileInfo(player.source()).fileName()));
+                    }
+                    std::fflush(stdout);
+                }
+                else if (step == QLatin1String("dialogstate")) { // are the visible dialogs usable?
+                    for (QObject *o : root->findChildren<QObject *>())
+                        if (o->inherits("QQuickPopup") && o->property("visible").toBool())
+                            std::printf("popup %s enabled=%d activeFocus=%s\\n", o->metaObject()->className(), int(o->property("enabled").toBool()),
+                                        qobject_cast<QQuickWindow *>(root)->activeFocusItem() ? qobject_cast<QQuickWindow *>(root)->activeFocusItem()->metaObject()->className() : "none");
+                    std::fflush(stdout);
+                }
+                else if (step.startsWith(QLatin1String("click:"))) { // click that panel's pin button like a user
                     auto *w = qobject_cast<QQuickWindow *>(root);
                     const QString icon = step.section(QLatin1Char(':'), 2, 2).isEmpty() ? QStringLiteral("thumbtack") : step.section(QLatin1Char(':'), 2, 2);
                     for (QQuickItem *panel : findItems(qPrintable(step.section(QLatin1Char(':'), 1, 1))))

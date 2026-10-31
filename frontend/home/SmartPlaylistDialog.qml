@@ -84,6 +84,7 @@ Popup {
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 520, 520)
     height: Math.min(Overlay.overlay ? Overlay.overlay.height - 2 * Theme.padding : 600, implicitHeight)
     modal: true
+    onVisibleChanged: Util.openDialogs += visible ? 1 : -1
     focus: true
     padding: Theme.padding * 1.5
     closePolicy: Popup.CloseOnEscape

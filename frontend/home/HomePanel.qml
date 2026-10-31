@@ -181,7 +181,7 @@ Rectangle {
                     implicitWidth: 72
                     implicitHeight: 72
                     enabled: root.hasHistory || LocalLibraryController.songCount > 0
-                    opacity: enabled ? 1 : 0.4
+                    opacity: enabled || Util.openDialogs > 0 ? 1 : 0.4
                     hoverEnabled: true
                     focusPolicy: Qt.NoFocus
                     scale: pressed ? 0.92 : hovered ? 1.05 : 1

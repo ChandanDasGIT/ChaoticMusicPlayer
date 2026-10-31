@@ -7,6 +7,7 @@ Rectangle {
     id: root
 
     property string text: PlayerController.qualityText
+    property bool covered: false // a panel lies over this (see NowPlayingPanel)
 
     signal clicked()
 
@@ -22,9 +23,11 @@ Rectangle {
 
     HoverHandler {
         id: chipHover
+        enabled: !root.covered
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
+        enabled: !root.covered
         margin: 18 // small to look at, but a finger needn't land exactly on it
         onTapped: root.clicked()
     }

@@ -377,7 +377,7 @@ Rectangle {
                             SettingsRow {
                                 Layout.fillWidth: true
                                 enabled: SettingsController.historyEnabled
-                                opacity: enabled ? 1 : 0.5
+                                opacity: enabled || Util.openDialogs > 0 ? 1 : 0.5
                                 title: qsTr("Include YouTube Music songs")
                                 description: qsTr("Off: only songs from your library and your files are remembered.")
 
@@ -824,7 +824,7 @@ Rectangle {
                                 Layout.fillWidth: true
                                 spacing: 6
                                 enabled: SettingsController.visualizerEnabled
-                                opacity: enabled ? 1 : 0.4
+                                opacity: enabled || Util.openDialogs > 0 ? 1 : 0.4
 
                                 Behavior on opacity { NumberAnimation { duration: Theme.animFast } }
 

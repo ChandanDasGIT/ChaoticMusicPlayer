@@ -16,7 +16,7 @@ AbstractButton {
     implicitHeight: implicitWidth
     hoverEnabled: true
     focusPolicy: Qt.NoFocus
-    opacity: enabled ? 1 : 0.35
+    opacity: enabled || Util.openDialogs > 0 ? 1 : 0.35
     scale: pressed ? 0.86 : (hovered && filled ? 1.06 : 1)
 
     Behavior on opacity { NumberAnimation { duration: Theme.anim } }

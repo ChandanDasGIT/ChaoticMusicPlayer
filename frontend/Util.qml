@@ -4,6 +4,9 @@ import QtQuick
 // Small helpers shared by the views: time / count formatting and cover addresses.
 QtObject {
     property int openMenus: 0 // menus open now (controls/ThemedMenu.qml)
+    // Dialogs open now. With a mouse, a click on a list inside a dialog also reaches
+    // the TapHandlers behind it, so Main switches everything behind off meanwhile.
+    property int openDialogs: 0
 
     // "m:ss" or "h:mm:ss"
     function formatTime(ms) {
