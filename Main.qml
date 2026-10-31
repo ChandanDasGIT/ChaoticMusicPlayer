@@ -530,6 +530,17 @@ ApplicationWindow {
                 onQuitRequested: window.quitApp()
             }
 
+            // Phone size: a panel covers the player, so nothing gets through to it.
+            // (Not `enabled` on the player: its controls would dim as the panel slides.)
+            MouseArea {
+                anchors.fill: nowPlaying
+                z: 1
+                visible: window.compact && window.anyDrawerOpen
+                acceptedButtons: Qt.AllButtons
+                hoverEnabled: true
+                onWheel: (wheel) => wheel.accepted = true
+            }
+
             // Songs dragged from the Library or YouTube: dropped here, they join the Queue.
             // (Phone size: the drawers' mini players take them instead.)
             DropHint {
