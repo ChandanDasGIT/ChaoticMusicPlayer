@@ -64,6 +64,8 @@ constexpr const char *LyricsSyncedKey = "lyrics.syncedByDefault";
 constexpr const char *LyricsLatinKey = "lyrics.latinScript";
 constexpr const char *YtLookupKey = "youtube.backgroundLookup";
 constexpr const char *YtAutoplayKey = "youtube.autoplay";
+constexpr const char *AppUpdateCheckKey = "updates.check";
+constexpr const char *AppUpdateSkippedKey = "updates.skippedVersion";
 constexpr const char *YtQueueMixKey = "youtube.queueMix";
 constexpr const char *YtSearchHistoryKey = "youtube.searchHistory";
 constexpr const char *YtQualityKey = "youtube.quality";
@@ -836,6 +838,34 @@ void SettingsController::setYtAutoplay(bool enabled)
     m_settings->setBool(YtAutoplayKey, enabled);
     scheduleSave();
     emit ytAutoplayChanged();
+}
+
+bool SettingsController::appUpdateCheck() const
+{
+    return m_settings->boolValue(AppUpdateCheckKey, true);
+}
+
+void SettingsController::setAppUpdateCheck(bool enabled)
+{
+    if (enabled == appUpdateCheck())
+        return;
+    m_settings->setBool(AppUpdateCheckKey, enabled);
+    scheduleSave();
+    emit appUpdateCheckChanged();
+}
+
+QString SettingsController::appUpdateSkipped() const
+{
+    return QString::fromStdString(m_settings->value(AppUpdateSkippedKey));
+}
+
+void SettingsController::setAppUpdateSkipped(const QString &version)
+{
+    if (version == appUpdateSkipped())
+        return;
+    m_settings->setValue(AppUpdateSkippedKey, version.toStdString());
+    scheduleSave();
+    emit appUpdateSkippedChanged();
 }
 
 bool SettingsController::ytQueueMix() const

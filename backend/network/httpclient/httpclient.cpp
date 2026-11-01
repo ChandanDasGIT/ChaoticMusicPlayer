@@ -7,6 +7,7 @@
 #include <mutex>
 
 #ifdef __ANDROID__
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -141,5 +142,72 @@ const char *HttpClient::userAgent()
 const std::string &HttpClient::androidCertificates()
 {
     return readAndroidCertificates();
+}
+
+namespace {
+
+struct FileDownload
+{
+    std::FILE *file;
+    long long size;
+    const std::function<bool(long long)> *progress;
+};
+
+size_t saveBody(char *data, size_t size, size_t count, void *userData)
+{
+    auto *download = static_cast<FileDownload *>(userData);
+    const size_t bytes = size * count;
+    if (std::fwrite(data, 1, bytes, download->file) != bytes)
+        return 0;
+    download->size += (long long)bytes;
+    return (*download->progress)(download->size) ? bytes : 0; // (0 stops curl)
+}
+
+} // namespace
+
+HttpResponse HttpClient::download(const std::string &url, const std::string &path,
+                                  const std::function<bool(long long)> &progress)
+{
+    ensureInitialized();
+    HttpResponse response;
+
+    std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), &curl_easy_cleanup);
+    std::unique_ptr<std::FILE, decltype(&std::fclose)> file(std::fopen(path.c_str(), "ab"), &std::fclose);
+    if (!curl || !file) {
+        response.error = "Cannot start the download";
+        return response;
+    }
+    std::error_code ec;
+    const auto existing = std::filesystem::file_size(path, ec);
+    FileDownload download{file.get(), ec ? 0 : (long long)existing, &progress};
+
+    CURL *handle = curl.get();
+    curl_easy_setopt(handle, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(handle, CURLOPT_USERAGENT, userAgent());
+    curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L); // (an error page must not end up in the file)
+    curl_easy_setopt(handle, CURLOPT_RESUME_FROM_LARGE, curl_off_t(download.size));
+    curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT_MS, 15000L);
+    // No limit on the whole download, only on the connection going quiet
+    curl_easy_setopt(handle, CURLOPT_LOW_SPEED_LIMIT, 1L);
+    curl_easy_setopt(handle, CURLOPT_LOW_SPEED_TIME, 30L);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
+    const std::string &certificates = readAndroidCertificates();
+    curl_blob blob{const_cast<char *>(certificates.data()), certificates.size(), CURL_BLOB_NOCOPY};
+    curl_easy_setopt(handle, CURLOPT_CAINFO_BLOB, &blob);
+    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, &saveBody);
+    curl_easy_setopt(handle, CURLOPT_WRITEDATA, &download);
+
+    const CURLcode code = curl_easy_perform(handle);
+    curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response.status);
+    if (code != CURLE_OK)
+        response.error = curl_easy_strerror(code);
+
+    // The server can't carry on from this file: next time starts over
+    if (code == CURLE_RANGE_ERROR || response.status == 416) {
+        file.reset();
+        std::filesystem::remove(path, ec);
+    }
+    return response;
 }
 #endif

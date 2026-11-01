@@ -206,6 +206,8 @@ elseif(CMP_PLATFORM STREQUAL "android")
     target_sources(TunedChaos PRIVATE
         wrapper/notifications/notificationcontroller_android.cpp
         wrapper/systemmedia/systemmedia_android.cpp
+        wrapper/update/appupdater.cpp
+        wrapper/update/appupdater.h
     )
     # The APK: android/ holds its manifest, Gradle build (with Python and
     # yt-dlp: Chaquopy), Java parts and icon
@@ -304,6 +306,7 @@ qt_add_qml_module(TunedChaos
         frontend/dialogs/ConfirmDialog.qml
         frontend/dialogs/FolderPicker.qml
         frontend/dialogs/NameDialog.qml
+        frontend/dialogs/UpdateDialog.qml
         frontend/dragdrop/DragCard.qml
         frontend/dragdrop/DragSource.qml
         frontend/dragdrop/DropHint.qml

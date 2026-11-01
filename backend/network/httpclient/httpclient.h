@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -32,5 +33,11 @@ public:
 #ifdef __ANDROID__
     // Android's trusted certificates, as one PEM text (for OpenSSL users other than this client)
     static const std::string &androidCertificates();
+
+    // Saves url to a file, carrying on from what the file already holds. The
+    // body stays empty. progress gets the file's size so far, and stops the
+    // download by returning false: what arrived stays, to carry on from later.
+    static HttpResponse download(const std::string &url, const std::string &path,
+                                 const std::function<bool(long long size)> &progress);
 #endif
 };

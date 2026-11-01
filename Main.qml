@@ -1150,4 +1150,11 @@ ApplicationWindow {
         confirmText: qsTr("Clear")
         onConfirmed: HistoryController.clear()
     }
+
+    // A new version of the app (AppUpdater only exists on Android)
+    UpdateDialog {
+        id: updateDialog
+        objectName: "updateDialog"
+        updater: typeof AppUpdater !== "undefined" ? AppUpdater : null
+    }
 }

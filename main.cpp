@@ -34,9 +34,11 @@
 
 #ifdef Q_OS_ANDROID
 #include "backend/network/httpclient/httpclient.h"
+#include "wrapper/update/appupdater.h"
 
 #include <QDir>
 #include <QFile>
+#include <QQmlContext>
 #endif
 
 #ifdef Q_OS_WIN
@@ -178,13 +180,23 @@ int main(int argc, char *argv[])
     QObject::connect(&player, &PlayerController::volumeChanged,
                      &settings, [&] { settings.setVolume(player.volume()); });
 
+#ifdef Q_OS_ANDROID
+    AppUpdater appUpdater(&settings, nullptr); // (before the engine, which must go first)
+#endif
+
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("albumart"), new AlbumArtProvider); // engine takes ownership
+#ifdef Q_OS_ANDROID
+    engine.rootContext()->setContextProperty(QStringLiteral("AppUpdater"), &appUpdater);
+#endif
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, [] { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("TunedChaos", "Main");
+#ifdef Q_OS_ANDROID
+    appUpdater.check(); // (after the load: the dialog listens from Main.qml)
+#endif
 
     const auto raiseWindow = [&engine] {
         if (engine.rootObjects().isEmpty())

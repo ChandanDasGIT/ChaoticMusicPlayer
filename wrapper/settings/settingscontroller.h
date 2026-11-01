@@ -63,6 +63,9 @@ class SettingsController : public QObject
     Q_PROPERTY(bool lyricsSyncedByDefault READ lyricsSyncedByDefault WRITE setLyricsSyncedByDefault NOTIFY lyricsSyncedByDefaultChanged)
     // Lyrics in English letters (romanized, same language) instead of their own script
     Q_PROPERTY(bool lyricsLatinScript READ lyricsLatinScript WRITE setLyricsLatinScript NOTIFY lyricsLatinScriptChanged)
+    // Android: look for a new version of the app at startup, and the version "Skip this version" hides.
+    Q_PROPERTY(bool appUpdateCheck READ appUpdateCheck WRITE setAppUpdateCheck NOTIFY appUpdateCheckChanged)
+    Q_PROPERTY(QString appUpdateSkipped READ appUpdateSkipped WRITE setAppUpdateSkipped NOTIFY appUpdateSkippedChanged)
     // YouTube
     Q_PROPERTY(bool ytBackgroundLookup READ ytBackgroundLookup WRITE setYtBackgroundLookup NOTIFY ytBackgroundLookupChanged)
     // After a YouTube song / album / playlist: keep going with YouTube's "up next" (a Mix).
@@ -197,6 +200,10 @@ public:
     void setYtBackgroundLookup(bool enabled);
     bool ytAutoplay() const;
     void setYtAutoplay(bool enabled);
+    bool appUpdateCheck() const;
+    void setAppUpdateCheck(bool enabled);
+    QString appUpdateSkipped() const;
+    void setAppUpdateSkipped(const QString &version);
     bool ytQueueMix() const;
     void setYtQueueMix(bool enabled);
     bool eqEnabled() const;
@@ -292,6 +299,8 @@ signals:
     void lyricsLatinScriptChanged();
     void ytBackgroundLookupChanged();
     void ytAutoplayChanged();
+    void appUpdateCheckChanged();
+    void appUpdateSkippedChanged();
     void ytQueueMixChanged();
     void ytSearchHistoryChanged();
     void ytQualityChanged();
