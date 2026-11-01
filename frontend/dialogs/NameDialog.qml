@@ -24,7 +24,9 @@ Popup {
         close()
     }
 
-    anchors.centerIn: Overlay.overlay
+    parent: Overlay.overlay
+    x: Math.round((parent.width - width) / 2)
+    y: Util.dialogY(parent.height, height)
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 380, 380)
     modal: true
     onVisibleChanged: Util.openDialogs += visible ? 1 : -1

@@ -80,9 +80,11 @@ Popup {
 
     readonly property int count: visible && revision >= 0 ? SmartPlaylistsController.preview(current()) : 0
 
-    anchors.centerIn: Overlay.overlay
+    parent: Overlay.overlay
+    x: Math.round((parent.width - width) / 2)
+    y: Util.dialogY(parent.height, height)
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 520, 520)
-    height: Math.min(Overlay.overlay ? Overlay.overlay.height - 2 * Theme.padding : 600, implicitHeight)
+    height: Math.min(Overlay.overlay ? Util.dialogRoom(Overlay.overlay.height) - 2 * Theme.padding : 600, implicitHeight)
     modal: true
     onVisibleChanged: Util.openDialogs += visible ? 1 : -1
     focus: true

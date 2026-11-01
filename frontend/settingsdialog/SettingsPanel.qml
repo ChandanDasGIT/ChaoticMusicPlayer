@@ -72,6 +72,11 @@ Rectangle {
             shownPage = index
         page = index
     }
+    // The panel closed: the search bar would keep its focus, and so the keyboard, open.
+    function dropKeyboard() {
+        searchField.focus = false
+        Qt.inputMethod.hide()
+    }
     // Esc: clears the search, else back to the list; false at the list (nothing left to do).
     readonly property bool canGoBack: searching || page >= 0
     function back() {

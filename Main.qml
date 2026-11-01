@@ -66,7 +66,12 @@ ApplicationWindow {
     readonly property bool libraryDocked: rightShown === "library"
     // Settings: in the right-hand column (never pinned), or a sheet at phone size
     readonly property bool settingsShown: rightShown === "settings" || settingsSheet.shown
-    onSettingsShownChanged: if (settingsShown && settingsPanel.page < 0) settingsPanel.intro()
+    onSettingsShownChanged: {
+        if (!settingsShown)
+            settingsPanel.dropKeyboard()
+        else if (settingsPanel.page < 0)
+            settingsPanel.intro()
+    }
     readonly property bool playerShown: layout !== "half" || !(leftShown !== "" && rightShown !== "")
 
     function isLeft(name) {
@@ -212,6 +217,30 @@ ApplicationWindow {
     readonly property real safeBottom: contentItem.SafeArea.margins.bottom
     readonly property real safeLeft: contentItem.SafeArea.margins.left
     readonly property real safeRight: contentItem.SafeArea.margins.right
+
+    Binding {
+        target: Util
+        property: "safeTop"
+        value: window.safeTop
+    }
+    // Android reports the keyboard in physical pixels.
+    Binding {
+        target: Util
+        property: "keyboardHeight"
+        value: {
+            const keyboard = Qt.inputMethod.keyboardRectangle
+            if (!Theme.touchOnly || !Qt.inputMethod.visible || keyboard.height <= 0)
+                return 0
+            return Math.max(0, window.height - keyboard.y / Screen.devicePixelRatio)
+        }
+    }
+
+    // How much of an item the open keyboard covers, from the item's bottom up.
+    function keyboardOverlap(item) {
+        if (Util.keyboardHeight <= 0)
+            return 0
+        return Math.max(0, item.mapToItem(null, 0, item.height).y - (height - Util.keyboardHeight))
+    }
 
     // Background playing: closing only hides the window while a song is loaded
     // (launching the app again or the desktop's media controls bring it back).
@@ -493,7 +522,7 @@ ApplicationWindow {
                     // 0: in place, 1: below the column (a fraction: see settingsCard)
                     property real down: up ? 0 : 1
                     width: parent.width
-                    height: parent.height
+                    height: parent.height - window.keyboardOverlap(parent)
                     y: down * (height + Theme.cardGap)
                     radius: Theme.radiusCard
                     color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")
@@ -829,7 +858,7 @@ ApplicationWindow {
             property real down: shown ? 0 : 1 // as for settingsCard
             x: Theme.cardGap + window.safeLeft
             width: parent.width - 2 * Theme.cardGap - window.safeLeft - window.safeRight
-            height: parent.height - 2 * Theme.cardGap - window.safeTop
+            height: parent.height - 2 * Theme.cardGap - window.safeTop - window.keyboardOverlap(parent)
             y: Theme.cardGap + window.safeTop + down * (parent.height - Theme.cardGap - window.safeTop) + settingsPull.pull
             radius: Theme.radiusCard
             color: Theme.isDark ? Qt.darker(window.tint, 1.6) : Qt.tint(window.tint, "#b3ffffff")

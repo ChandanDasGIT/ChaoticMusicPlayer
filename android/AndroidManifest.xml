@@ -35,7 +35,8 @@
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
             android:label="Tuned Chaos"
             android:launchMode="singleTop"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

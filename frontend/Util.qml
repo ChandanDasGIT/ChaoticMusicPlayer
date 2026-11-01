@@ -7,6 +7,19 @@ QtObject {
     // Dialogs open now. With a mouse, a click on a list inside a dialog also reaches
     // the TapHandlers behind it, so Main switches everything behind off meanwhile.
     property int openDialogs: 0
+    // How far the on-screen keyboard reaches up from the window's bottom (0: closed).
+    // The window itself stays put on Android: what the keyboard would cover moves.
+    property real keyboardHeight: 0
+    property real safeTop: 0 // (Main) the system bar over the top of the window
+
+    // Dialogs use the part of the window above the keyboard, the whole of it otherwise.
+    function dialogRoom(windowHeight) {
+        return windowHeight - (keyboardHeight > 0 ? keyboardHeight + safeTop : 0)
+    }
+    // Where a dialog goes to sit in the middle of that part.
+    function dialogY(windowHeight, dialogHeight) {
+        return Math.round((keyboardHeight > 0 ? safeTop : 0) + (dialogRoom(windowHeight) - dialogHeight) / 2)
+    }
 
     // "m:ss" or "h:mm:ss"
     function formatTime(ms) {

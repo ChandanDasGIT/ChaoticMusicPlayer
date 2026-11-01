@@ -124,6 +124,7 @@ Popup {
     // ---- Editing the tags
     readonly property bool canEdit: path !== "" && !path.startsWith("ytmusic:")
     property bool editing: false
+    onEditingChanged: if (!editing) Qt.inputMethod.hide()
     property bool saving: false
     readonly property var tagFields: [
         { key: "title", label: qsTr("Title") }, { key: "artist", label: qsTr("Artist") },
@@ -159,9 +160,11 @@ Popup {
         }
     }
 
-    anchors.centerIn: Overlay.overlay
+    parent: Overlay.overlay
+    x: Math.round((parent.width - width) / 2)
+    y: Util.dialogY(parent.height, height)
     width: Math.min(Overlay.overlay ? Overlay.overlay.width - 2 * Theme.padding : 560, 560)
-    height: Math.min(Overlay.overlay ? Overlay.overlay.height - 2 * Theme.padding : 640, 640)
+    height: Math.min(Overlay.overlay ? Util.dialogRoom(Overlay.overlay.height) - 2 * Theme.padding : 640, 640)
     modal: true
     onVisibleChanged: Util.openDialogs += visible ? 1 : -1
     focus: true
